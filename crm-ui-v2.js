@@ -24,6 +24,15 @@
     if(data.length>430000)throw Error('A imagem continua grande. Recorte ou reduza antes de anexar.');
     return {name:file.name.replace(/\.[^.]+$/,'.jpg'),mime:'image/jpeg',base64:data.split(',')[1]};
   }
+  function uppercaseOperationalFields(root=document){
+    root.querySelectorAll('.fscrm input[type="text"], .fscrm textarea').forEach(el=>{
+      if(el.dataset.upperReady==='1')return;
+      el.dataset.upperReady='1';el.style.textTransform='uppercase';
+      el.addEventListener('input',()=>{const a=el.selectionStart,b=el.selectionEnd,v=String(el.value||'').toUpperCase();if(el.value!==v){el.value=v;try{el.setSelectionRange(a,b)}catch(e){}}});
+      if(el.value)el.value=String(el.value).toUpperCase();
+    });
+  }
+
   function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=()=>reject(Error('Falha ao ler o arquivo.'));r.readAsDataURL(file);});}
 
   const actor = () => remote?.session ? {...remote.session.actor,canManage:false} : ({name:localStorage.getItem('fs_nome')||'',branch:localStorage.getItem('fs_filial')||'',role:localStorage.getItem('fs_cargo')||'',canManage:false});
@@ -203,6 +212,7 @@
   async function editSave() {
     const patch = {};
     ['status','reason','next','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer','lossNote','lossCompetitor'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
+    ['note','issue','issueOwner','relation','lossNote','lossCompetitor'].forEach(k=>{ if(patch[k]) patch[k]=patch[k].toUpperCase(); });
     patch.lossCompetitorPrice=Number($('fscrm-edit-lossCompetitorPrice').value||0);
     patch.consent=$('fscrm-edit-consent').checked;
     if (!draft.consent && patch.consent && draft.history.some(h=>h.type==='nao_contatar')) throw Error('Cliente com pedido de interrupção. A reautorização deve ser documentada antes de retomar; mantenha sem contato nesta versão.');

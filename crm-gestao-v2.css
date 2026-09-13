@@ -176,3 +176,6 @@ main{padding-bottom:54px}
  .periods{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}
  .seller-numbers strong{font-size:21px}
 }
+
+/* V6.1 */
+#access-name,#access-branch{text-transform:uppercase}

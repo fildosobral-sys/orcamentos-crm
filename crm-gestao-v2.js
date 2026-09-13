@@ -109,7 +109,7 @@ function renderAccessUsers(){
 function accessMessage(info){return 'Olá, '+info.name+'. Seu acesso ao Sistema de Orçamentos CRM foi liberado.\n\nFilial: '+info.branch+'\nPerfil: '+(info.role==='GERENTE'?'Gerente':'Vendedor')+'\nLink: https://fildosobral-sys.github.io/orcamentos-crm/\nCredencial individual: '+info.token+'\nWhatsApp cadastrado: '+info.phone+'\n\nNão compartilhe sua credencial.';}
 async function createAccess(){
  const st=$('access-state');st.textContent='';
- const name=clean($('access-name').value),branch=clean($('access-branch').value),phone=digits($('access-phone').value),role=$('access-role').value,canManage=$('access-manage').checked;
+ const name=clean($('access-name').value).toUpperCase(),branch=clean($('access-branch').value).toUpperCase(),phone=digits($('access-phone').value),role=$('access-role').value,canManage=$('access-manage').checked;
  if(!name){st.textContent='Informe o nome do colaborador.';return;}
  if(!branch){st.textContent='Informe a filial.';return;}
  if(!/^\d{10,11}$/.test(phone)){st.textContent='Informe o WhatsApp com DDD.';return;}
@@ -200,5 +200,11 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)clear();els
 window.addEventListener('pagehide',clear);
 window.addEventListener('pageshow',()=>refresh());
 setInterval(()=>{if(!document.hidden)refresh();},60000);
+
+function setupManagementUppercase(){
+ ['access-name','access-branch'].forEach(id=>{const el=$(id);if(!el)return;el.style.textTransform='uppercase';el.addEventListener('input',()=>{const a=el.selectionStart,b=el.selectionEnd,v=String(el.value||'').toUpperCase();if(el.value!==v){el.value=v;try{el.setSelectionRange(a,b)}catch(e){}}});});
+}
+setupManagementUppercase();
+
 refresh();
 })();
