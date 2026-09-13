@@ -214,3 +214,47 @@ button.home-fixed:active{
     gap:8px!important;
   }
 }
+
+
+/* V6.5 — botão HOME real */
+.fs-back-home{
+  position:fixed!important;
+  left:14px!important;
+  right:auto!important;
+  bottom:18px!important;
+  width:46px!important;
+  height:46px!important;
+  min-width:46px!important;
+  min-height:46px!important;
+  max-width:46px!important;
+  padding:0!important;
+  border-radius:50%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  font-size:18px!important;
+  line-height:1!important;
+  opacity:.48!important;
+  background:rgba(37,99,235,.84)!important;
+  color:#fff!important;
+  box-shadow:0 6px 18px rgba(31,64,130,.22)!important;
+  border:1px solid rgba(255,255,255,.3)!important;
+  backdrop-filter:blur(8px)!important;
+  -webkit-backdrop-filter:blur(8px)!important;
+  z-index:999!important;
+  transition:opacity .15s ease,transform .15s ease!important;
+}
+.fs-back-home:hover,.fs-back-home:focus,.fs-back-home:active{
+  opacity:.94!important;
+  transform:scale(1.06)!important;
+}
+@media(max-width:640px){
+  .fs-back-home{
+    left:14px!important;
+    right:auto!important;
+    bottom:18px!important;
+    width:46px!important;
+    height:46px!important;
+  }
+}
