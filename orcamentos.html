@@ -1804,7 +1804,7 @@
       <div class="calculation-section section-auto">
        <h3 class="section-title">🎯 Cálculo Automático por Percentual</h3>
        <div class="input-group"><label class="input-label" for="percentualDesconto">📊 Percentual de Desconto (%):</label>
-        <div class="percent-input"><input type="number" id="percentualDesconto" class="input-field" placeholder="" step="0.1" min="0" max="10"> <span class="percent-symbol">%</span>
+        <div class="percent-input"><input type="number" id="percentualDesconto" class="input-field" placeholder="" step="0.1" min="0" max="100"> <span class="percent-symbol">%</span>
         </div>
        </div>
        <div id="precoCalculadoGroup" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(72, 187, 120, 0.15); border-radius: 12px; border: 2px solid rgba(72, 187, 120, 0.3);"><label class="input-label" style="color: #2f855a; font-size: 0.85rem; margin-bottom: 0.5rem; font-weight: 600;">✅ Preço Especial:</label>
@@ -1812,6 +1812,21 @@
         </div>
        </div>
        <div id="statusAutorizacao" class="status-authorization"><span id="textoAutorizacao"></span>
+       </div>
+       <div id="aprovacaoSuperiorBox" style="display:none; margin-top: 1rem; padding: 1rem; border: 2px solid rgba(244,67,54,.28); border-radius: 12px; background: rgba(244,67,54,.06);">
+        <div class="input-group" style="margin-bottom:.8rem;">
+         <label class="input-label" for="nivelAprovacaoSuperior">🔐 Nível de aprovação superior:</label>
+         <select id="nivelAprovacaoSuperior" class="input-field">
+          <option value="">Selecione quem autorizou</option>
+          <option value="Gerente Comprador">Gerente Comprador</option>
+          <option value="Gerente Comercial">Gerente Comercial</option>
+          <option value="Diretoria">Diretoria</option>
+         </select>
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+         <label class="input-label" for="nomeAprovador">👤 Nome de quem autorizou:</label>
+         <input type="text" id="nomeAprovador" class="input-field" placeholder="Ex.: Allan, Alex, comprador responsável...">
+        </div>
        </div>
       </div><!-- Seção: Cálculo Manual -->
       <div class="calculation-section section-manual">
@@ -2344,8 +2359,9 @@ let currentData = [];
                         </div>
                         ${item.nivel_autorizacao ? `
                         <div class="detail-item">
-                            <div class="detail-label">Nível de Autorização</div>
-                            <div class="detail-value" style="color: ${item.nivel_autorizacao === 'Vendedor' ? '#856404' : item.nivel_autorizacao === 'Gerente' ? '#e65100' : '#c62828'}; font-weight: 700;">${item.nivel_autorizacao}</div>
+                            <div class="detail-label">Aprovação do desconto</div>
+                            <div class="detail-value" style="color: ${item.nivel_autorizacao === 'Gerente' ? '#e65100' : '#c62828'}; font-weight: 700;">${item.nivel_autorizacao}</div>
+                            ${item.aprovado_por ? `<div style="margin-top:.25rem;font-size:.78rem;color:#718096;">Autorizado por: <strong>${item.aprovado_por}</strong></div>` : ''}
                         </div>
                         ` : ''}
                     </div>
@@ -2469,45 +2485,46 @@ let currentData = [];
             aplicarFiltroData();
         }
 
-        // Função para verificar autorização de desconto
+        // Função para verificar o nível necessário de aprovação do desconto
         function verificarAutorizacao(percentual) {
             const statusDiv = document.getElementById('statusAutorizacao');
             const textoSpan = document.getElementById('textoAutorizacao');
-            
+            const superiorBox = document.getElementById('aprovacaoSuperiorBox');
+
             if (percentual <= 0) {
                 statusDiv.style.display = 'none';
+                if (superiorBox) superiorBox.style.display = 'none';
                 return { autorizado: true, nivel: '' };
-            }
-
-            if (percentual > 10) {
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'status-authorization status-supervisor';
-                textoSpan.innerHTML = '🚫 <strong>ACESSO NEGADO</strong><br>Desconto máximo permitido: 10%';
-                return { autorizado: false, nivel: 'Negado' };
             }
 
             statusDiv.style.display = 'block';
             statusDiv.className = 'status-authorization';
-            
-            if (percentual >= 1 && percentual <= 3.0) {
-                statusDiv.classList.add('status-vendedor');
-                textoSpan.innerHTML = '✅ <strong>Autorizado - Vendedor</strong>';
-                return { autorizado: true, nivel: 'Vendedor' };
-            } else if (percentual > 3.0 && percentual <= 5.0) {
+
+            if (percentual <= 5.0) {
                 statusDiv.classList.add('status-gerente');
-                textoSpan.innerHTML = '⚠️ <strong>REQUER AUTORIZAÇÃO - NÍVEL GERENTE</strong><br>Fale com seu gerente para aprovar este desconto';
+                textoSpan.innerHTML = '🟠 <strong>APROVAÇÃO DO DESCONTO — GERENTE</strong><br>Descontos de até 5% exigem autorização do gerente.';
+                if (superiorBox) superiorBox.style.display = 'none';
                 return { autorizado: true, nivel: 'Gerente' };
-            } else if (percentual > 5.0 && percentual <= 10.0) {
-                statusDiv.classList.add('status-supervisor');
-                textoSpan.innerHTML = '🔴 <strong>REQUER AUTORIZAÇÃO - NÍVEL SUPERVISOR</strong><br>Fale com seu supervisor para aprovar este desconto';
-                return { autorizado: true, nivel: 'Supervisor' };
-            } else if (percentual < 1) {
-                statusDiv.classList.add('status-vendedor');
-                textoSpan.innerHTML = '⚠️ <strong>Mínimo: 1%</strong>';
-                return { autorizado: false, nivel: 'Mínimo' };
             }
-            
-            return { autorizado: true, nivel: 'Vendedor' };
+
+            if (percentual <= 8.0) {
+                statusDiv.classList.add('status-supervisor');
+                textoSpan.innerHTML = '🔴 <strong>APROVAÇÃO DO DESCONTO — SUPERVISOR</strong><br>Descontos acima de 5% e até 8% exigem autorização do supervisor.';
+                if (superiorBox) superiorBox.style.display = 'none';
+                return { autorizado: true, nivel: 'Supervisor' };
+            }
+
+            statusDiv.classList.add('status-supervisor');
+            textoSpan.innerHTML = '🔐 <strong>APROVAÇÃO SUPERIOR OBRIGATÓRIA</strong><br>Acima de 8%, informe o nível e o nome de quem autorizou.';
+            if (superiorBox) superiorBox.style.display = 'block';
+
+            const nivelSelecionado = String(document.getElementById('nivelAprovacaoSuperior')?.value || '').trim();
+            const nomeAprovador = String(document.getElementById('nomeAprovador')?.value || '').trim();
+            return {
+                autorizado: !!(nivelSelecionado && nomeAprovador),
+                nivel: nivelSelecionado || 'Aprovação superior',
+                aprovadoPor: nomeAprovador
+            };
         }
 
         // Função para calcular desconto automaticamente por percentual
@@ -2519,7 +2536,7 @@ let currentData = [];
 
             const autorizacao = verificarAutorizacao(percentualDesconto);
 
-            if (percentualDesconto < 1 || percentualDesconto > 10 || precoNormal <= 0) {
+            if (percentualDesconto < 0 || percentualDesconto >= 100 || precoNormal <= 0) {
                 precoCalculadoGroup.style.display = 'none';
                 precoCalculadoInput.value = '';
                 document.getElementById('precoPromocional').value = '';
@@ -2527,7 +2544,7 @@ let currentData = [];
                 return;
             }
 
-            if (!autorizacao.autorizado && percentualDesconto > 10) {
+            if (!autorizacao.autorizado && percentualDesconto > 8) {
                 precoCalculadoGroup.style.display = 'none';
                 precoCalculadoInput.value = '';
                 document.getElementById('precoPromocional').value = '';
@@ -3248,6 +3265,12 @@ Zenir - O Melhor Está Aqui! 🏆`;
             const descontoPercentual = (descontoValor / precoNormal) * 100;
             const autorizacao = verificarAutorizacao(descontoPercentual);
 
+            if (descontoPercentual > 8 && !autorizacao.autorizado) {
+                showToast("❌ Acima de 8%, selecione o nível de aprovação superior e informe o nome de quem autorizou.", "error");
+                document.getElementById('nivelAprovacaoSuperior')?.focus();
+                return;
+            }
+
             // Obter informações de modalidade de pagamento
             const modalidadeNormal = document.querySelector('input[name="modalidadeNormal"]:checked').value;
             const modalidadePromocional = document.querySelector('input[name="modalidadePromocional"]:checked').value;
@@ -3287,7 +3310,8 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 preco_promocional: precoFinal,
                 desconto_percentual: descontoPercentual,
                 desconto_valor: descontoValor,
-                nivel_autorizacao: autorizacao.nivel || 'Vendedor',
+                nivel_autorizacao: autorizacao.nivel || '',
+                aprovado_por: autorizacao.aprovadoPor || '',
                 anotacoes: anotacoes,
                 data_calculo: new Date().toISOString(),
                 tipo_calculo: tipoCalculo,
@@ -3503,8 +3527,9 @@ Zenir - O Melhor Está Aqui! 🏆`;
                         </div>
                         ${item.nivel_autorizacao ? `
                         <div class="detail-item">
-                            <div class="detail-label">Nível de Autorização</div>
-                            <div class="detail-value" style="color: ${item.nivel_autorizacao === 'Vendedor' ? '#856404' : item.nivel_autorizacao === 'Gerente' ? '#e65100' : '#c62828'}; font-weight: 700;">${item.nivel_autorizacao}</div>
+                            <div class="detail-label">Aprovação do desconto</div>
+                            <div class="detail-value" style="color: ${item.nivel_autorizacao === 'Gerente' ? '#e65100' : '#c62828'}; font-weight: 700;">${item.nivel_autorizacao}</div>
+                            ${item.aprovado_por ? `<div style="margin-top:.25rem;font-size:.78rem;color:#718096;">Autorizado por: <strong>${item.aprovado_por}</strong></div>` : ''}
                         </div>
                         ` : ''}
                     </div>
@@ -3534,6 +3559,8 @@ Zenir - O Melhor Está Aqui! 🏆`;
             document.getElementById('resultSection').style.display = 'none';
             document.getElementById('precoCalculadoGroup').style.display = 'none';
             document.getElementById('statusAutorizacao').style.display = 'none';
+            const superiorBox = document.getElementById('aprovacaoSuperiorBox');
+            if (superiorBox) superiorBox.style.display = 'none';
             
             // Resetar parcelas
             document.getElementById('parcelasNormalGroup').classList.remove('active');
@@ -3733,6 +3760,18 @@ Zenir - O Melhor Está Aqui! 🏆`;
             // Parcelamento automático
             if (typeof configurarListenersParcelamento === 'function') {
                 configurarListenersParcelamento();
+            const nivelSuperior = document.getElementById('nivelAprovacaoSuperior');
+            const nomeAprovador = document.getElementById('nomeAprovador');
+            if (nivelSuperior) nivelSuperior.addEventListener('change', () => {
+                const precoNormal = converterParaNumero(document.getElementById('precoNormal').value);
+                const precoFinal = converterParaNumero(document.getElementById('precoCalculado').value) || converterParaNumero(document.getElementById('precoPromocional').value);
+                if (precoNormal > 0 && precoFinal > 0 && precoFinal <= precoNormal) verificarAutorizacao(((precoNormal-precoFinal)/precoNormal)*100);
+            });
+            if (nomeAprovador) nomeAprovador.addEventListener('input', () => {
+                const precoNormal = converterParaNumero(document.getElementById('precoNormal').value);
+                const precoFinal = converterParaNumero(document.getElementById('precoCalculado').value) || converterParaNumero(document.getElementById('precoPromocional').value);
+                if (precoNormal > 0 && precoFinal > 0 && precoFinal <= precoNormal) verificarAutorizacao(((precoNormal-precoFinal)/precoNormal)*100);
+            });
             }
 // Event listeners para formulários
             document.getElementById('authForm').addEventListener('submit', function(e) {
