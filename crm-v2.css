@@ -51,3 +51,166 @@
 .crm-eye:hover{background:rgba(79,70,190,.08)}
 .crm-support-btn{width:100%;margin-top:12px;min-height:50px;border:1px solid #b9e2cf;border-radius:12px;background:#eaf8f1;color:#116b48;font-weight:800;font-size:15px}
 .crm-attempt-info{text-align:center;color:#7b8496;font-size:12px;margin:8px 0 0}
+
+
+/* ===== V6.4 MOBILE LAYOUT ===== */
+
+/* Home button: small, circular, translucent, unobtrusive */
+.fs-home-fixed,
+#homeButton,
+.home-button,
+.home-btn,
+a[href="#top"].home,
+button.home-fixed {
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  max-width:48px!important;
+  border-radius:50%!important;
+  padding:0!important;
+  position:fixed!important;
+  left:14px!important;
+  right:auto!important;
+  bottom:18px!important;
+  z-index:999!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  opacity:.54!important;
+  background:rgba(22,105,232,.86)!important;
+  color:white!important;
+  box-shadow:0 5px 18px rgba(25,67,135,.22)!important;
+  backdrop-filter:blur(8px)!important;
+  -webkit-backdrop-filter:blur(8px)!important;
+  border:1px solid rgba(255,255,255,.28)!important;
+  transition:opacity .16s ease,transform .16s ease!important;
+}
+.fs-home-fixed:hover,
+#homeButton:hover,
+.home-button:hover,
+.home-btn:hover,
+a[href="#top"].home:hover,
+button.home-fixed:hover,
+.fs-home-fixed:active,
+#homeButton:active,
+.home-button:active,
+.home-btn:active,
+a[href="#top"].home:active,
+button.home-fixed:active{
+  opacity:.92!important;
+  transform:scale(1.05)!important;
+}
+
+/* Mobile historic summary: force 2x2 */
+@media(max-width:600px){
+  .stats-container,
+  .history-stats,
+  .summary-cards,
+  .dashboard-cards,
+  .calculation-stats {
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:12px!important;
+  }
+  .stats-container > *,
+  .history-stats > *,
+  .summary-cards > *,
+  .dashboard-cards > *,
+  .calculation-stats > * {
+    min-width:0!important;
+    width:auto!important;
+    margin:0!important;
+  }
+}
+
+/* Saved-calculation/result card: align header and close button */
+@media(max-width:600px){
+  .calculation-item,
+  .history-item,
+  .saved-calculation,
+  .record-card,
+  .calculo-card{
+    position:relative!important;
+    overflow:visible!important;
+  }
+
+  .calculation-header,
+  .history-item-header,
+  .saved-calculation-header,
+  .record-card-header{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    align-items:start!important;
+    gap:10px!important;
+    padding-right:0!important;
+  }
+
+  .delete-calculation,
+  .remove-calculation,
+  .delete-btn,
+  .record-delete,
+  .calculation-item .close-btn,
+  .history-item .close-btn{
+    position:static!important;
+    grid-column:2!important;
+    grid-row:1!important;
+    align-self:start!important;
+    justify-self:end!important;
+    margin:0!important;
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+    padding:0!important;
+    border-radius:50%!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+
+  /* keep status/date in a clean line instead of pushing X below */
+  .calculation-meta,
+  .history-meta,
+  .record-meta,
+  .status-date-row{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:8px!important;
+  }
+}
+
+/* CRM record cards created by new module */
+@media(max-width:600px){
+  .fscrm-card{
+    position:relative!important;
+    padding:15px!important;
+    gap:12px!important;
+  }
+  .fscrm-card-side{
+    width:100%!important;
+    min-width:0!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+  }
+  .fscrm-card-side button{
+    width:100%!important;
+  }
+}
+
+/* Keep follow-up section readable but slightly tighter on phones */
+@media(max-width:600px){
+  #fscrm-capture{
+    padding:14px!important;
+    margin:14px 0!important;
+  }
+  #fscrm-capture h2,
+  #fscrm-capture h3{
+    margin-top:8px!important;
+  }
+  #fscrm-capture .fscrm-grid{
+    gap:8px!important;
+  }
+}

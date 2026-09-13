@@ -1626,7 +1626,19 @@
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
- <link rel="stylesheet" href="./crm-v2.css?v=63">
+ <link rel="stylesheet" href="./crm-v2.css?v=64">
+
+<style>
+@media(max-width:600px){
+  .bottom-home-button,.floating-home-button,.fixed-home-btn,#btnHome,#homeBtn{
+    width:48px!important;height:48px!important;min-width:48px!important;
+    border-radius:50%!important;left:14px!important;right:auto!important;bottom:18px!important;
+    padding:0!important;opacity:.54!important;
+  }
+  .bottom-home-button:active,.floating-home-button:active,.fixed-home-btn:active,#btnHome:active,#homeBtn:active{opacity:.92!important}
+}
+</style>
+
 </head>
  <body>
   <header class="header">
@@ -4843,10 +4855,10 @@ window.FSCRMBridge = {
   }
 };
 </script>
-<script src="./crm-config-v2.js?v=63"></script>
-<script src="./crm-api-v2.js?v=63"></script>
-<script src="./crm-core-v2.js?v=63"></script>
-<script src="./crm-ui-v2.js?v=63"></script>
+<script src="./crm-config-v2.js?v=64"></script>
+<script src="./crm-api-v2.js?v=64"></script>
+<script src="./crm-core-v2.js?v=64"></script>
+<script src="./crm-ui-v2.js?v=64"></script>
 </body>
 </html>
 
