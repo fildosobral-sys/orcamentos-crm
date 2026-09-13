@@ -216,76 +216,31 @@ button.home-fixed:active{
 }
 
 
-/* ===== V6.8 — avisos sempre visíveis sobre o acompanhamento ===== */
-.toast,
-.toast-notification,
-#toast,
-#toastContainer,
-#notification,
-.notification,
-.alert-toast,
-.fscrm-toast,
-[role="alert"]{
-  position:fixed!important;
-  z-index:2147483647!important;
-}
-
-/* Quando houver dialog aberto, o aviso continua acima do backdrop e da janela */
-dialog[open] ~ .toast,
-dialog[open] ~ #toast,
-dialog[open] ~ .notification,
-body:has(dialog[open]) .toast,
-body:has(dialog[open]) #toast,
-body:has(dialog[open]) .notification,
-body:has(dialog[open]) [role="alert"]{
-  z-index:2147483647!important;
-  pointer-events:auto!important;
-}
-
-/* posição mobile: topo, sem cobrir botões inferiores */
-@media(max-width:640px){
-  .toast,
-  .toast-notification,
-  #toast,
-  #notification,
-  .notification,
-  .alert-toast,
-  .fscrm-toast,
-  [role="alert"]{
-    top:82px!important;
-    left:12px!important;
-    right:12px!important;
-    bottom:auto!important;
-    max-width:calc(100vw - 24px)!important;
-    width:auto!important;
-    margin:0!important;
-  }
-}
-
-
-/* V6.8.1 — erro dentro do próprio modal, acima do formulário */
-#fscrm-modal-error:not(:empty){
-  display:block!important;
-  position:sticky!important;
-  top:0!important;
-  z-index:20!important;
-  margin:0 0 14px!important;
-  padding:12px 14px!important;
-  border-radius:10px!important;
-  background:#fff0f0!important;
-  border:1px solid #efb8c0!important;
-  color:#9f263b!important;
-  font-weight:700!important;
-  line-height:1.45!important;
-  box-shadow:0 6px 18px rgba(130,32,52,.12)!important;
-}
-#fscrm-modal-error:empty{display:none!important}
-
-.fscrm-card-actions{display:flex;gap:7px;flex-wrap:wrap}
-.fscrm-card-actions button{flex:1;min-width:105px}
-.fscrm-delete-record{color:#9f263b!important;border-color:#e8bdc5!important;background:#fff7f8!important}
-.fscrm-delete-record:hover{background:#ffecee!important}
+/* ===== V6.5 COMPACT HISTORY ===== */
+.history-item{padding:1rem!important;margin-bottom:.8rem!important}
+.history-header{align-items:flex-start!important;margin-bottom:.55rem!important;gap:.45rem!important}
+.history-meta-row{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:.4rem!important;flex-wrap:nowrap!important;white-space:nowrap!important}
+.success-status,.history-date{padding:.38rem .68rem!important;border-radius:12px!important;font-size:.74rem!important;line-height:1.15!important;letter-spacing:.15px!important}
+.history-meta-row button{margin-left:.1rem!important;flex:0 0 28px!important}
+.history-details{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:.55rem!important;margin-bottom:.65rem!important}
+.detail-item{padding:.7rem .75rem!important;min-width:0!important}
+.detail-label{font-size:.74rem!important;margin-bottom:.2rem!important}
+.detail-value{font-size:.98rem!important;line-height:1.2!important}
+.history-actions{margin-top:.65rem!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:.5rem!important;justify-content:stretch!important}
+.history-actions .btn{min-width:0!important;width:100%!important;padding:.68rem .7rem!important;font-size:.82rem!important}
+.history-actions .btn:last-child:nth-child(3){grid-column:1/-1!important}
 @media(max-width:600px){
-  .fscrm-card-actions{display:grid;grid-template-columns:1fr auto;width:100%}
-  .fscrm-delete-record{min-width:82px!important}
+  .history-item{padding:.8rem!important}
+  .history-header{display:block!important}
+  .client-name{display:block!important;font-size:.86rem!important;line-height:1.35!important;margin-bottom:.45rem!important;padding-right:0!important}
+  .history-meta-row{width:100%!important;justify-content:flex-start!important;gap:.32rem!important;overflow-x:auto!important;scrollbar-width:none!important}
+  .history-meta-row::-webkit-scrollbar{display:none!important}
+  .success-status,.history-date{font-size:.69rem!important;padding:.34rem .5rem!important;flex:0 0 auto!important}
+  .history-meta-row button{width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;flex-basis:26px!important}
+  .history-details{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:.42rem!important}
+  .detail-item{padding:.58rem .62rem!important}
+  .detail-label{font-size:.68rem!important}
+  .detail-value{font-size:.9rem!important}
+  .history-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:.42rem!important}
+  .history-actions .btn{padding:.62rem .45rem!important;font-size:.76rem!important}
 }
