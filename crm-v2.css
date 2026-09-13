@@ -43,3 +43,11 @@
 
 /* V6.1: campos descritivos em letra de forma */
 #codigoProduto,#cliente,#nomeAprovador,#shareUserName,.fscrm input[type=text],.fscrm textarea{text-transform:uppercase}
+
+/* V6.3 — credencial, sessão persistente e suporte */
+.crm-password-wrap{position:relative}
+.crm-password-wrap .input-field{padding-right:54px}
+.crm-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;font-size:19px;display:grid;place-items:center;border-radius:10px}
+.crm-eye:hover{background:rgba(79,70,190,.08)}
+.crm-support-btn{width:100%;margin-top:12px;min-height:50px;border:1px solid #b9e2cf;border-radius:12px;background:#eaf8f1;color:#116b48;font-weight:800;font-size:15px}
+.crm-attempt-info{text-align:center;color:#7b8496;font-size:12px;margin:8px 0 0}
