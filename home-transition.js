@@ -147,3 +147,124 @@
     subtree: true
   });
 })();
+
+
+/* ===== Sincronização de identidade do vendedor =====
+   Corrige a diferença entre:
+   - let vendedorAtual (variável lexical do HTML)
+   - window.vendedorAtual (usada pelo CRM)
+*/
+(function(){
+  'use strict';
+
+  function nomeAtual(){
+    return String(
+      localStorage.getItem('fs_nome') ||
+      localStorage.getItem('vendedorLogado') ||
+      localStorage.getItem('nomeVendedorLogado') ||
+      ''
+    ).trim();
+  }
+
+  function sincronizarVendedor(aplicarFiltro){
+    var nome = nomeAtual();
+    if(!nome) return false;
+
+    try{
+      if(typeof vendedorAtual !== 'undefined'){
+        vendedorAtual = nome;
+      }
+    }catch(_e){}
+
+    try{
+      window.vendedorAtual = nome;
+    }catch(_e){}
+
+    try{
+      localStorage.setItem('vendedorLogado', nome);
+      localStorage.setItem('nomeVendedorLogado', nome);
+    }catch(_e){}
+
+    if(aplicarFiltro){
+      try{
+        if(typeof aplicarFiltroData === 'function'){
+          aplicarFiltroData();
+        }
+      }catch(_e){}
+    }
+
+    return true;
+  }
+
+  function instalarHookEntrada(){
+    try{
+      if(typeof window.entrarNaCalculadora !== 'function') return;
+      if(window.entrarNaCalculadora.__fsSellerSync) return;
+
+      var original = window.entrarNaCalculadora;
+
+      function entradaSincronizada(nomeUsuario){
+        var nome = String(nomeUsuario || nomeAtual() || '').trim();
+
+        if(nome){
+          try{
+            if(typeof vendedorAtual !== 'undefined'){
+              vendedorAtual = nome;
+            }
+          }catch(_e){}
+
+          try{
+            window.vendedorAtual = nome;
+            localStorage.setItem('vendedorLogado', nome);
+            localStorage.setItem('nomeVendedorLogado', nome);
+          }catch(_e){}
+        }
+
+        var resultado = original.apply(this, arguments);
+
+        setTimeout(function(){
+          sincronizarVendedor(true);
+        }, 80);
+
+        return resultado;
+      }
+
+      entradaSincronizada.__fsSellerSync = true;
+      window.entrarNaCalculadora = entradaSincronizada;
+    }catch(_e){}
+  }
+
+  function iniciarSync(){
+    instalarHookEntrada();
+    sincronizarVendedor(false);
+
+    setTimeout(function(){
+      instalarHookEntrada();
+      sincronizarVendedor(true);
+    }, 120);
+
+    setTimeout(function(){
+      sincronizarVendedor(true);
+    }, 500);
+
+    setTimeout(function(){
+      sincronizarVendedor(true);
+    }, 1200);
+  }
+
+  window.addEventListener('storage', function(ev){
+    if(['fs_nome','vendedorLogado','nomeVendedorLogado'].includes(ev.key)){
+      sincronizarVendedor(true);
+    }
+  });
+
+  window.addEventListener('focus', function(){
+    sincronizarVendedor(true);
+  });
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', iniciarSync, {once:true});
+  }else{
+    iniciarSync();
+  }
+})();
