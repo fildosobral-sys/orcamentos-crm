@@ -292,7 +292,9 @@
       localStorage.setItem('calculosDesconto',JSON.stringify(rows.filter(x=>x.__backendId!==id)));
     }catch(_e){}
     window.dispatchEvent(new CustomEvent('fscrm:records',{detail:{records:serverRows}}));
-    render(); notify('Orçamento excluído.');
+    render();
+    if(remote?.enabled)await refreshData();
+    notify('Orçamento excluído de todo o sistema.');
   }
 
   async function viewEvidence(fileId){
@@ -362,7 +364,10 @@
       }
     }catch(err){fail(err);}finally{b.disabled=false;}
   }
-  window.FSCRM={capture:captureSafe,has:id=>!!db?.get(id),setLegacyStatus,
+  window.FSCRM={capture:captureSafe,has:id=>!!db?.get(id),setLegacyStatus,remove:async id=>{
+      const r=db?.get(id);if(!r)throw Error('Registro não encontrado.');
+      return deleteRecord(id,r.revision);
+    },
     async saved(row){try{await ingest(row);render();}catch(e){fail(Error('Cálculo salvo no histórico. Não foi possível atualizar o acompanhamento: '+e.message));}},
     async refresh(){try{await refreshData();}catch(e){fail(e);}}
   };

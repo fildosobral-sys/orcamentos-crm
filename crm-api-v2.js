@@ -130,17 +130,7 @@ async function verifyStandaloneAccess(){
   }catch(err){
     // Credencial ausente/realmente inválida: pede login. Falha transitória de rede não apaga a sessão salva.
     const authFailure=err.code==='LOGIN_REQUIRED'||err.code==='UNAUTHORIZED'||/credencial|revogad|não autorizad|usuário não identificado/i.test(String(err.message||''));
-    if(authFailure){
-      const cachedName=String(localStorage.getItem('fs_nome')||localStorage.getItem('vendedorLogado')||'').trim();
-      const hasAnyCred=!!(localStorage.getItem('fs_access_token')||localStorage.getItem('fs_filial')||localStorage.getItem('fs_whatsapp'));
-      if(cachedName && err.code==='LOGIN_REQUIRED' && hasAnyCred){
-        // Mantém a sessão visual durante uma inconsistência transitória de leitura/localStorage.
-        if(typeof window.showToast==='function')window.showToast('Reconectando ao CRM…','warning');
-      }else{
-        clearCredentials();
-        buildLoginCard(err.code==='LOGIN_REQUIRED'?'Informe suas credenciais para iniciar esta sessão.':(err.message||'Não foi possível validar seu acesso.'));
-      }
-    }
+    if(authFailure){clearCredentials();buildLoginCard(err.code==='LOGIN_REQUIRED'?'':(err.message||'Não foi possível validar seu acesso.'));}
     else{
       const cachedName=String(localStorage.getItem('fs_nome')||'').trim();
       if(!cachedName)buildLoginCard('Não foi possível confirmar a conexão agora. Tente novamente.');

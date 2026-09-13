@@ -2002,6 +2002,11 @@ let currentData = [];
             return [...map.values()];
         }
 
+        function diaBrasilia(valor){
+            try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(valor));}
+            catch(_e){return '';}
+        }
+
         window.addEventListener('fscrm:records',function(ev){
             const records=ev?.detail?.records||[];
             crmHistoryShadow=records.map(projetarRegistroCRMParaHistorico);
@@ -2059,7 +2064,7 @@ let currentData = [];
                 currentData = combinarHistoricoComCRM(mergedBase);
 
                 try {
-                    if(incoming.length) localStorage.setItem('calculosDesconto', JSON.stringify(incoming));
+                    localStorage.setItem('calculosDesconto', JSON.stringify(incoming));
                 } catch (error) {
                     console.error("❌ Erro ao sincronizar localStorage:", error);
                 }
@@ -2509,16 +2514,15 @@ let currentData = [];
                 try {
                     const dadosLocais = JSON.parse(localStorage.getItem('calculosDesconto') || '[]');
                     if (dadosLocais.length > 0) {
-                        currentData = [...dadosLocais];
+                        currentData = combinarHistoricoComCRM(dadosLocais);
                     }
                 } catch (error) {
                     console.error("❌ Erro ao recarregar dados:", error);
                 }
             }
             
-            const dadosVendedor = currentData.filter(item => {
-                return item.vendedor === vendedorAtual;
-            });
+            const nomeAtual=String(vendedorAtual||'').trim().toUpperCase();
+            const dadosVendedor = currentData.filter(item => String(item.vendedor||'').trim().toUpperCase()===nomeAtual);
             
             const filtroDataElement = document.getElementById('filtroData');
             const dataFiltro = filtroDataElement ? filtroDataElement.value : '';
@@ -2528,7 +2532,7 @@ let currentData = [];
             if (dataFiltro) {
                 dadosFiltrados = dadosVendedor.filter(item => {
                     try {
-                        const dataItem = new Date(item.data_calculo).toISOString().split('T')[0];
+                        const dataItem = diaBrasilia(item.data_calculo);
                         return dataItem === dataFiltro;
                     } catch (error) {
                         return false;
@@ -2915,8 +2919,7 @@ let currentData = [];
         // Função para excluir registro
         async function excluirRegistro(backendId, nomeCliente, codigoProduto) {
             if (window.FSCRM && window.FSCRM.has(backendId)) {
-                showToast('Este orçamento tem acompanhamento. Atualize o status no painel para preservar o histórico comercial.', 'error');
-                return;
+                return window.FSCRM.remove(backendId);
             }
             console.log("🗑️ Solicitando exclusão do registro:", backendId);
             
@@ -4924,10 +4927,10 @@ window.FSCRMBridge = {
   }
 };
 </script>
-<script src="./crm-config-v2.js?v=65"></script>
-<script src="./crm-api-v2.js?v=65"></script>
-<script src="./crm-core-v2.js?v=65"></script>
-<script src="./crm-ui-v2.js?v=69"></script>
+<script src="./crm-config-v2.js?v=70"></script>
+<script src="./crm-api-v2.js?v=70"></script>
+<script src="./crm-core-v2.js?v=70"></script>
+<script src="./crm-ui-v2.js?v=70"></script>
 </body>
 </html>
 
