@@ -194,7 +194,7 @@
           ${field('Concorrente (opcional)','fscrm-edit-lossCompetitor',r.lossCompetitor||'')}
           ${field('Valor da concorrência (R$)','fscrm-edit-lossCompetitorPrice',r.lossCompetitorPrice||'','number','min="0" step="0.01"')}
         </div>
-        <label>Observação da perda<textarea id="fscrm-edit-lossNote" rows="3" maxlength="2000">${esc(r.lossNote||'')}</textarea></label>
+        <label>Observação da perda (opcional)<textarea id="fscrm-edit-lossNote" rows="3" maxlength="2000">${esc(r.lossNote||'')}</textarea></label>
         <label>Evidência: foto, print ou PDF
           <input id="fscrm-evidence-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf">
         </label>
@@ -210,6 +210,8 @@
       `<button type="button" class="fscrm-primary" data-action="save">Salvar alterações</button><button type="button" data-action="message">Preparar contato</button><button type="button" class="fscrm-danger" data-action="stop">Não contatar este cliente</button>`);
   }
   async function editSave() {
+    const modalError=$('fscrm-modal-error');
+    if(modalError){modalError.textContent='';delete modalError.dataset.error;}
     const patch = {};
     ['status','reason','next','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer','lossNote','lossCompetitor'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
     ['note','issue','issueOwner','relation','lossNote','lossCompetitor'].forEach(k=>{ if(patch[k]) patch[k]=patch[k].toUpperCase(); });
@@ -219,12 +221,28 @@
     let r = C.edit(draft,patch,actor()); await save(r,revision);
     const file=$('fscrm-evidence-file')?.files?.[0];
     if(file){
-      if(!remote?.enabled)throw Error('Anexos exigem o banco central conectado.');
-      const prepared=await prepareEvidence(file);
-      r=cacheRecord(await remote.call('addEvidence',{id:r.id,expectedRevision:r.revision,file:prepared}));
-      notify('Acompanhamento e evidência salvos.');
-    } else notify('Acompanhamento atualizado.');
-    modal.close();
+      try{
+        if(!remote?.enabled)throw Error('Anexos exigem o banco central conectado.');
+        const prepared=await prepareEvidence(file);
+        r=cacheRecord(await remote.call('addEvidence',{id:r.id,expectedRevision:r.revision,file:prepared}));
+        notify('Registro salvo com a evidência.');
+        modal.close();
+      }catch(err){
+        // O registro principal já foi salvo. A falha do anexo NÃO desfaz a perda/negociação.
+        const msg='Registro salvo. A evidência não foi anexada: '+(err.message||'falha no envio.');
+        notify(msg, true);
+        const modalError=$('fscrm-modal-error');
+        if(modalError){
+          modalError.textContent=msg;
+          modalError.dataset.error='true';
+          modalError.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+        // Mantém a janela aberta para tentar o anexo novamente ou simplesmente fechar.
+      }
+    } else {
+      notify('Registro salvo.');
+      modal.close();
+    }
   }
   async function messageOpen() {
     const r=db.get(draft.id); if(r.revision!==revision) throw Error('O orçamento mudou. Feche e abra novamente.');
