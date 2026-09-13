@@ -21,21 +21,42 @@ function renderBars(target,items,total){
  const max=Math.max(1,...items.map(x=>x[1]));
  box.innerHTML=items.length?items.map(([name,value],i)=>'<div class="loss-rank-row"><span class="loss-rank-pos">'+(i+1)+'</span><div class="loss-rank-main"><div><strong>'+esc(name)+'</strong><span>'+value+(total?' · '+(100*value/total).toFixed(1).replace('.',',')+'%':'')+'</span></div><div class="loss-rank-bar"><i style="width:'+(100*value/max)+'%"></i></div></div></div>').join(''):'<p>Nenhum dado de perda no período.</p>';
 }
+
+function renderLossDonut(items,total){
+ const box=$('loss-donut'); if(!box)return;
+ if(!items.length||!total){box.innerHTML='<div class="donut-empty"><span>0</span><small>Sem perdas no período</small></div>';return;}
+ const top=items.slice(0,5),circ=2*Math.PI*44;
+ let offset=0,parts='',legend='';
+ top.forEach(([name,value],i)=>{
+   const frac=value/total,dash=frac*circ;
+   parts+='<circle class="donut-seg seg-'+(i+1)+'" cx="60" cy="60" r="44" stroke-dasharray="'+dash+' '+(circ-dash)+'" stroke-dashoffset="'+(-offset)+'"></circle>';
+   offset+=dash;
+   legend+='<div class="donut-legend-row"><span><i class="legend-dot seg-'+(i+1)+'"></i>'+esc(name)+'</span><strong>'+value+' <small>'+Math.round(frac*100)+'%</small></strong></div>';
+ });
+ const other=items.slice(5).reduce((s,x)=>s+x[1],0);
+ if(other)legend+='<div class="donut-legend-row"><span><i class="legend-dot seg-other"></i>Outros</span><strong>'+other+' <small>'+Math.round(other/total*100)+'%</small></strong></div>';
+ box.innerHTML='<div class="donut-wrap"><div class="donut-chart"><svg viewBox="0 0 120 120" role="img" aria-label="Distribuição das perdas"><circle class="donut-bg" cx="60" cy="60" r="44"></circle>'+parts+'</svg><div class="donut-center"><strong>'+total+'</strong><span>perdas</span></div></div><div class="donut-legend">'+legend+'</div></div>';
+}
+
 function renderLossIntel(records,p){
  const lost=lossRecords(records,p),potential=lost.reduce((s,r)=>s+Number(r.amount||0),0);
  const compRows=lost.filter(r=>r.lossCompetitorPrice>0),diff=compRows.reduce((s,r)=>s+Math.max(0,Number(r.amount||0)-Number(r.lossCompetitorPrice||0)),0);
  $('loss-kpis').innerHTML=[
-  ['Perdas',lost.length],['Valor potencial',money(potential)],['Com prova',lost.filter(r=>Array.isArray(r.evidence)&&r.evidence.length).length],['Diferença p/ concorrência',compRows.length?money(diff/compRows.length):'—']
- ].map(([k,v])=>'<div><small>'+k+'</small><strong>'+v+'</strong></div>').join('');
+  ['Perdas registradas',lost.length,'Casos não convertidos'],
+  ['Valor potencial',money(potential),'Volume em negociação perdido'],
+  ['Com evidência',lost.filter(r=>Array.isArray(r.evidence)&&r.evidence.length).length,'Foto, print ou PDF'],
+  ['Gap médio concorrência',compRows.length?money(diff/compRows.length):'—','Diferença média de preço']
+ ].map(([k,v,s],i)=>'<div class="loss-kpi kpi-'+(i+1)+'"><span class="kpi-index">0'+(i+1)+'</span><small>'+k+'</small><strong>'+v+'</strong><em>'+s+'</em></div>').join('');
  const reasons=rankBy(lost,r=>r.reason==='Preço'?'Preço da concorrência':r.reason);
  renderBars('loss-ranking',reasons,lost.length);
+ renderLossDonut(reasons,lost.length);
  const competitors=rankBy(lost.filter(r=>r.lossCompetitor),r=>r.lossCompetitor);
  renderBars('competitor-ranking',competitors,0);
  const days={};lost.forEach(r=>{const d=B.day(r.createdAt);days[d]=(days[d]||0)+1;});
  const entries=Object.entries(days).sort((a,b)=>a[0].localeCompare(b[0]));
  const max=Math.max(1,...entries.map(x=>x[1]));
  $('loss-trend').innerHTML=entries.length?entries.map(([d,v])=>'<div class="loss-trend-col" title="'+date(d)+': '+v+'"><i style="height:'+(22+78*v/max)+'%"></i><span>'+date(d).slice(0,5)+'</span><strong>'+v+'</strong></div>').join(''):'<p>Nenhuma perda registrada no período.</p>';
- $('loss-case-count').textContent=lost.length+' caso(s)';
+ $('loss-case-count').textContent=lost.length+' caso'+(lost.length===1?'':'s');
  $('loss-cases').innerHTML=lost.length?lost.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).map(r=>'<article class="loss-case"><div><span class="loss-badge">'+esc(r.reason==='Preço'?'Preço da concorrência':r.reason||'Não informado')+'</span><h4>'+esc(r.client)+'</h4><p>'+esc(r.product)+' · '+esc(r.seller)+'</p><small>'+date(r.createdAt)+' · Proposta '+money(r.amount)+(r.lossCompetitorPrice?' · Concorrência '+money(r.lossCompetitorPrice):'')+'</small>'+(r.lossCompetitor?'<p><strong>Concorrente:</strong> '+esc(r.lossCompetitor)+'</p>':'')+(r.lossNote?'<p><strong>Observação:</strong> '+esc(r.lossNote)+'</p>':'')+'</div><div class="loss-case-actions">'+((r.evidence||[]).length?'<button data-loss-evidence="'+esc(r.id)+'">Ver '+r.evidence.length+' anexo(s)</button>':'<span>Sem anexo</span>')+'</div></article>').join(''):'<p>Nenhuma perda registrada no período.</p>';
 }
 async function showLossEvidence(recordId){

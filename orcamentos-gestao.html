@@ -3,12 +3,22 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestão de Orçamentos | FS Soluções</title>
-<link rel="stylesheet" href="./crm-gestao-v2.css?v=4">
+<link rel="stylesheet" href="./crm-gestao-v2.css?v=6">
 </head>
 <body>
 <header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
 <main>
-<section class="hero"><p class="eyebrow">ACOMPANHAMENTO COMERCIAL</p><h1>Gestão da equipe</h1><p>Uma visão das pesquisas, dos retornos e da conversão de cada vendedor.</p><span id="identity"></span></section>
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">ACOMPANHAMENTO COMERCIAL</p>
+    <h1>Gestão da equipe</h1>
+    <p>Indicadores, conversão, perdas, concorrência e desempenho comercial em uma única visão.</p>
+    <div class="hero-meta"><span id="identity"></span><span class="live-chip"><i></i> BI atualizado</span></div>
+  </div>
+  <div class="hero-mark" aria-hidden="true">
+    <span>FS</span><small>BI</small>
+  </div>
+</section>
 <div id="state" role="status" aria-live="polite">Verificando sua autorização…</div>
 <div id="content" hidden>
 <section id="access-admin" class="access-admin" hidden>
@@ -30,6 +40,7 @@
   <details class="access-list-wrap" open><summary>Usuários cadastrados</summary><div id="access-user-list"></div></details>
 </section>
 
+<div class="section-kicker"><span>Visão executiva</span><strong>Escolha o período e refine a análise</strong></div>
 <section class="filters" aria-label="Filtros de acompanhamento">
 <div class="periods" role="group" aria-label="Período"><button data-period="dia">Dia</button><button data-period="semana">Semana</button><button data-period="quinzena">Quinzena</button><button data-period="mes" aria-pressed="true">Mês</button></div>
 <div class="filter-fields"><label>Data de referência<input type="date" id="anchor"></label><label>Vendedor<select id="seller"><option value="">Toda a equipe</option></select></label><label>Ordenar por<select id="sort"><option value="name">Nome</option><option value="total">Mais orçamentos</option><option value="contacts">Mais contatos</option><option value="conversion">Maior conversão</option><option value="late">Mais retornos atrasados</option></select></label></div>
@@ -43,11 +54,12 @@
     <button id="print-loss-report" type="button">Imprimir relatório</button>
   </div>
   <div id="loss-kpis" class="loss-kpis"></div>
-  <div class="loss-grid-2">
-    <section class="loss-panel"><h3>Ranking dos motivos</h3><div id="loss-ranking"></div></section>
-    <section class="loss-panel"><h3>Concorrentes mais citados</h3><div id="competitor-ranking"></div></section>
+  <div class="loss-grid-3">
+    <section class="loss-panel"><div class="panel-title"><span class="panel-icon">01</span><div><small>CAUSA</small><h3>Ranking dos motivos</h3></div></div><div id="loss-ranking"></div></section>
+    <section class="loss-panel loss-donut-panel"><div class="panel-title"><span class="panel-icon">02</span><div><small>PARTICIPAÇÃO</small><h3>Distribuição das perdas</h3></div></div><div id="loss-donut"></div></section>
+    <section class="loss-panel"><div class="panel-title"><span class="panel-icon">03</span><div><small>MERCADO</small><h3>Concorrentes mais citados</h3></div></div><div id="competitor-ranking"></div></section>
   </div>
-  <section class="loss-panel"><h3>Evolução das perdas no período</h3><div id="loss-trend" class="loss-trend"></div></section>
+  <section class="loss-panel loss-trend-panel"><div class="panel-title"><span class="panel-icon">04</span><div><small>TENDÊNCIA</small><h3>Evolução das perdas no período</h3></div></div><div id="loss-trend" class="loss-trend"></div></section>
   <section class="loss-panel"><div class="loss-case-head"><h3>Casos de perda</h3><span id="loss-case-count"></span></div><div id="loss-cases"></div></section>
 </section>
 
@@ -60,5 +72,5 @@
 </div>
 </main>
 <dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><h2 id="detail-title"></h2><button id="close-detail" aria-label="Fechar">×</button></div><div id="detail-body"></div></dialog>
-<script src="./crm-config-v2.js?v=2"></script><script src="./crm-api-v2.js?v=5"></script><script src="./crm-bi-v2.js?v=5"></script><script src="./crm-gestao-v2.js?v=5"></script>
+<script src="./crm-config-v2.js?v=6"></script><script src="./crm-api-v2.js?v=6"></script><script src="./crm-bi-v2.js?v=6"></script><script src="./crm-gestao-v2.js?v=6"></script>
 </body></html>
