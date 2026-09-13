@@ -7,7 +7,7 @@
   'use strict';
   const PREFIX = 'fs_crm_v1:record:';
   const STATUS = { negociacao: 'Em negociação', aguardando: 'Aguardando resposta', agendado: 'Retorno agendado', ganha: 'Venda concluída', perdida: 'Não concluído' };
-  const REASONS = ['Preço', 'Condição de pagamento', 'Falta de estoque', 'Prazo de entrega', 'Comprou em outro lugar', 'Adiou a compra', 'Desistiu', 'Sem resposta', 'Outro'];
+  const REASONS = ['Preço da concorrência', 'Condição de pagamento', 'Falta de estoque', 'Prazo de entrega', 'Cliente sem crédito', 'Comprou em outro lugar', 'Preferiu outra marca/modelo', 'Adiou a compra', 'Desistiu', 'Sem resposta', 'Outro', 'Preço'];
   const norm = s => String(s || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ');
   const phone = s => { const n = String(s || '').replace(/\D/g, ''); return n.length === 10 || n.length === 11 ? '55' + n : n; };
   const validPhone = s => /^55\d{10,11}$/.test(phone(s));
@@ -28,7 +28,7 @@
     const id = String(legacy.__backendId);
     const date = Number.isFinite(Date.parse(legacy.data_calculo)) ? legacy.data_calculo : now.toISOString();
     const r = { schema: 1, id, revision: 1, branch: actor.branch, seller, client: String(legacy.cliente), phone: String(legacy.whatsapp || ''), product: String(legacy.codigo_produto), amount: Number(legacy.preco_promocional) || 0,
-      createdAt: date, updatedAt: now.toISOString(), channel: meta.channel, buyer: meta.buyer, consent: meta.consent === true, status: legacy.venda_bem_sucedida === true ? 'ganha' : 'negociacao', reason: '', next: meta.next || plus(day(now), 2), note: String(legacy.anotacoes || ''), delivered: '', post: 'pendente', issue: '', issueOwner: '', issueDue: '', relation: '', history: [] };
+      createdAt: date, updatedAt: now.toISOString(), channel: meta.channel, buyer: meta.buyer, consent: meta.consent === true, status: legacy.venda_bem_sucedida === true ? 'ganha' : 'negociacao', reason: '', lossNote: '', lossCompetitor: '', lossCompetitorPrice: 0, evidence: [], next: meta.next || plus(day(now), 2), note: String(legacy.anotacoes || ''), delivered: '', post: 'pendente', issue: '', issueOwner: '', issueDue: '', relation: '', history: [] };
     if (!validDate(r.next)) throw Error('Informe uma data válida para o retorno.');
     if (closed(r)) r.next = '';
     event(r, actor, 'cadastro', 'Pesquisa de cliente incluída no acompanhamento.', now);
@@ -37,7 +37,7 @@
   function edit(record, patch, actor, now = new Date()) {
     assertAccess(record, actor);
     const r = JSON.parse(JSON.stringify(record));
-    const allowed = ['status', 'reason', 'next', 'note', 'phone', 'consent', 'delivered', 'post', 'issue', 'issueOwner', 'issueDue', 'relation', 'channel', 'buyer'];
+    const allowed = ['status', 'reason', 'lossNote', 'lossCompetitor', 'lossCompetitorPrice', 'next', 'note', 'phone', 'consent', 'delivered', 'post', 'issue', 'issueOwner', 'issueDue', 'relation', 'channel', 'buyer'];
     allowed.forEach(k => { if (Object.prototype.hasOwnProperty.call(patch, k)) r[k] = patch[k]; });
     if (!Object.prototype.hasOwnProperty.call(STATUS, r.status)) throw Error('Status inválido.');
     if (!['presencial', 'online'].includes(r.channel) || !['proprio', 'terceiro'].includes(r.buyer)) throw Error('Canal ou destinatário inválido.');
@@ -45,10 +45,14 @@
     if (r.phone && !validPhone(r.phone)) throw Error('Informe um WhatsApp brasileiro com DDD válido.');
     for (const k of ['next', 'delivered', 'issueDue', 'relation']) if (r[k] && !validDate(r[k])) throw Error('Data inválida.');
     if (r.status === 'perdida' && !REASONS.includes(r.reason)) throw Error('Selecione o motivo de não fechamento.');
-    if (r.status === 'perdida' && r.reason === 'Outro' && !String(r.note).trim()) throw Error('Descreva o motivo nas observações.');
+    if (r.status === 'perdida' && r.reason === 'Outro' && !String(r.lossNote || r.note).trim()) throw Error('Descreva o motivo da perda.');
+    if (r.status === 'perdida' && String(r.lossNote || '').length > 2000) throw Error('A observação da perda é muito longa.');
+    if (r.status === 'perdida' && String(r.lossCompetitor || '').length > 120) throw Error('O nome do concorrente é muito longo.');
+    r.lossCompetitorPrice = Number(r.lossCompetitorPrice || 0);
+    if (!Number.isFinite(r.lossCompetitorPrice) || r.lossCompetitorPrice < 0) throw Error('Valor da concorrência inválido.');
     if (!closed(r) && !r.next) throw Error('Defina a próxima data de retorno.');
     if (closed(r)) r.next = '';
-    if (r.status !== 'perdida') r.reason = '';
+    if (r.status !== 'perdida') { r.reason = ''; r.lossNote = ''; r.lossCompetitor = ''; r.lossCompetitorPrice = 0; }
     if (r.delivered && r.delivered > day(now)) throw Error('Confirme apenas entregas já realizadas.');
     if (!['pendente', 'bem', 'problema', 'sem_resposta', 'resolvido'].includes(r.post)) throw Error('Resultado de pós-venda inválido.');
     if (r.status !== 'ganha') {

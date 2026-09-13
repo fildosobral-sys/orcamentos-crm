@@ -8,6 +8,24 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
   const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const date = v => v ? new Date(v.length === 10 ? v + 'T12:00:00' : v).toLocaleDateString('pt-BR') : 'Não definido';
+
+  async function prepareEvidence(file){
+    if(!file)throw Error('Selecione uma imagem ou PDF.');
+    if(file.type==='application/pdf'){
+      if(file.size>300000)throw Error('PDF maior que 300 KB. Reduza o arquivo antes de anexar.');
+      return {name:file.name,mime:file.type,base64:await fileToBase64(file)};
+    }
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Use JPG, PNG, WEBP ou PDF.');
+    const img=await new Promise((resolve,reject)=>{const u=URL.createObjectURL(file),i=new Image();i.onload=()=>{URL.revokeObjectURL(u);resolve(i)};i.onerror=()=>{URL.revokeObjectURL(u);reject(Error('Não foi possível ler a imagem.'))};i.src=u;});
+    const max=1280,scale=Math.min(1,max/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);
+    let quality=.78,data=canvas.toDataURL('image/jpeg',quality);
+    while(data.length>430000&&quality>.42){quality-=.08;data=canvas.toDataURL('image/jpeg',quality);}
+    if(data.length>430000)throw Error('A imagem continua grande. Recorte ou reduza antes de anexar.');
+    return {name:file.name.replace(/\.[^.]+$/,'.jpg'),mime:'image/jpeg',base64:data.split(',')[1]};
+  }
+  function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=()=>reject(Error('Falha ao ler o arquivo.'));r.readAsDataURL(file);});}
+
   const actor = () => remote?.session ? {...remote.session.actor,canManage:false} : ({name:localStorage.getItem('fs_nome')||'',branch:localStorage.getItem('fs_filial')||'',role:localStorage.getItem('fs_cargo')||'',canManage:false});
   function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;return r;}
   async function refreshData(){
@@ -55,7 +73,7 @@
   function captureSafe() { try { return capture(); } catch(e) { fail(e); return false; } }
   async function save(r, oldRevision, command) {
     if(remote?.enabled){
-      const keys=['status','reason','next','note','phone','consent','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer'];
+      const keys=['status','reason','lossNote','lossCompetitor','lossCompetitorPrice','next','note','phone','consent','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer'];
       const patch={};keys.forEach(k=>patch[k]=r[k]);
       r=cacheRecord(await remote.call(command?.action||'update',{id:r.id,expectedRevision:oldRevision,requestId:crypto.randomUUID(),patch,...(command?.data||{})}));
     }else db.put(r,oldRevision);
@@ -154,12 +172,26 @@
     const r = draft; revision=r.revision;
     show('Acompanhar negociação', `<p><strong>${esc(r.client)}</strong> · ${esc(r.product)}<br>${esc(r.seller)} · ${money(r.amount)}</p><div class="fscrm-grid">
       ${select('Status','fscrm-edit-status',Object.entries(C.STATUS),r.status)}
-      ${select('Motivo de não fechamento','fscrm-edit-reason',[['','Selecione'],...C.REASONS.map(x=>[x,x])],r.reason)}
+      ${select('Motivo da perda','fscrm-edit-reason',[['','Selecione'],...C.REASONS.filter(x=>x!=='Preço').map(x=>[x,x])],r.reason==='Preço'?'Preço da concorrência':r.reason)}
       ${field('Próximo retorno','fscrm-edit-next',r.next,'date')}${field('WhatsApp com DDD','fscrm-edit-phone',r.phone,'tel')}
       ${select('Atendimento','fscrm-edit-channel',[['presencial','Presencial'],['online','Online']],r.channel)}
       ${select('Compra para','fscrm-edit-buyer',[['proprio','O próprio cliente'],['terceiro','Terceiro']],r.buyer)}
       </div><label class="fscrm-check"><input type="checkbox" id="fscrm-edit-consent" ${r.consent?'checked':''}> Cliente autoriza contato pelo WhatsApp.</label>
-      <label>Observações<textarea id="fscrm-edit-note" rows="3" maxlength="2000">${esc(r.note)}</textarea></label>
+      <label>Observações gerais<textarea id="fscrm-edit-note" rows="3" maxlength="2000">${esc(r.note)}</textarea></label>
+      <section id="fscrm-loss-box" class="fscrm-loss-box">
+        <h3>Registro da perda / negativa</h3>
+        <p>Preencha quando o cliente não fechar a compra. Esses dados alimentam os rankings e relatórios da gestão.</p>
+        <div class="fscrm-grid">
+          ${field('Concorrente (opcional)','fscrm-edit-lossCompetitor',r.lossCompetitor||'')}
+          ${field('Valor da concorrência (R$)','fscrm-edit-lossCompetitorPrice',r.lossCompetitorPrice||'','number','min="0" step="0.01"')}
+        </div>
+        <label>Observação da perda<textarea id="fscrm-edit-lossNote" rows="3" maxlength="2000">${esc(r.lossNote||'')}</textarea></label>
+        <label>Evidência: foto, print ou PDF
+          <input id="fscrm-evidence-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf">
+        </label>
+        <p class="fscrm-hint">A imagem é comprimida antes do envio. Limite: 5 anexos por negociação.</p>
+        <div id="fscrm-evidence-list" class="fscrm-evidence-list">${(Array.isArray(r.evidence)?r.evidence:[]).map(x=>`<button type="button" data-action="view-evidence" data-file-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')||'<span>Nenhum anexo.</span>'}</div>
+      </section>
       <details ${r.status==='ganha'?'open':''}><summary>Entrega e pós-venda</summary><p>O lembrete aparece três dias após a entrega ou retirada confirmada.</p><div class="fscrm-grid">
       ${field('Entrega / retirada confirmada','fscrm-edit-delivered',r.delivered,'date',`max="${C.day()}"`)}
       ${select('Resultado do pós-venda','fscrm-edit-post',[['pendente','Aguardando contato'],['bem','Está tudo certo'],['sem_resposta','Aguardando resposta'],['problema','Precisa de atendimento'],['resolvido','Problema resolvido']],r.post)}
@@ -170,10 +202,19 @@
   }
   async function editSave() {
     const patch = {};
-    ['status','reason','next','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
+    ['status','reason','next','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer','lossNote','lossCompetitor'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
+    patch.lossCompetitorPrice=Number($('fscrm-edit-lossCompetitorPrice').value||0);
     patch.consent=$('fscrm-edit-consent').checked;
     if (!draft.consent && patch.consent && draft.history.some(h=>h.type==='nao_contatar')) throw Error('Cliente com pedido de interrupção. A reautorização deve ser documentada antes de retomar; mantenha sem contato nesta versão.');
-    const r = C.edit(draft,patch,actor()); await save(r,revision); modal.close(); notify('Acompanhamento atualizado.');
+    let r = C.edit(draft,patch,actor()); await save(r,revision);
+    const file=$('fscrm-evidence-file')?.files?.[0];
+    if(file){
+      if(!remote?.enabled)throw Error('Anexos exigem o banco central conectado.');
+      const prepared=await prepareEvidence(file);
+      r=cacheRecord(await remote.call('addEvidence',{id:r.id,expectedRevision:r.revision,file:prepared}));
+      notify('Acompanhamento e evidência salvos.');
+    } else notify('Acompanhamento atualizado.');
+    modal.close();
   }
   async function messageOpen() {
     const r=db.get(draft.id); if(r.revision!==revision) throw Error('O orçamento mudou. Feche e abra novamente.');
@@ -202,6 +243,15 @@
     if(next.revision===r.revision) next.revision++;
     next.updatedAt=new Date().toISOString(); await save(next,r.revision,{action:'stop'});modal.close();notify('Pedido de interrupção registrado.');
   }
+
+  async function viewEvidence(fileId){
+    if(!remote?.enabled)throw Error('Visualização de anexo disponível apenas no banco central.');
+    const item=await remote.call('attachment',{id:draft.id,fileId});
+    const src='data:'+item.mime+';base64,'+item.base64;
+    if(item.mime==='application/pdf'){const w=window.open();w.document.write('<iframe style="border:0;width:100%;height:100vh" src="'+src+'"></iframe>');return;}
+    show('Evidência comercial', `<p>${esc(item.name)}</p><img class="fscrm-evidence-preview" src="${src}" alt="Evidência comercial">`, '');
+  }
+
   function enroll(id) {
     const r=source().find(x=>x.__backendId===id); if(!r || (!C.leader(actor())&&C.norm(r.vendedor)!==C.norm(actor().name))) throw Error('Registro não disponível.');
     draft=r;
@@ -250,6 +300,7 @@
           window.open('https://wa.me/'+C.phone(r.phone)+'?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');break;
         }
         case 'copy':await navigator.clipboard.writeText($('fscrm-message').value);$('fscrm-modal-error').textContent='Mensagem copiada. O contato ainda não foi registrado.';break;
+        case 'view-evidence':await viewEvidence(b.dataset.fileId);break;
         case 'enroll':enroll(b.dataset.id);break;
         case 'enroll-confirm':{
           const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:$('fscrm-enroll-next').value,consent:$('fscrm-enroll-consent').checked},actor());if(remote?.enabled)cacheRecord(await remote.call('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:r.consent},imported:true}));else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');break;

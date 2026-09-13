@@ -8,6 +8,72 @@ const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'B
 const pct=v=>v===null?'—':v.toFixed(1).replace('.',',')+'%';
 let data=null,kind='mes',summary=null,loading=false,lastFocus=null;
 let lastAccess=null;
+
+function lossRecords(records,p){
+ return records.filter(r=>r.status==='perdida'&&B.day(r.createdAt)>=p.start&&B.day(r.createdAt)<=p.end);
+}
+function rankBy(rows,keyFn,valueFn=()=>1){
+ const m={};rows.forEach(r=>{const k=keyFn(r)||'Não informado';m[k]=(m[k]||0)+valueFn(r);});
+ return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+function renderBars(target,items,total){
+ const box=$(target);if(!box)return;
+ const max=Math.max(1,...items.map(x=>x[1]));
+ box.innerHTML=items.length?items.map(([name,value],i)=>'<div class="loss-rank-row"><span class="loss-rank-pos">'+(i+1)+'</span><div class="loss-rank-main"><div><strong>'+esc(name)+'</strong><span>'+value+(total?' · '+(100*value/total).toFixed(1).replace('.',',')+'%':'')+'</span></div><div class="loss-rank-bar"><i style="width:'+(100*value/max)+'%"></i></div></div></div>').join(''):'<p>Nenhum dado de perda no período.</p>';
+}
+function renderLossIntel(records,p){
+ const lost=lossRecords(records,p),potential=lost.reduce((s,r)=>s+Number(r.amount||0),0);
+ const compRows=lost.filter(r=>r.lossCompetitorPrice>0),diff=compRows.reduce((s,r)=>s+Math.max(0,Number(r.amount||0)-Number(r.lossCompetitorPrice||0)),0);
+ $('loss-kpis').innerHTML=[
+  ['Perdas',lost.length],['Valor potencial',money(potential)],['Com prova',lost.filter(r=>Array.isArray(r.evidence)&&r.evidence.length).length],['Diferença p/ concorrência',compRows.length?money(diff/compRows.length):'—']
+ ].map(([k,v])=>'<div><small>'+k+'</small><strong>'+v+'</strong></div>').join('');
+ const reasons=rankBy(lost,r=>r.reason==='Preço'?'Preço da concorrência':r.reason);
+ renderBars('loss-ranking',reasons,lost.length);
+ const competitors=rankBy(lost.filter(r=>r.lossCompetitor),r=>r.lossCompetitor);
+ renderBars('competitor-ranking',competitors,0);
+ const days={};lost.forEach(r=>{const d=B.day(r.createdAt);days[d]=(days[d]||0)+1;});
+ const entries=Object.entries(days).sort((a,b)=>a[0].localeCompare(b[0]));
+ const max=Math.max(1,...entries.map(x=>x[1]));
+ $('loss-trend').innerHTML=entries.length?entries.map(([d,v])=>'<div class="loss-trend-col" title="'+date(d)+': '+v+'"><i style="height:'+(22+78*v/max)+'%"></i><span>'+date(d).slice(0,5)+'</span><strong>'+v+'</strong></div>').join(''):'<p>Nenhuma perda registrada no período.</p>';
+ $('loss-case-count').textContent=lost.length+' caso(s)';
+ $('loss-cases').innerHTML=lost.length?lost.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).map(r=>'<article class="loss-case"><div><span class="loss-badge">'+esc(r.reason==='Preço'?'Preço da concorrência':r.reason||'Não informado')+'</span><h4>'+esc(r.client)+'</h4><p>'+esc(r.product)+' · '+esc(r.seller)+'</p><small>'+date(r.createdAt)+' · Proposta '+money(r.amount)+(r.lossCompetitorPrice?' · Concorrência '+money(r.lossCompetitorPrice):'')+'</small>'+(r.lossCompetitor?'<p><strong>Concorrente:</strong> '+esc(r.lossCompetitor)+'</p>':'')+(r.lossNote?'<p><strong>Observação:</strong> '+esc(r.lossNote)+'</p>':'')+'</div><div class="loss-case-actions">'+((r.evidence||[]).length?'<button data-loss-evidence="'+esc(r.id)+'">Ver '+r.evidence.length+' anexo(s)</button>':'<span>Sem anexo</span>')+'</div></article>').join(''):'<p>Nenhuma perda registrada no período.</p>';
+}
+async function showLossEvidence(recordId){
+ const r=data.records.find(x=>x.id===recordId);if(!r)return;
+ const items=Array.isArray(r.evidence)?r.evidence:[];
+ lastFocus=document.activeElement;$('detail-title').textContent='Evidências · '+r.client;
+ $('detail-body').innerHTML='<p>Carregando '+items.length+' anexo(s)…</p>';$('detail').showModal();
+ const blocks=[];
+ for(const meta of items){
+   try{
+     const item=await R.call('attachment',{id:r.id,fileId:meta.id});
+     const src='data:'+item.mime+';base64,'+item.base64;
+     blocks.push(item.mime==='application/pdf'?'<article class="evidence-card"><strong>'+esc(item.name)+'</strong><p><a href="'+src+'" target="_blank">Abrir PDF</a></p></article>':'<article class="evidence-card"><strong>'+esc(item.name)+'</strong><img src="'+src+'" alt="Evidência comercial"></article>');
+   }catch(e){blocks.push('<article class="evidence-card"><strong>'+esc(meta.name)+'</strong><p>Não foi possível carregar.</p></article>');}
+ }
+ $('detail-body').innerHTML=blocks.join('')||'<p>Nenhum anexo.</p>';
+}
+async function printLossReport(){
+ if(!data)return;
+ const anchor=$('anchor').value,p=B.period(kind,anchor),selected=$('seller').value;
+ const records=data.records.filter(r=>(!selected||r.ownerId===selected));
+ const lost=lossRecords(records,p),reasons=rankBy(lost,r=>r.reason==='Preço'?'Preço da concorrência':r.reason);
+ const win=window.open('','_blank');if(!win)return;
+ win.document.write('<!doctype html><meta charset="utf-8"><title>Relatório de perdas</title><style>body{font-family:Arial,sans-serif;color:#243047;margin:28px}h1{margin-bottom:4px}.meta{color:#677085;margin-bottom:20px}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpis div,.case{border:1px solid #dfe3eb;border-radius:10px;padding:12px;margin:10px 0}.rank{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:7px 0}.evidence{max-width:420px;max-height:300px;object-fit:contain;border:1px solid #ddd;margin:6px} @media print{button{display:none}}</style>');
+ win.document.write('<h1>Relatório de perdas de vendas</h1><div class="meta">'+esc(data.actor.branch)+' · '+date(p.start)+' a '+date(p.end)+'</div>');
+ win.document.write('<div class="kpis"><div><b>Perdas</b><br>'+lost.length+'</div><div><b>Valor potencial</b><br>'+money(lost.reduce((s,r)=>s+Number(r.amount||0),0))+'</div><div><b>Com evidência</b><br>'+lost.filter(r=>(r.evidence||[]).length).length+'</div></div>');
+ win.document.write('<h2>Ranking dos motivos</h2>'+reasons.map(([k,v],i)=>'<div class="rank"><span>'+(i+1)+'. '+esc(k||'Não informado')+'</span><b>'+v+'</b></div>').join(''));
+ win.document.write('<h2>Casos detalhados</h2>');
+ for(const r of lost){
+   let ev='';
+   for(const meta of (r.evidence||[])){
+     try{const item=await R.call('attachment',{id:r.id,fileId:meta.id});if(item.mime.startsWith('image/'))ev+='<img class="evidence" src="data:'+item.mime+';base64,'+item.base64+'">';else ev+='<p>Anexo PDF: '+esc(item.name)+'</p>';}catch(e){ev+='<p>Anexo não carregado: '+esc(meta.name)+'</p>';}
+   }
+   win.document.write('<div class="case"><b>'+esc(r.client)+'</b> · '+esc(r.product)+'<br><small>'+esc(r.seller)+' · '+date(r.createdAt)+'</small><p><b>Motivo:</b> '+esc(r.reason==='Preço'?'Preço da concorrência':r.reason||'Não informado')+'</p>'+(r.lossCompetitor?'<p><b>Concorrente:</b> '+esc(r.lossCompetitor)+(r.lossCompetitorPrice?' · '+money(r.lossCompetitorPrice):'')+'</p>':'')+(r.lossNote?'<p><b>Observação:</b> '+esc(r.lossNote)+'</p>':'')+ev+'</div>');
+ }
+ win.document.write('<script>window.onload=function(){setTimeout(function(){window.print()},500)}<\/script>');win.document.close();
+}
+
 const clean=s=>String(s||'').trim();
 const digits=s=>String(s||'').replace(/\D/g,'');
 function slugName(name){return clean(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase();}
@@ -69,6 +135,7 @@ function render(){
  const t=summary.totals;
  const metrics=[['Pesquisas de orçamento',t.total,'Criadas no período'],['Vendas concluídas',t.wins,'Dos orçamentos do período'],['Conversão',pct(t.conversion),'Vendas ÷ pesquisas'],['Contatos registrados',t.contacts,'Realizados no período'],['Retornos atrasados',t.late,'Pendências atuais'],['Valor concluído',money(t.value),'Dos orçamentos do período']];
  $('metrics').innerHTML=metrics.map(m=>'<div class="metric"><small>'+m[0]+'</small><strong>'+m[1]+'</strong><span>'+m[2]+'</span></div>').join('');
+ renderLossIntel(records,p);
  const sort=$('sort').value;
  summary.perSeller.sort((a,b)=>sort==='name'?a.user.name.localeCompare(b.user.name,'pt-BR'):(b[sort]??-1)-(a[sort]??-1)||a.user.name.localeCompare(b.user.name,'pt-BR'));
  $('roster-count').textContent=summary.perSeller.length+' colaboradores';
@@ -103,6 +170,10 @@ $('permission-list').addEventListener('change',async e=>{
  try{await R.call('permission',{userId:input.dataset.permission,canManage:input.checked});await refresh();}
  catch(err){input.checked=!input.checked;state(err.message,true);}finally{input.disabled=false;}
 });
+
+$('print-loss-report').addEventListener('click',()=>printLossReport().catch(e=>state(e.message,true)));
+$('loss-cases').addEventListener('click',e=>{const b=e.target.closest('[data-loss-evidence]');if(b)showLossEvidence(b.dataset.lossEvidence).catch(err=>state(err.message,true));});
+
 window.addEventListener('storage',e=>{if(e.key===null||e.key.startsWith('fs_')){clear();refresh();}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clear();else refresh();});
 window.addEventListener('pagehide',clear);

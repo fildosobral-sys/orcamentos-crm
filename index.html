@@ -1626,7 +1626,7 @@
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
- <link rel="stylesheet" href="./crm-v2.css?v=2">
+ <link rel="stylesheet" href="./crm-v2.css?v=5">
 </head>
  <body>
   <header class="header">
@@ -1804,7 +1804,7 @@
       <div class="calculation-section section-auto">
        <h3 class="section-title">🎯 Cálculo Automático por Percentual</h3>
        <div class="input-group"><label class="input-label" for="percentualDesconto">📊 Percentual de Desconto (%):</label>
-        <div class="percent-input"><input type="number" id="percentualDesconto" class="input-field" placeholder="" step="0.1" min="0" max="10"> <span class="percent-symbol">%</span>
+        <div class="percent-input"><input type="number" id="percentualDesconto" class="input-field" placeholder="" step="0.1" min="0" max="100"> <span class="percent-symbol">%</span>
         </div>
        </div>
        <div id="precoCalculadoGroup" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(72, 187, 120, 0.15); border-radius: 12px; border: 2px solid rgba(72, 187, 120, 0.3);"><label class="input-label" style="color: #2f855a; font-size: 0.85rem; margin-bottom: 0.5rem; font-weight: 600;">✅ Preço Especial:</label>
@@ -1812,6 +1812,21 @@
         </div>
        </div>
        <div id="statusAutorizacao" class="status-authorization"><span id="textoAutorizacao"></span>
+       </div>
+       <div id="aprovacaoSuperiorBox" style="display:none; margin-top: 1rem; padding: 1rem; border: 2px solid rgba(244,67,54,.28); border-radius: 12px; background: rgba(244,67,54,.06);">
+        <div class="input-group" style="margin-bottom:.8rem;">
+         <label class="input-label" for="nivelAprovacaoSuperior">🔐 Nível de aprovação superior:</label>
+         <select id="nivelAprovacaoSuperior" class="input-field">
+          <option value="">Selecione quem autorizou</option>
+          <option value="Gerente Comprador">Gerente Comprador</option>
+          <option value="Gerente Comercial">Gerente Comercial</option>
+          <option value="Diretoria">Diretoria</option>
+         </select>
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+         <label class="input-label" for="nomeAprovador">👤 Nome de quem autorizou:</label>
+         <input type="text" id="nomeAprovador" class="input-field" placeholder="Ex.: Allan, Alex, comprador responsável...">
+        </div>
        </div>
       </div><!-- Seção: Cálculo Manual -->
       <div class="calculation-section section-manual">
@@ -2344,8 +2359,9 @@ let currentData = [];
                         </div>
                         ${item.nivel_autorizacao ? `
                         <div class="detail-item">
-                            <div class="detail-label">Nível de Autorização</div>
-                            <div class="detail-value" style="color: ${item.nivel_autorizacao === 'Vendedor' ? '#856404' : item.nivel_autorizacao === 'Gerente' ? '#e65100' : '#c62828'}; font-weight: 700;">${item.nivel_autorizacao}</div>
+                            <div class="detail-label">Aprovação do desconto</div>
+                            <div class="detail-value" style="color: ${item.nivel_autorizacao === 'Gerente' ? '#e65100' : '#c62828'}; font-weight: 700;">${item.nivel_autorizacao}</div>
+                            ${item.aprovado_por ? `<div style="margin-top:.25rem;font-size:.78rem;color:#718096;">Autorizado por: <strong>${item.aprovado_por}</strong></div>` : ''}
                         </div>
                         ` : ''}
                     </div>
@@ -2469,45 +2485,46 @@ let currentData = [];
             aplicarFiltroData();
         }
 
-        // Função para verificar autorização de desconto
+        // Função para verificar o nível necessário de aprovação do desconto
         function verificarAutorizacao(percentual) {
             const statusDiv = document.getElementById('statusAutorizacao');
             const textoSpan = document.getElementById('textoAutorizacao');
-            
+            const superiorBox = document.getElementById('aprovacaoSuperiorBox');
+
             if (percentual <= 0) {
                 statusDiv.style.display = 'none';
+                if (superiorBox) superiorBox.style.display = 'none';
                 return { autorizado: true, nivel: '' };
-            }
-
-            if (percentual > 10) {
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'status-authorization status-supervisor';
-                textoSpan.innerHTML = '🚫 <strong>ACESSO NEGADO</strong><br>Desconto máximo permitido: 10%';
-                return { autorizado: false, nivel: 'Negado' };
             }
 
             statusDiv.style.display = 'block';
             statusDiv.className = 'status-authorization';
-            
-            if (percentual >= 1 && percentual <= 3.0) {
-                statusDiv.classList.add('status-vendedor');
-                textoSpan.innerHTML = '✅ <strong>Autorizado - Vendedor</strong>';
-                return { autorizado: true, nivel: 'Vendedor' };
-            } else if (percentual > 3.0 && percentual <= 5.0) {
+
+            if (percentual <= 5.0) {
                 statusDiv.classList.add('status-gerente');
-                textoSpan.innerHTML = '⚠️ <strong>REQUER AUTORIZAÇÃO - NÍVEL GERENTE</strong><br>Fale com seu gerente para aprovar este desconto';
+                textoSpan.innerHTML = '🟠 <strong>APROVAÇÃO DO DESCONTO — GERENTE</strong><br>Descontos de até 5% exigem autorização do gerente.';
+                if (superiorBox) superiorBox.style.display = 'none';
                 return { autorizado: true, nivel: 'Gerente' };
-            } else if (percentual > 5.0 && percentual <= 10.0) {
-                statusDiv.classList.add('status-supervisor');
-                textoSpan.innerHTML = '🔴 <strong>REQUER AUTORIZAÇÃO - NÍVEL SUPERVISOR</strong><br>Fale com seu supervisor para aprovar este desconto';
-                return { autorizado: true, nivel: 'Supervisor' };
-            } else if (percentual < 1) {
-                statusDiv.classList.add('status-vendedor');
-                textoSpan.innerHTML = '⚠️ <strong>Mínimo: 1%</strong>';
-                return { autorizado: false, nivel: 'Mínimo' };
             }
-            
-            return { autorizado: true, nivel: 'Vendedor' };
+
+            if (percentual <= 8.0) {
+                statusDiv.classList.add('status-supervisor');
+                textoSpan.innerHTML = '🔴 <strong>APROVAÇÃO DO DESCONTO — SUPERVISOR</strong><br>Descontos acima de 5% e até 8% exigem autorização do supervisor.';
+                if (superiorBox) superiorBox.style.display = 'none';
+                return { autorizado: true, nivel: 'Supervisor' };
+            }
+
+            statusDiv.classList.add('status-supervisor');
+            textoSpan.innerHTML = '🔐 <strong>APROVAÇÃO SUPERIOR OBRIGATÓRIA</strong><br>Acima de 8%, informe o nível e o nome de quem autorizou.';
+            if (superiorBox) superiorBox.style.display = 'block';
+
+            const nivelSelecionado = String(document.getElementById('nivelAprovacaoSuperior')?.value || '').trim();
+            const nomeAprovador = String(document.getElementById('nomeAprovador')?.value || '').trim();
+            return {
+                autorizado: !!(nivelSelecionado && nomeAprovador),
+                nivel: nivelSelecionado || 'Aprovação superior',
+                aprovadoPor: nomeAprovador
+            };
         }
 
         // Função para calcular desconto automaticamente por percentual
@@ -2519,7 +2536,7 @@ let currentData = [];
 
             const autorizacao = verificarAutorizacao(percentualDesconto);
 
-            if (percentualDesconto < 1 || percentualDesconto > 10 || precoNormal <= 0) {
+            if (percentualDesconto < 0 || percentualDesconto >= 100 || precoNormal <= 0) {
                 precoCalculadoGroup.style.display = 'none';
                 precoCalculadoInput.value = '';
                 document.getElementById('precoPromocional').value = '';
@@ -2527,7 +2544,7 @@ let currentData = [];
                 return;
             }
 
-            if (!autorizacao.autorizado && percentualDesconto > 10) {
+            if (!autorizacao.autorizado && percentualDesconto > 8) {
                 precoCalculadoGroup.style.display = 'none';
                 precoCalculadoInput.value = '';
                 document.getElementById('precoPromocional').value = '';
@@ -3248,6 +3265,12 @@ Zenir - O Melhor Está Aqui! 🏆`;
             const descontoPercentual = (descontoValor / precoNormal) * 100;
             const autorizacao = verificarAutorizacao(descontoPercentual);
 
+            if (descontoPercentual > 8 && !autorizacao.autorizado) {
+                showToast("❌ Acima de 8%, selecione o nível de aprovação superior e informe o nome de quem autorizou.", "error");
+                document.getElementById('nivelAprovacaoSuperior')?.focus();
+                return;
+            }
+
             // Obter informações de modalidade de pagamento
             const modalidadeNormal = document.querySelector('input[name="modalidadeNormal"]:checked').value;
             const modalidadePromocional = document.querySelector('input[name="modalidadePromocional"]:checked').value;
@@ -3287,7 +3310,8 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 preco_promocional: precoFinal,
                 desconto_percentual: descontoPercentual,
                 desconto_valor: descontoValor,
-                nivel_autorizacao: autorizacao.nivel || 'Vendedor',
+                nivel_autorizacao: autorizacao.nivel || '',
+                aprovado_por: autorizacao.aprovadoPor || '',
                 anotacoes: anotacoes,
                 data_calculo: new Date().toISOString(),
                 tipo_calculo: tipoCalculo,
@@ -3503,8 +3527,9 @@ Zenir - O Melhor Está Aqui! 🏆`;
                         </div>
                         ${item.nivel_autorizacao ? `
                         <div class="detail-item">
-                            <div class="detail-label">Nível de Autorização</div>
-                            <div class="detail-value" style="color: ${item.nivel_autorizacao === 'Vendedor' ? '#856404' : item.nivel_autorizacao === 'Gerente' ? '#e65100' : '#c62828'}; font-weight: 700;">${item.nivel_autorizacao}</div>
+                            <div class="detail-label">Aprovação do desconto</div>
+                            <div class="detail-value" style="color: ${item.nivel_autorizacao === 'Gerente' ? '#e65100' : '#c62828'}; font-weight: 700;">${item.nivel_autorizacao}</div>
+                            ${item.aprovado_por ? `<div style="margin-top:.25rem;font-size:.78rem;color:#718096;">Autorizado por: <strong>${item.aprovado_por}</strong></div>` : ''}
                         </div>
                         ` : ''}
                     </div>
@@ -3534,6 +3559,8 @@ Zenir - O Melhor Está Aqui! 🏆`;
             document.getElementById('resultSection').style.display = 'none';
             document.getElementById('precoCalculadoGroup').style.display = 'none';
             document.getElementById('statusAutorizacao').style.display = 'none';
+            const superiorBox = document.getElementById('aprovacaoSuperiorBox');
+            if (superiorBox) superiorBox.style.display = 'none';
             
             // Resetar parcelas
             document.getElementById('parcelasNormalGroup').classList.remove('active');
@@ -3691,6 +3718,35 @@ Zenir - O Melhor Está Aqui! 🏆`;
 
 
         // Event Listeners
+
+        // CRM isolado: ao voltar da gestão, reaproveita a sessão central e nunca mostra o login antigo.
+        const verificarEstadoAcessoLegado = verificarEstadoAcesso;
+        verificarEstadoAcesso = function() {
+            const hasCRM = !!(localStorage.getItem('fs_access_token') && localStorage.getItem('fs_filial') && localStorage.getItem('fs_whatsapp'));
+            if (!hasCRM || !window.FSCRMRemote || !window.FSCRMRemote.enabled) return verificarEstadoAcessoLegado();
+            document.getElementById('authCard').style.display = 'none';
+            document.getElementById('loginCard').style.display = 'none';
+            document.getElementById('calculatorCard').style.display = 'none';
+            document.getElementById('historySection').style.display = 'none';
+            window.FSCRMRemote.connect().then(function(sess){
+                const nome = sess && sess.actor && sess.actor.name;
+                if(!nome) throw Error('Sessão CRM inválida.');
+                vendedorAtual = nome;
+                localStorage.setItem('vendedorLogado', nome);
+                localStorage.setItem('nomeVendedorLogado', nome);
+                localStorage.setItem('fs_nome', nome);
+                localStorage.setItem('plataformaAutorizada','true');
+                entrarNaCalculadora(nome);
+            }).catch(function(){
+                if(window.FSCRMRemote) window.FSCRMRemote.clearCredentials();
+                document.getElementById('authCard').style.display = 'none';
+                document.getElementById('loginCard').style.display = 'none';
+                document.getElementById('calculatorCard').style.display = 'none';
+                document.getElementById('historySection').style.display = 'none';
+                location.reload();
+            });
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
 
@@ -3704,6 +3760,18 @@ Zenir - O Melhor Está Aqui! 🏆`;
             // Parcelamento automático
             if (typeof configurarListenersParcelamento === 'function') {
                 configurarListenersParcelamento();
+            const nivelSuperior = document.getElementById('nivelAprovacaoSuperior');
+            const nomeAprovador = document.getElementById('nomeAprovador');
+            if (nivelSuperior) nivelSuperior.addEventListener('change', () => {
+                const precoNormal = converterParaNumero(document.getElementById('precoNormal').value);
+                const precoFinal = converterParaNumero(document.getElementById('precoCalculado').value) || converterParaNumero(document.getElementById('precoPromocional').value);
+                if (precoNormal > 0 && precoFinal > 0 && precoFinal <= precoNormal) verificarAutorizacao(((precoNormal-precoFinal)/precoNormal)*100);
+            });
+            if (nomeAprovador) nomeAprovador.addEventListener('input', () => {
+                const precoNormal = converterParaNumero(document.getElementById('precoNormal').value);
+                const precoFinal = converterParaNumero(document.getElementById('precoCalculado').value) || converterParaNumero(document.getElementById('precoPromocional').value);
+                if (precoNormal > 0 && precoFinal > 0 && precoFinal <= precoNormal) verificarAutorizacao(((precoNormal-precoFinal)/precoNormal)*100);
+            });
             }
 // Event listeners para formulários
             document.getElementById('authForm').addEventListener('submit', function(e) {
@@ -4067,55 +4135,253 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 </script>
-  <!-- Modal Criar Acesso CRM -->
+  <!-- Modal Compartilhar Acesso -->
   <div class="message-modal" id="shareAccessModal" style="display:none;">
     <div class="message-overlay" onclick="closeShareModal()"></div>
-    <div class="message-container" style="position:relative; z-index:10001; max-width:760px; width:100%;">
-      <div class="message-header"><h3>🔐 Criar acesso ao CRM</h3><button class="message-close" onclick="closeShareModal()">✕</button></div>
+
+    <div class="message-container" style="position:relative; z-index:10001; max-width:720px; width:100%;">
+      <div class="message-header">
+        <h3>🔗 Compartilhar acesso</h3>
+        <button class="message-close" onclick="closeShareModal()">✕</button>
+      </div>
+
       <div class="message-body">
-        <p style="margin:0 0 14px;color:#555;line-height:1.45;">Crie um acesso individual para o colaborador. A credencial usa parte do nome + final do WhatsApp + 4 caracteres aleatórios.</p>
+        <p style="margin:0 0 12px 0;color:#555;line-height:1.35;">
+          Gere um link personalizado para um colaborador. <b>Observação:</b> como este sistema é offline (HTML), o link pode ser encaminhado.
+          Aqui a regra é operacional: o acesso vem travado no nome e com regras de <b>Capital/Interior</b>.
+        </p>
+
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
-          <div class="input-group"><label>Nome do colaborador</label><input id="shareUserName" type="text" placeholder="Ex.: Alessandro Silva" /></div>
-          <div class="input-group"><label>Filial</label><input id="shareUserBranch" type="text" placeholder="Ex.: Iguatu III" /></div>
-          <div class="input-group"><label>WhatsApp (DDD + número)</label><input id="shareUserPhone" type="text" inputmode="numeric" placeholder="Ex.: 88999990000" /></div>
-          <div class="input-group"><label>Cargo</label><select id="shareUserRole" onchange="syncSharePermission()"><option value="VENDEDOR">Vendedor</option><option value="GERENTE">Gerente</option></select></div>
-          <div class="input-group" style="grid-column:1 / -1;"><label style="display:flex;align-items:center;gap:8px;"><input id="shareCanManage" type="checkbox" style="width:auto;" /> Pode acompanhar a equipe da filial</label></div>
+          <div class="input-group">
+            <label>Nome do colaborador</label>
+            <input id="shareUserName" type="text" placeholder="Ex: Alessandro" />
+          </div>
+
+          <div class="input-group">
+            <label>Região</label>
+            <select id="shareUserRegion">
+              <option value="interior">Interior (À vista + Cartão + Carnê)</option>
+              <option value="capital">Capital (À vista + Cartão)</option>
+            </select>
+          </div>
+
+          <div class="input-group" style="grid-column:1 / -1;">
+            <label>WhatsApp (DDD + número)</label>
+            <input id="shareUserPhone" type="text" inputmode="numeric" placeholder="Ex: 85999990000" />
+          </div>
         </div>
-        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-          <div class="input-group"><label>Credencial individual</label><input id="shareGeneratedToken" type="text" readonly placeholder="Será gerada ao criar o acesso" /></div>
-          <div class="input-group"><label>Link de acesso</label><input id="shareGeneratedLink" type="text" readonly /></div>
+
+        <div class="input-group" style="margin-top:12px;">
+          <label>Link gerado</label>
+          <input id="shareGeneratedLink" type="text" readonly />
         </div>
-        <div id="shareAccessStatus" style="margin-top:10px;font-weight:700;color:#475569;"></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
-          <button class="btn-primary" id="shareCreateBtn" onclick="criarAcessoCRM()">✨ Criar acesso</button>
-          <button class="btn-secondary" onclick="copiarAcessoCRM()">📋 Copiar acesso</button>
-          <button class="btn-success" onclick="enviarAcessoWhatsapp()">💬 Enviar no WhatsApp</button>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn-primary" onclick="gerarLinkCompartilhamento()">✨ Gerar link</button>
+          <button class="btn-secondary" onclick="copiarLinkCompartilhamento()">📋 Copiar</button>
+          <button class="btn-success" onclick="enviarLinkWhatsapp()">💬 Enviar no WhatsApp</button>
         </div>
       </div>
     </div>
   </div>
-  <style>
-    .btn-share{margin-left:10px;width:44px;height:44px;border-radius:12px;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer}
-    .btn-secondary{background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer}
-    .btn-success{background:linear-gradient(135deg,#22c55e,#16a34a);color:white;border:none;padding:12px 16px;border-radius:12px;font-weight:800;cursor:pointer}
+
+<style>
+    .btn-share{
+      margin-left:10px;
+      width:44px;height:44px;border-radius:12px;
+      border:2px solid rgba(255,255,255,0.25);
+      background:rgba(255,255,255,0.12);
+      color:#fff;font-size:18px;cursor:pointer;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      transition: transform .15s ease, filter .15s ease;
+    }
+    .btn-share:hover{transform: translateY(-1px); filter: brightness(1.05);}
+    .btn-share:active{transform: translateY(0);}
+    .btn-secondary{
+      background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;
+      padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer;
+    }
+    .btn-success{
+      background: linear-gradient(135deg,#22c55e,#16a34a);
+      color:white;border:none;padding:12px 16px;border-radius:12px;font-weight:800;cursor:pointer;
+      box-shadow: 0 10px 24px rgba(34,197,94,0.25);
+    }
   </style>
+
   <script>
-    const CRM_PUBLIC_URL='https://fildosobral-sys.github.io/orcamentos-crm/';
-    function shareActor(){return window.FSCRMRemote&&window.FSCRMRemote.session?window.FSCRMRemote.session.actor:null}
-    function isGerenteFS(){const a=shareActor();return !!(a&&a.isOwner===true)}
-    function updateShareButtonVisibility(){const btn=document.getElementById('btnShareAccess');if(btn)btn.style.display=isGerenteFS()?'inline-flex':'none'}
-    function slugCRM(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48)}
-    function randCRM(n){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let out='';const b=new Uint32Array(n);crypto.getRandomValues(b);for(let i=0;i<n;i++)out+=chars[b[i]%chars.length];return out}
-    function gerarTokenColaborador(nome,phone){const p=slugCRM(nome).split('_')[0].toUpperCase().slice(0,4)||'USER';const d=String(phone||'').replace(/\D/g,'');return `${p}-${d.slice(-4).padStart(4,'0')}-${randCRM(4)}`}
-    function gerarIdColaborador(nome,phone){const d=String(phone||'').replace(/\D/g,'');return `${slugCRM(nome)||'usuario'}_${d.slice(-4)}`}
-    function syncSharePermission(){const role=document.getElementById('shareUserRole')?.value||'VENDEDOR';const cb=document.getElementById('shareCanManage');if(cb){cb.checked=role==='GERENTE';cb.disabled=role==='GERENTE'}}
-    function openShareModal(){if(!isGerenteFS()){showToast?.('Somente o administrador geral pode criar acessos.','error');return}const m=document.getElementById('shareAccessModal');if(!m)return;document.getElementById('shareUserName').value='';document.getElementById('shareUserPhone').value='';document.getElementById('shareUserBranch').value=shareActor()?.branch||'';document.getElementById('shareUserRole').value='VENDEDOR';document.getElementById('shareCanManage').checked=false;document.getElementById('shareCanManage').disabled=false;document.getElementById('shareGeneratedToken').value='';document.getElementById('shareGeneratedLink').value=CRM_PUBLIC_URL;document.getElementById('shareAccessStatus').textContent='';m.style.display='flex'}
-    function closeShareModal(){const m=document.getElementById('shareAccessModal');if(m)m.style.display='none'}
-    async function criarAcessoCRM(){const r=window.FSCRMRemote;if(!r?.session?.actor?.isOwner){showToast?.('Seu acesso de administrador ainda não foi validado.','error');return}const nome=document.getElementById('shareUserName').value.trim(),branch=document.getElementById('shareUserBranch').value.trim(),phone=document.getElementById('shareUserPhone').value.replace(/\D/g,''),role=document.getElementById('shareUserRole').value,canManage=document.getElementById('shareCanManage').checked||role==='GERENTE';if(!nome||!branch||!/^\d{10,11}$/.test(phone)){showToast?.('Preencha nome, filial e WhatsApp corretamente.','error');return}const token=gerarTokenColaborador(nome,phone),id=gerarIdColaborador(nome,phone);const btn=document.getElementById('shareCreateBtn'),status=document.getElementById('shareAccessStatus');try{btn.disabled=true;status.textContent='Criando acesso...';await r.call('createUser',{id,name:nome,branch,phone,role,canManage,token});document.getElementById('shareGeneratedToken').value=token;document.getElementById('shareGeneratedLink').value=CRM_PUBLIC_URL;status.textContent='✅ Acesso criado no banco central.';showToast?.('✅ Acesso criado com sucesso!','success')}catch(e){status.textContent='❌ '+(e.message||e);showToast?.(e.message||String(e),'error')}finally{btn.disabled=false}}
-    async function copiarAcessoCRM(){const token=document.getElementById('shareGeneratedToken').value;if(!token){showToast?.('Crie o acesso primeiro.','error');return}const t=`Acesso ao CRM de Orçamentos\nNome: ${document.getElementById('shareUserName').value.trim()}\nFilial: ${document.getElementById('shareUserBranch').value.trim()}\nPerfil: ${document.getElementById('shareUserRole').value}\nCredencial: ${token}\nLink: ${document.getElementById('shareGeneratedLink').value}`;await navigator.clipboard.writeText(t);showToast?.('📋 Acesso copiado!','success')}
-    function enviarAcessoWhatsapp(){const phone=document.getElementById('shareUserPhone').value.replace(/\D/g,''),token=document.getElementById('shareGeneratedToken').value;if(!token){showToast?.('Crie o acesso primeiro.','error');return}const nome=document.getElementById('shareUserName').value.trim(),branch=document.getElementById('shareUserBranch').value.trim(),role=document.getElementById('shareUserRole').value,link=document.getElementById('shareGeneratedLink').value;const msg=`Olá, ${nome}!\n\nSeu acesso ao CRM de Orçamentos foi criado.\n\nFilial: ${branch}\nPerfil: ${role==='GERENTE'?'Gerente':'Vendedor'}\nCredencial individual: ${token}\n\nAcesse:\n${link}\n\nNão compartilhe sua credencial.`;window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`,'_blank')}
-    document.addEventListener('DOMContentLoaded',()=>{setTimeout(updateShareButtonVisibility,600);setTimeout(syncSharePermission,600)})
-    window.addEventListener('fscrm-session-ready',updateShareButtonVisibility)
+    // ===== Compartilhamento simples (sem backend) =====
+    const ADMIN_USERS = ["Fildo", "Francifildo", "Francifildo Pereira Sobral", "Fildo Sobral"];
+
+    function isGerenteFS(){
+      try{
+        const nome = (window.vendedorAtual || localStorage.getItem('vendedorLogado') || "").trim();
+        if (!nome) return false;
+        return ADMIN_USERS.some(a => a.toLowerCase() === nome.toLowerCase());
+      }catch(e){ return false; }
+    }
+
+    function updateShareButtonVisibility(){
+      const btn = document.getElementById('btnShareAccess');
+      if (!btn) return;
+      btn.style.display = isGerenteFS() ? 'inline-flex' : 'none';
+    }
+
+    function openShareModal(){
+      const modal = document.getElementById('shareAccessModal');
+      if (!modal) return;
+      document.getElementById('shareUserName').value = '';
+      document.getElementById('shareUserPhone').value = '';
+      const regSel = document.getElementById('shareUserRegion');
+      if (regSel) regSel.value = 'interior';
+      document.getElementById('shareGeneratedLink').value = '';
+      modal.style.display = 'flex';
+    }
+    function closeShareModal(){
+      const modal = document.getElementById('shareAccessModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function gerarTokenCurto(){
+      // token curto para link (não é segurança real)
+      return Math.random().toString(36).slice(2, 8) + "-" + Math.random().toString(36).slice(2, 8);
+    }
+
+    function gerarLinkCompartilhamento(){
+      const nome = (document.getElementById('shareUserName').value || '').trim();
+      const regiao = (document.getElementById('shareUserRegion')?.value || 'interior').trim();
+      if (!nome){
+        if (typeof showToast === 'function') showToast('Informe o nome do usuário.', 'error');
+        return;
+      }
+      const token = gerarTokenCurto();
+      const base = PUBLIC_BASE_URL;
+      const params = new URLSearchParams();
+      params.set('u', nome);
+      params.set('invite', token);
+      params.set('regiao', regiao);
+      const link = base + "?" + params.toString();
+
+      // Registra o invite localmente (somente neste navegador do gerente)
+      try{
+        const invites = JSON.parse(localStorage.getItem('fsInvites') || '[]');
+        invites.push({ token, nome, regiao, createdAt: new Date().toISOString() });
+        localStorage.setItem('fsInvites', JSON.stringify(invites));
+      }catch(e){}
+
+      document.getElementById('shareGeneratedLink').value = link;
+      if (typeof showToast === 'function') showToast('✅ Link gerado!', 'success');
+    }
+
+    async function copiarLinkCompartilhamento(){
+      const link = (document.getElementById('shareGeneratedLink').value || '').trim();
+      if (!link){
+        if (typeof showToast === 'function') showToast('Gere um link primeiro.', 'error');
+        return;
+      }
+      try{
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(link);
+        }else{
+          const tmp = document.createElement('textarea');
+          tmp.value = link;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand('copy');
+          document.body.removeChild(tmp);
+        }
+        if (typeof showToast === 'function') showToast('📋 Link copiado!', 'success');
+      }catch(e){
+        if (typeof showToast === 'function') showToast('Não foi possível copiar automaticamente.', 'warning');
+      }
+    }
+
+    function enviarLinkWhatsapp(){
+      const link = (document.getElementById('shareGeneratedLink').value || '').trim();
+      const phone = (document.getElementById('shareUserPhone').value || '').replace(/\D/g,'');
+      const nome = (document.getElementById('shareUserName').value || '').trim();
+      const regiao = (document.getElementById('shareUserRegion')?.value || 'interior').trim();
+
+      if (!link){
+        if (typeof showToast === 'function') showToast('Gere um link primeiro.', 'error');
+        return;
+      }
+      if (!phone || phone.length < 10){
+        if (typeof showToast === 'function') showToast('Informe um WhatsApp válido (DDD + número).', 'error');
+        return;
+      }
+      if (!nome){
+        if (typeof showToast === 'function') showToast('Informe o nome do colaborador.', 'error');
+        return;
+      }
+
+      const regra = (regiao === 'capital')
+        ? 'CAPITAL: somente À vista e Cartão (sem Carnê).'
+        : 'INTERIOR: À vista + Cartão + Carnê.';
+
+      // Mensagem limpa (sem emojis) + link em linha separada (clicável no WhatsApp)
+      const msgText =
+        `Olá ${nome}!
+
+` +
+        `Segue seu acesso à plataforma de Orçamentos Zenir.
+` +
+        `${regra}
+
+` +
+        `Acesse por este link:
+` +
+        `${link}`;
+
+      const waUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(msgText)}`;
+      window.open(waUrl, '_blank');
+
+      if (typeof showToast === 'function') showToast('📱 WhatsApp aberto com a mensagem!', 'success');
+    }
+
+    // Pré-preenchimento por link (?u=Nome&invite=xxxx)
+    function aplicarInviteSeExistir(){
+      try{
+        const sp = new URLSearchParams(window.location.search || '');
+        const nome = (sp.get('u') || '').trim();
+        const invite = (sp.get('invite') || '').trim();
+        const regiao = (sp.get('regiao') || 'interior').trim();
+        if (!nome || !invite) return;
+
+        // Se abriu pelo invite, autoriza a plataforma neste navegador (sem pedir senha gerente)
+        localStorage.setItem('plataformaAutorizada', 'true');
+        localStorage.setItem('dataAutorizacao', new Date().toISOString());
+        localStorage.setItem('vendedorLogado', nome);
+        localStorage.setItem('fsRegiao', regiao);
+
+        // Token global usado pelos módulos
+        try{ localStorage.setItem('fsAuthGlobal', 'ok-@fildO1060'); }catch(e){}
+
+        try{ aplicarRestricoesRegiao(regiao); }catch(e){}
+
+        // Limpa parâmetros da URL
+        const cleanUrl = PUBLIC_BASE_URL;
+        window.history.replaceState({}, document.title, cleanUrl);
+
+      }catch(e){}
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      aplicarInviteSeExistir();
+      try{ aplicarRestricoesRegiao(obterRegiaoAtual()); }catch(e){}
+      setTimeout(updateShareButtonVisibility, 250);
+    });
+
+    // Hook: quando entrar, atualiza visibilidade
+    const __oldEntrarCalc = window.entrarNaCalculadora;
+    if (typeof __oldEntrarCalc === 'function'){
+      window.entrarNaCalculadora = function(nomeUsuario){
+        const r = __oldEntrarCalc.apply(this, arguments);
+        try{ window.vendedorAtual = nomeUsuario; }catch(e){}
+        updateShareButtonVisibility();
+        return r;
+      }
+    }
   </script>
 
 
@@ -4527,9 +4793,9 @@ window.FSCRMBridge = {
 };
 </script>
 <script src="./crm-config-v2.js?v=2"></script>
-<script src="./crm-api-v2.js?v=3"></script>
-<script src="./crm-core-v2.js?v=2"></script>
-<script src="./crm-ui-v2.js?v=2"></script>
+<script src="./crm-api-v2.js?v=5"></script>
+<script src="./crm-core-v2.js?v=5"></script>
+<script src="./crm-ui-v2.js?v=5"></script>
 </body>
 </html>
 
