@@ -2,10 +2,32 @@
 'use strict';
 const config=window.FSCRMConfig||{};let session=null;
 const digits=s=>String(s||'').replace(/\D/g,'').replace(/^55(?=\d{10,11}$)/,'');
+
+const CRM_SNAPSHOT_KEY='fs_crm_auth_snapshot_v1';
+function readCRMSnapshot(){
+  try{
+    const v=JSON.parse(localStorage.getItem(CRM_SNAPSHOT_KEY)||'null');
+    return v&&typeof v==='object'?v:null;
+  }catch(_e){return null;}
+}
+function saveCRMSnapshot(){
+  try{
+    const token=String(localStorage.getItem('fs_access_token')||'').trim();
+    const branch=String(localStorage.getItem('fs_filial')||'').trim();
+    const phone=digits(localStorage.getItem('fs_whatsapp')||'');
+    if(token.length<12||!branch||!/^\d{10,11}$/.test(phone))return;
+    const keys=['fs_access_token','fs_filial','fs_whatsapp','fs_nome','fs_cargo','vendedorLogado','nomeVendedorLogado','plataformaAutorizada','dataAutorizacao','fsAuthGlobal','fs_device_id'];
+    const data={};
+    keys.forEach(k=>{const v=localStorage.getItem(k);if(v!==null)data[k]=v;});
+    localStorage.setItem(CRM_SNAPSHOT_KEY,JSON.stringify(data));
+  }catch(_e){}
+}
+
 function storedCredentials(){
-  const token=String(localStorage.getItem('fs_access_token')||'').trim();
-  const branch=String(localStorage.getItem('fs_filial')||'').trim();
-  const phone=digits(localStorage.getItem('fs_whatsapp')||'');
+  const snap=readCRMSnapshot();
+  const token=String((snap&&snap.fs_access_token)||localStorage.getItem('fs_access_token')||'').trim();
+  const branch=String((snap&&snap.fs_filial)||localStorage.getItem('fs_filial')||'').trim();
+  const phone=digits((snap&&snap.fs_whatsapp)||localStorage.getItem('fs_whatsapp')||'');
   if(!token||!branch||!phone){const e=Error('LOGIN_REQUIRED');e.code='LOGIN_REQUIRED';throw e;}
   if(token.length<12){const e=Error('A credencial individual precisa ter no mínimo 12 caracteres.');e.code='LOGIN_REQUIRED';throw e;}
   if(!/^\d{10,11}$/.test(phone)){const e=Error('Informe um WhatsApp válido com DDD.');e.code='LOGIN_REQUIRED';throw e;}
@@ -102,7 +124,7 @@ function buildLoginCard(message){
       const s=await connect(),actor=s&&s.actor?s.actor:null;if(!actor||!actor.name)throw Error('O CRM não retornou a identificação do usuário.');
       resetLoginAttempts();
       localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
-      applyRoleUI(actor);location.reload();
+      saveCRMSnapshot();applyRoleUI(actor);location.reload();
     }catch(err){
       const n=addLoginAttempt();
       clearCredentials();
@@ -125,12 +147,22 @@ async function verifyStandaloneAccess(){
 
     const s=await connect(),actor=s&&s.actor?s.actor:null;if(!actor||!actor.name)throw Error('Usuário não identificado pelo CRM.');
     localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||creds.branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
-    applyRoleUI(actor);
+    saveCRMSnapshot();applyRoleUI(actor);
     if(!cachedName&&typeof window.entrarNaCalculadora==='function'){window.vendedorAtual=actor.name;window.entrarNaCalculadora(actor.name);}
   }catch(err){
     // Credencial ausente/realmente inválida: pede login. Falha transitória de rede não apaga a sessão salva.
     const authFailure=err.code==='LOGIN_REQUIRED'||err.code==='UNAUTHORIZED'||/credencial|revogad|não autorizad|usuário não identificado/i.test(String(err.message||''));
-    if(authFailure){clearCredentials();buildLoginCard(err.code==='LOGIN_REQUIRED'?'':(err.message||'Não foi possível validar seu acesso.'));}
+    if(authFailure){
+      const cachedName=String(localStorage.getItem('fs_nome')||localStorage.getItem('vendedorLogado')||'').trim();
+      const hasAnyCred=!!(localStorage.getItem('fs_access_token')||localStorage.getItem('fs_filial')||localStorage.getItem('fs_whatsapp'));
+      if(cachedName && err.code==='LOGIN_REQUIRED' && hasAnyCred){
+        // Mantém a sessão visual durante uma inconsistência transitória de leitura/localStorage.
+        if(typeof window.showToast==='function')window.showToast('Reconectando ao CRM…','warning');
+      }else{
+        clearCredentials();
+        buildLoginCard(err.code==='LOGIN_REQUIRED'?'Informe suas credenciais para iniciar esta sessão.':(err.message||'Não foi possível validar seu acesso.'));
+      }
+    }
     else{
       const cachedName=String(localStorage.getItem('fs_nome')||'').trim();
       if(!cachedName)buildLoginCard('Não foi possível confirmar a conexão agora. Tente novamente.');

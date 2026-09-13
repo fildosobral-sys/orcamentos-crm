@@ -71,6 +71,7 @@
   }
 
   async function goHome(event) {
+    try{ if(typeof window.FSRestoreCentralSession==='function') window.FSRestoreCentralSession(); }catch(_e){}
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -268,3 +269,66 @@
     iniciarSync();
   }
 })();
+
+
+/* ===== Ponte de sessão Central <-> Orçamentos CRM ===== */
+(function(){
+  'use strict';
+  var KEYS=["fs_filial", "fs_nome", "fs_cargo", "fs_whatsapp", "fs_genero", "fs_access_token", "fs_pode_compartilhar", "fs_access_persisted", "fsAuthGlobal", "fs_access_verified_at", "fs_access_verified_fingerprint", "fs_device_id", "nomeVendedor", "nomeVendedorLogado", "vendedor_nome"];
+
+  function readKeys(){
+    var data={};
+    KEYS.forEach(function(k){
+      var v=localStorage.getItem(k);
+      if(v!==null) data[k]=v;
+    });
+    return data;
+  }
+
+  function writeKeys(data){
+    if(!data || typeof data!=='object') return;
+    KEYS.forEach(function(k){
+      if(Object.prototype.hasOwnProperty.call(data,k) && data[k]!==null){
+        localStorage.setItem(k,String(data[k]));
+      }else{
+        localStorage.removeItem(k);
+      }
+    });
+  }
+
+  function parse(value){
+    try{return JSON.parse(value||'null');}catch(_e){return null;}
+  }
+
+  function looksLikeCRM(){
+    var token=String(localStorage.getItem('fs_access_token')||'').trim();
+    var branch=String(localStorage.getItem('fs_filial')||'').trim();
+    var phone=String(localStorage.getItem('fs_whatsapp')||'').replace(/\D/g,'');
+    return token.length>=12 && !!branch && /^\d{10,11}$/.test(phone);
+  }
+
+  window.FSSaveCRMSession=function(){
+    try{
+      if(looksLikeCRM()){
+        localStorage.setItem('fs_crm_auth_snapshot_v1',JSON.stringify(readKeys()));
+      }
+    }catch(e){}
+  };
+
+  window.FSRestoreCentralSession=function(){
+    try{
+      window.FSSaveCRMSession();
+      var central=parse(sessionStorage.getItem('fs_central_auth_snapshot_v1'));
+      if(central) writeKeys(central);
+      sessionStorage.setItem('fs_returning_home','1');
+      sessionStorage.removeItem('fs_module_from_index');
+    }catch(e){}
+  };
+
+  // Mantém uma cópia separada da credencial CRM após a validação.
+  window.addEventListener('load',function(){
+    setTimeout(window.FSSaveCRMSession,350);
+    setTimeout(window.FSSaveCRMSession,1200);
+  });
+})();
+
