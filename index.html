@@ -1008,11 +1008,11 @@
         .success-status {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
+            gap: 0.3rem;
+            padding: 0.42rem 0.72rem;
             border-radius: 15px;
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -1142,15 +1142,25 @@
             font-size: 0.95rem;
         }
 
+        .history-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.45rem;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+
         .history-date {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.42rem 0.75rem;
             border-radius: 15px;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
         }
 
         .history-details {
@@ -1648,7 +1658,9 @@
   #historySection .summary-label{font-size:.66rem!important;line-height:1.25!important;text-align:center!important;}
   #historySection .history-item{position:relative!important;padding:15px 13px!important;}
   #historySection .history-header{position:relative!important;display:block!important;padding-right:42px!important;}
-  #historySection .history-header>div{display:flex!important;flex-wrap:wrap!important;gap:7px!important;align-items:center!important;margin-top:9px!important;}
+  #historySection .history-header>.history-meta-row{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;align-items:center!important;justify-content:flex-start!important;margin-top:8px!important;max-width:100%!important;overflow-x:auto!important;padding-bottom:2px!important;}
+  #historySection .history-header .success-status{padding:6px 9px!important;font-size:.68rem!important;letter-spacing:.15px!important;flex:0 0 auto!important;}
+  #historySection .history-header .history-date{padding:6px 9px!important;font-size:.68rem!important;letter-spacing:0!important;flex:0 0 auto!important;}
   #historySection .history-header button[title="Excluir registro"]{position:absolute!important;top:0!important;right:0!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;margin:0!important;padding:0!important;border-radius:50%!important;}
   #historySection .history-details{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;}
   #historySection .history-details>.detail-item{min-width:0!important;min-height:82px!important;padding:11px 9px!important;margin:0!important;}
@@ -2408,7 +2420,7 @@ let currentData = [];
                 <div class="history-item" style="border-left-color: ${item.vendedor === vendedorAtual ? '#48bb78' : '#667eea'};">
                     <div class="history-header">
                         <span class="client-name">👤 <strong>${item.vendedor || 'Usuário Desconhecido'}</strong> • 📦 ${item.codigo_produto || 'N/A'} - 👤 ${item.cliente}${item.whatsapp ? ` - 📱 ${item.whatsapp}` : ''}</span>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <div class="history-meta-row">
                             <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">
                                 ${item.venda_bem_sucedida ? '✅ Bem-Sucedida' : '⏳ Pendente'}
                             </span>
@@ -3575,7 +3587,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 <div class="history-item">
                     <div class="history-header">
                         <span class="client-name">📦 ${item.codigo_produto || 'N/A'} - 👤 ${item.cliente}${item.whatsapp ? ` - 📱 ${item.whatsapp}` : ''}</span>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <div class="history-meta-row">
                             <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">
                                 ${item.venda_bem_sucedida ? '✅ Bem-Sucedida' : '⏳ Pendente'}
                             </span>
