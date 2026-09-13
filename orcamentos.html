@@ -2456,14 +2456,14 @@ let currentData = [];
                             <p class="notes-content">${item.anotacoes}</p>
                         </div>
                     ` : ''}
-                    <div style="margin-top: 1rem; text-align: center; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <div class="history-actions-compact">
                         ${item.whatsapp ? `
-                            <button type="button" class="btn btn-secondary js-ver-msg" data-hist-id="${item.__backendId}" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; min-width: 180px;">👁️ Ver Mensagem</button>
-                            <button type="button" class="btn btn-primary js-enviar-wpp" data-hist-id="${item.__backendId}" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; min-width: 180px;">📱 Enviar WhatsApp</button>
+                            <button type="button" class="btn btn-secondary js-ver-msg history-action-btn" data-hist-id="${item.__backendId}" title="Ver mensagem preparada">👁️ <span>Mensagem</span></button>
+                            <button type="button" class="btn btn-primary js-enviar-wpp history-action-btn" data-hist-id="${item.__backendId}" title="Enviar pelo WhatsApp">📱 <span>WhatsApp</span></button>
                         ` : ''}
 
-                        <button type="button" class="btn ${item.venda_bem_sucedida ? 'btn-secondary' : 'btn-primary'}" onclick="alterarStatusVenda('${item.__backendId}', ${!item.venda_bem_sucedida})" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; min-width: 180px;">
-                            ${item.venda_bem_sucedida ? '⏳ Marcar como Pendente' : '✅ Marcar como Realizada'}
+                        <button type="button" class="btn ${item.venda_bem_sucedida ? 'btn-secondary' : 'btn-primary'} history-action-btn history-status-btn" onclick="alterarStatusVenda('${item.__backendId}', ${!item.venda_bem_sucedida})" title="${item.venda_bem_sucedida ? 'Marcar venda como pendente' : 'Marcar venda como realizada'}">
+                            ${item.venda_bem_sucedida ? '⏳ <span>Pendente</span>' : '✅ <span>Realizada</span>'}
                         </button>
                     </div>
                 </div>
@@ -3623,14 +3623,14 @@ Zenir - O Melhor Está Aqui! 🏆`;
                             <p class="notes-content">${item.anotacoes}</p>
                         </div>
                     ` : ''}
-                    <div style="margin-top: 1rem; text-align: center; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <div class="history-actions-compact">
                         ${item.whatsapp ? `
-                            <button type="button" class="btn btn-secondary js-ver-msg" data-hist-id="${item.__backendId}" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; min-width: 180px;">👁️ Ver Mensagem</button>
-                            <button type="button" class="btn btn-primary js-enviar-wpp" data-hist-id="${item.__backendId}" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; min-width: 180px;">📱 Enviar WhatsApp</button>
+                            <button type="button" class="btn btn-secondary js-ver-msg history-action-btn" data-hist-id="${item.__backendId}" title="Ver mensagem preparada">👁️ <span>Mensagem</span></button>
+                            <button type="button" class="btn btn-primary js-enviar-wpp history-action-btn" data-hist-id="${item.__backendId}" title="Enviar pelo WhatsApp">📱 <span>WhatsApp</span></button>
                         ` : ''}
 
-                        <button type="button" class="btn ${item.venda_bem_sucedida ? 'btn-secondary' : 'btn-primary'}" onclick="alterarStatusVenda('${item.__backendId}', ${!item.venda_bem_sucedida})" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; min-width: 180px;">
-                            ${item.venda_bem_sucedida ? '⏳ Marcar como Pendente' : '✅ Marcar como Realizada'}
+                        <button type="button" class="btn ${item.venda_bem_sucedida ? 'btn-secondary' : 'btn-primary'} history-action-btn history-status-btn" onclick="alterarStatusVenda('${item.__backendId}', ${!item.venda_bem_sucedida})" title="${item.venda_bem_sucedida ? 'Marcar venda como pendente' : 'Marcar venda como realizada'}">
+                            ${item.venda_bem_sucedida ? '⏳ <span>Pendente</span>' : '✅ <span>Realizada</span>'}
                         </button>
                     </div>
                 </div>
@@ -4188,14 +4188,27 @@ Zenir - O Melhor Está Aqui! 🏆`;
 
   @media (max-width: 640px) {
     .fs-back-home {
-      left: 14px;
-      right: auto;
-      width: 46px;
-      height: 46px;
+      left: auto;
+      right: 10px;
+      bottom: 12px;
+      width: 40px;
+      height: 40px;
       padding: 0;
       border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-align: center;
+      font-size: 17px;
+      opacity: .88;
+      box-shadow: 0 6px 16px rgba(37,99,235,.35);
     }
+  }
+  body:has(input:focus) .fs-back-home,
+  body:has(textarea:focus) .fs-back-home,
+  body:has(select:focus) .fs-back-home {
+    opacity: .22;
+    pointer-events: none;
   }
 </style>
 <script>
@@ -4931,6 +4944,41 @@ window.FSCRMBridge = {
 <script src="./crm-api-v2.js?v=70"></script>
 <script src="./crm-core-v2.js?v=70"></script>
 <script src="./crm-ui-v2.js?v=70"></script>
+
+<style>
+  /* Histórico: ações compactas para reduzir a altura de cada registro */
+  .history-actions-compact{
+    margin-top:.8rem;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:.55rem;
+    align-items:stretch;
+  }
+  .history-actions-compact .history-action-btn{
+    min-width:0!important;
+    width:100%;
+    padding:.68rem .45rem!important;
+    font-size:.82rem!important;
+    line-height:1.1;
+    border-radius:12px;
+    white-space:nowrap;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:.28rem;
+  }
+  @media (max-width:420px){
+    .history-actions-compact{gap:.4rem;}
+    .history-actions-compact .history-action-btn{
+      padding:.62rem .28rem!important;
+      font-size:.76rem!important;
+    }
+  }
+  @media (max-width:340px){
+    .history-actions-compact{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .history-actions-compact .history-status-btn{grid-column:1/-1;}
+  }
+</style>
 </body>
 </html>
 

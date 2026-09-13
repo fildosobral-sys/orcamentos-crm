@@ -4692,5 +4692,40 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
+
+<style>
+  /* Histórico: ações compactas para reduzir a altura de cada registro */
+  .history-actions-compact{
+    margin-top:.8rem;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:.55rem;
+    align-items:stretch;
+  }
+  .history-actions-compact .history-action-btn{
+    min-width:0!important;
+    width:100%;
+    padding:.68rem .45rem!important;
+    font-size:.82rem!important;
+    line-height:1.1;
+    border-radius:12px;
+    white-space:nowrap;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:.28rem;
+  }
+  @media (max-width:420px){
+    .history-actions-compact{gap:.4rem;}
+    .history-actions-compact .history-action-btn{
+      padding:.62rem .28rem!important;
+      font-size:.76rem!important;
+    }
+  }
+  @media (max-width:340px){
+    .history-actions-compact{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .history-actions-compact .history-status-btn{grid-column:1/-1;}
+  }
+</style>
 </body>
 </html>
