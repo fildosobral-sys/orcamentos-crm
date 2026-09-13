@@ -1,103 +1,57 @@
-(function(){
-'use strict';
+(function () {
+  'use strict';
 
-var CENTRAL_ORIGIN=location.origin;
-var TICKET_KEY='fs_central_return_ticket_v3';
-var BACKUP_KEY='fs_central_return_ticket_backup_v3';
-var RETURN_NONCE_KEY='fs_returning_home_nonce_v3';
-var CENTRAL_KEYS=["fs_filial","fs_nome","fs_cargo","fs_whatsapp","fs_genero","fs_access_token","fs_pode_compartilhar","fs_access_persisted","fsAuthGlobal","fs_access_verified_at","fs_access_verified_fingerprint","fs_device_id","nomeVendedor","nomeVendedorLogado","vendedor_nome"];
+  function veioDaCentral() {
+    try {
+      if (!document.referrer) return false;
 
-function parse(v){try{return JSON.parse(v||'null');}catch(_e){return null;}}
+      var atual = new URL(window.location.href);
+      var anterior = new URL(document.referrer);
 
-function readTicket(){
-  try{
-    var t=parse(sessionStorage.getItem(TICKET_KEY))||parse(localStorage.getItem(BACKUP_KEY));
-    if(!t||!t.nonce||!t.ts||!t.snapshot)return null;
-    if(Date.now()-Number(t.ts)>2*60*60*1000)return null;
-    return t;
-  }catch(_e){return null;}
-}
+      if (anterior.origin !== atual.origin) return false;
 
-function restoreCentral(ticket){
-  try{
-    var snap=ticket&&ticket.snapshot;
-    if(!snap)return false;
-    CENTRAL_KEYS.forEach(function(k){
-      if(Object.prototype.hasOwnProperty.call(snap,k)&&snap[k]!==null){
-        localStorage.setItem(k,String(snap[k]));
-      }else{
-        localStorage.removeItem(k);
+      // Se o anterior não era o próprio repositório do Orçamentos,
+      // então o acesso veio da Central / outro módulo da plataforma.
+      return !anterior.pathname.toLowerCase().startsWith('/orcamentos-crm/');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function voltarHome(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) {
+        event.stopImmediatePropagation();
       }
-    });
-    sessionStorage.setItem('fs_returning_home','1');
-    sessionStorage.setItem(RETURN_NONCE_KEY,ticket.nonce);
-    return true;
-  }catch(_e){return false;}
-}
+    }
 
-function goHome(e){
-  if(e){
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    /*
+      FLUXO CORRETO:
+      Central -> Orçamentos -> casinha
+      Volta pela pilha real do navegador, preservando a Central já autenticada.
+    */
+    if (veioDaCentral() && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    /*
+      Se o usuário entrou diretamente no Orçamentos, sem vir da Central,
+      a casinha retorna para a tela inicial do próprio módulo.
+    */
+    window.location.assign('./orcamentos.html');
   }
 
-  var ticket=readTicket();
-  if(ticket && restoreCentral(ticket)){
-    var target=ticket.target||'/index-desktop.html';
-    location.assign(CENTRAL_ORIGIN+target);
-    return;
-  }
+  window.FSVoltarHome = voltarHome;
 
-  // Uso isolado: sem ticket da Central, permanece no próprio módulo.
-  location.assign('./orcamentos.html');
-}
+  function aplicarVisual() {
+    if (document.getElementById('fs-home-button-style-final')) return;
 
-window.FSVoltarHome=goHome;
-
-function injectStyle(){
-  if(document.getElementById('fs-home-glass-style-v3'))return;
-  var style=document.createElement('style');
-  style.id='fs-home-glass-style-v3';
-  style.textContent=`
-    .fs-back-home,
-    .bottom-home-button,
-    .floating-home-button,
-    .fixed-home-btn,
-    #btnHome,
-    #homeBtn,
-    #fsUniversalHomeButton {
-      width:44px !important;
-      height:44px !important;
-      min-width:44px !important;
-      padding:0 !important;
-      display:flex !important;
-      align-items:center !important;
-      justify-content:center !important;
-      border-radius:14px !important;
-      background:rgba(255,255,255,.15) !important;
-      border:1px solid rgba(255,255,255,.34) !important;
-      color:#fff !important;
-      opacity:.72 !important;
-      box-shadow:0 8px 22px rgba(15,23,42,.14) !important;
-      backdrop-filter:blur(12px) saturate(135%) !important;
-      -webkit-backdrop-filter:blur(12px) saturate(135%) !important;
-      text-decoration:none !important;
-      font-size:17px !important;
-      transition:opacity .18s ease, transform .18s ease, background .18s ease !important;
-    }
-    .fs-back-home:hover,
-    .bottom-home-button:hover,
-    .floating-home-button:hover,
-    .fixed-home-btn:hover,
-    #btnHome:hover,
-    #homeBtn:hover,
-    #fsUniversalHomeButton:hover {
-      opacity:.96 !important;
-      background:rgba(255,255,255,.24) !important;
-      transform:translateY(-1px) !important;
-    }
-    @media (max-width:640px) {
+    var style = document.createElement('style');
+    style.id = 'fs-home-button-style-final';
+    style.textContent = `
       .fs-back-home,
       .bottom-home-button,
       .floating-home-button,
@@ -105,32 +59,77 @@ function injectStyle(){
       #btnHome,
       #homeBtn,
       #fsUniversalHomeButton {
-        width:40px !important;
-        height:40px !important;
-        min-width:40px !important;
-        border-radius:13px !important;
-        opacity:.66 !important;
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 50% !important;
+        background: rgba(255,255,255,.16) !important;
+        border: 1px solid rgba(255,255,255,.32) !important;
+        color: #fff !important;
+        opacity: .68 !important;
+        box-shadow: 0 5px 14px rgba(15,23,42,.14) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        text-decoration: none !important;
+        font-size: 16px !important;
+        transition: opacity .18s ease, background .18s ease, transform .18s ease !important;
       }
-    }
-  `;
-  document.head.appendChild(style);
-}
 
-function bind(){
-  injectStyle();
-  var selectors='.fs-back-home,.bottom-home-button,.floating-home-button,.fixed-home-btn,#btnHome,#homeBtn,#fsUniversalHomeButton';
-  document.querySelectorAll(selectors).forEach(function(btn){
-    if(btn.dataset.fsSmartHome==='ticket-v3')return;
-    btn.dataset.fsSmartHome='ticket-v3';
-    btn.setAttribute('title','Voltar para a Central');
-    btn.setAttribute('aria-label','Voltar para a Central');
-    if(btn.tagName==='A')btn.setAttribute('href','#');
-    btn.addEventListener('click',goHome,true);
+      .fs-back-home:hover,
+      .bottom-home-button:hover,
+      .floating-home-button:hover,
+      .fixed-home-btn:hover,
+      #btnHome:hover,
+      #homeBtn:hover,
+      #fsUniversalHomeButton:hover {
+        opacity: .95 !important;
+        background: rgba(255,255,255,.24) !important;
+        transform: translateY(-1px) !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function vincular() {
+    aplicarVisual();
+
+    var seletor = [
+      '.fs-back-home',
+      '.bottom-home-button',
+      '.floating-home-button',
+      '.fixed-home-btn',
+      '#btnHome',
+      '#homeBtn',
+      '#fsUniversalHomeButton'
+    ].join(',');
+
+    document.querySelectorAll(seletor).forEach(function (botao) {
+      if (botao.dataset.fsHomeHistory === '1') return;
+
+      botao.dataset.fsHomeHistory = '1';
+      botao.setAttribute('title', 'Voltar');
+      botao.setAttribute('aria-label', 'Voltar');
+
+      if (botao.tagName === 'A') {
+        botao.setAttribute('href', '#');
+      }
+
+      botao.addEventListener('click', voltarHome, true);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', vincular);
+  } else {
+    vincular();
+  }
+
+  new MutationObserver(vincular).observe(document.documentElement, {
+    childList: true,
+    subtree: true
   });
-}
-
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);
-else bind();
-
-new MutationObserver(bind).observe(document.documentElement,{childList:true,subtree:true});
 })();
