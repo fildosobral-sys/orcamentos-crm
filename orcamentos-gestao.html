@@ -3,14 +3,33 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestão de Orçamentos | FS Soluções</title>
-<link rel="stylesheet" href="./crm-gestao-v2.css?v=2">
+<link rel="stylesheet" href="./crm-gestao-v2.css?v=4">
 </head>
 <body>
-<header><a href="./orcamentos.html" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
+<header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
 <main>
 <section class="hero"><p class="eyebrow">ACOMPANHAMENTO COMERCIAL</p><h1>Gestão da equipe</h1><p>Uma visão das pesquisas, dos retornos e da conversão de cada vendedor.</p><span id="identity"></span></section>
 <div id="state" role="status" aria-live="polite">Verificando sua autorização…</div>
 <div id="content" hidden>
+<section id="access-admin" class="access-admin" hidden>
+  <div class="access-head">
+    <div><p class="eyebrow">ACESSOS DA EQUIPE</p><h2>Criar acesso de colaborador</h2><p>Cadastre a credencial individual e envie o acesso pelo WhatsApp.</p></div>
+  </div>
+  <div class="access-grid">
+    <label>Nome do colaborador<input id="access-name" type="text" placeholder="Ex.: Alessandro Silva" autocomplete="off"></label>
+    <label>Filial<input id="access-branch" type="text" placeholder="Ex.: Iguatu III" autocomplete="off"></label>
+    <label>WhatsApp<input id="access-phone" type="tel" inputmode="numeric" placeholder="Ex.: 88999999999" autocomplete="off"></label>
+    <label>Perfil<select id="access-role"><option value="VENDEDOR">Vendedor</option><option value="GERENTE">Gerente</option></select></label>
+    <label class="access-check"><input id="access-manage" type="checkbox"> Pode acompanhar a equipe</label>
+  </div>
+  <div class="access-actions"><button type="button" id="access-create">Criar acesso</button><span id="access-state" role="status"></span></div>
+  <div id="access-result" class="access-result" hidden>
+    <div><small>Credencial gerada</small><strong id="access-token"></strong><span id="access-user-summary"></span></div>
+    <div class="access-result-actions"><button type="button" id="access-copy">Copiar acesso</button><button type="button" id="access-whatsapp">Enviar no WhatsApp</button></div>
+  </div>
+  <details class="access-list-wrap" open><summary>Usuários cadastrados</summary><div id="access-user-list"></div></details>
+</section>
+
 <section class="filters" aria-label="Filtros de acompanhamento">
 <div class="periods" role="group" aria-label="Período"><button data-period="dia">Dia</button><button data-period="semana">Semana</button><button data-period="quinzena">Quinzena</button><button data-period="mes" aria-pressed="true">Mês</button></div>
 <div class="filter-fields"><label>Data de referência<input type="date" id="anchor"></label><label>Vendedor<select id="seller"><option value="">Toda a equipe</option></select></label><label>Ordenar por<select id="sort"><option value="name">Nome</option><option value="total">Mais orçamentos</option><option value="contacts">Mais contatos</option><option value="conversion">Maior conversão</option><option value="late">Mais retornos atrasados</option></select></label></div>
@@ -26,5 +45,5 @@
 </div>
 </main>
 <dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><h2 id="detail-title"></h2><button id="close-detail" aria-label="Fechar">×</button></div><div id="detail-body"></div></dialog>
-<script src="./crm-config-v2.js?v=2"></script><script src="./crm-api-v2.js?v=2"></script><script src="./crm-bi-v2.js?v=2"></script><script src="./crm-gestao-v2.js?v=2"></script>
+<script src="./crm-config-v2.js?v=2"></script><script src="./crm-api-v2.js?v=4"></script><script src="./crm-bi-v2.js?v=2"></script><script src="./crm-gestao-v2.js?v=4"></script>
 </body></html>

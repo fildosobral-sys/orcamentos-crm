@@ -7,6 +7,39 @@ const date=s=>s?new Date(s.length===10?s+'T12:00:00Z':s).toLocaleDateString('pt-
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const pct=v=>v===null?'—':v.toFixed(1).replace('.',',')+'%';
 let data=null,kind='mes',summary=null,loading=false,lastFocus=null;
+let lastAccess=null;
+const clean=s=>String(s||'').trim();
+const digits=s=>String(s||'').replace(/\D/g,'');
+function slugName(name){return clean(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase();}
+function tokenPart(name){const raw=clean(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z]/g,'').toUpperCase();return (raw.slice(0,5)||'ACESSO');}
+function randomPart(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let out='';for(let i=0;i<4;i++)out+=chars[Math.floor(Math.random()*chars.length)];return out;}
+function makeToken(name,phone){const d=digits(phone);return tokenPart(name)+'-'+d.slice(-4)+'-'+randomPart();}
+function renderAccessUsers(){
+ const box=$('access-user-list'); if(!box||!data)return;
+ const users=data.users.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+ box.innerHTML=users.map(u=>'<div class="access-user"><div><strong>'+esc(u.name)+'</strong><small>'+esc(u.branch)+' · '+esc(u.role)+(u.isOwner?' · Administrador geral':'')+'</small></div><div><span class="access-status '+(u.active?'on':'off')+'">'+(u.active?'Ativo':'Inativo')+'</span>'+(u.canManage?'<span class="access-manage-badge">Gestão</span>':'')+'</div></div>').join('')||'<p>Nenhum usuário cadastrado.</p>';
+}
+function accessMessage(info){return 'Olá, '+info.name+'. Seu acesso ao Sistema de Orçamentos CRM foi liberado.\n\nFilial: '+info.branch+'\nPerfil: '+(info.role==='GERENTE'?'Gerente':'Vendedor')+'\nLink: https://fildosobral-sys.github.io/orcamentos-crm/\nCredencial individual: '+info.token+'\nWhatsApp cadastrado: '+info.phone+'\n\nNão compartilhe sua credencial.';}
+async function createAccess(){
+ const st=$('access-state');st.textContent='';
+ const name=clean($('access-name').value),branch=clean($('access-branch').value),phone=digits($('access-phone').value),role=$('access-role').value,canManage=$('access-manage').checked;
+ if(!name){st.textContent='Informe o nome do colaborador.';return;}
+ if(!branch){st.textContent='Informe a filial.';return;}
+ if(!/^\d{10,11}$/.test(phone)){st.textContent='Informe o WhatsApp com DDD.';return;}
+ const token=makeToken(name,phone),id=(slugName(name)+'_'+phone.slice(-4)).slice(0,80);
+ const btn=$('access-create');btn.disabled=true;st.textContent='Criando acesso…';
+ try{
+   const res=await R.call('createUser',{id,name,branch,phone,role,canManage,token});
+   lastAccess={...res.user,token,phone,branch,name,role};
+   $('access-token').textContent=token;
+   $('access-user-summary').textContent=name+' · '+branch+' · '+(role==='GERENTE'?'Gerente':'Vendedor');
+   $('access-result').hidden=false;st.textContent='Acesso criado com sucesso.';
+   await refresh();
+ }catch(e){st.textContent=e.message||String(e);}finally{btn.disabled=false;}
+}
+async function copyAccess(){if(!lastAccess)return;const text=accessMessage(lastAccess);try{await navigator.clipboard.writeText(text);$('access-state').textContent='Acesso copiado.';}catch(e){$('access-state').textContent='Não foi possível copiar automaticamente.';}}
+function sendAccess(){if(!lastAccess)return;const phone='55'+digits(lastAccess.phone);window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(accessMessage(lastAccess)),'_blank','noopener');}
+
 function clear(){data=null;summary=null;$('content').hidden=true;$('identity').textContent='';$('seller-cards').replaceChildren();$('metrics').replaceChildren();$('detail-body').replaceChildren();$('permission-list').replaceChildren();$('reasons').replaceChildren();$('detail').close();}
 function state(text,error=false){$('state').textContent=text;$('state').dataset.error=String(error);}
 async function refresh(){
@@ -18,6 +51,7 @@ async function refresh(){
   data=await R.call('team');
   if(!data.actor.canManage)throw Error('Autorização da equipe não concedida.');
   $('identity').textContent=data.actor.name+' · '+data.actor.branch;
+  $('access-admin').hidden=!data.actor.isOwner; if(data.actor.isOwner){$('access-branch').value=$('access-branch').value||data.actor.branch;renderAccessUsers();}
   const selected=$('seller').value;
   $('seller').innerHTML='<option value="">Toda a equipe</option>'+data.users.filter(u=>u.track!==false).map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name)+'</option>').join('');
   $('seller').value=selected;render();$('content').hidden=false;state('');
@@ -60,6 +94,10 @@ $('refresh').addEventListener('click',refresh);
 $('seller-cards').addEventListener('click',e=>{const b=e.target.closest('[data-seller]');if(b)openDetail(b.dataset.seller);});
 $('close-detail').addEventListener('click',()=>$('detail').close());
 $('detail').addEventListener('close',()=>lastFocus?.focus());
+$('access-create')?.addEventListener('click',createAccess);
+$('access-copy')?.addEventListener('click',copyAccess);
+$('access-whatsapp')?.addEventListener('click',sendAccess);
+$('access-role')?.addEventListener('change',()=>{if($('access-role').value==='GERENTE')$('access-manage').checked=true;});
 $('permission-list').addEventListener('change',async e=>{
  const input=e.target;if(!input.dataset.permission)return;input.disabled=true;
  try{await R.call('permission',{userId:input.dataset.permission,canManage:input.checked});await refresh();}
