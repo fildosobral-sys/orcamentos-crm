@@ -1626,7 +1626,7 @@
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
- <link rel="stylesheet" href="./crm-v2.css?v=67">
+ <link rel="stylesheet" href="./crm-v2.css?v=69">
 
 <style>
 @media(max-width:600px){
@@ -1964,7 +1964,52 @@ const PUBLIC_BASE_URL = 'https://fildosobral-sys.github.io/FS_simula_plus/orcame
         const TAXAS_CARTAO = [1.0292, 0.5220, 0.3530, 0.2685, 0.2179, 0.1841, 0.1600, 0.1420, 0.1280, 0.1168, 0.1076, 0.1000];
 
 let currentData = [];
+        let crmHistoryShadow = [];
         let vendedorAtual = null;
+
+        function projetarRegistroCRMParaHistorico(r){
+            const table=Number(r?.quote?.table || r.amount || 0);
+            const amount=Number(r?.amount || 0);
+            const discountValue=Number(r?.quote?.discountValue || Math.max(0,table-amount));
+            const discountPercent=Number(r?.quote?.discountPercent || (table>0 ? (discountValue/table)*100 : 0));
+            return {
+                __backendId:String(r.id),
+                __crmOnly:true,
+                codigo_produto:String(r.product||''),
+                cliente:String(r.client||''),
+                whatsapp:String(r.phone||''),
+                vendedor:String(r.seller||''),
+                preco_normal:table,
+                preco_promocional:amount,
+                desconto_percentual:discountPercent,
+                desconto_valor:discountValue,
+                nivel_autorizacao:String(r?.quote?.approvalLevel||''),
+                aprovado_por:String(r?.quote?.approvedBy||''),
+                anotacoes:String(r.note||r.lossNote||''),
+                data_calculo:String(r.createdAt||new Date().toISOString()),
+                venda_bem_sucedida:r.status==='ganha'
+            };
+        }
+
+        function combinarHistoricoComCRM(base){
+            const map=new Map();
+            (Array.isArray(base)?base:[]).forEach(x=>{if(x&&x.__backendId)map.set(String(x.__backendId),x);});
+            crmHistoryShadow.forEach(x=>{
+                const id=String(x.__backendId);
+                if(map.has(id)) map.get(id).venda_bem_sucedida=x.venda_bem_sucedida;
+                else map.set(id,x);
+            });
+            return [...map.values()];
+        }
+
+        window.addEventListener('fscrm:records',function(ev){
+            const records=ev?.detail?.records||[];
+            crmHistoryShadow=records.map(projetarRegistroCRMParaHistorico);
+            let local=[];
+            try{local=JSON.parse(localStorage.getItem('calculosDesconto')||'[]');}catch(_e){}
+            currentData=combinarHistoricoComCRM(local);
+            if(vendedorAtual && typeof aplicarFiltroData==='function') aplicarFiltroData();
+        });
 
         // Senha gerencial
         const SENHA_GERENTE = "@fildO1060";
@@ -2007,14 +2052,18 @@ let currentData = [];
                     return;
                 }
                 
-                currentData = [...data];
-                
+                let local=[];
+                try { local=JSON.parse(localStorage.getItem('calculosDesconto')||'[]'); } catch(_e){}
+                const incoming=Array.isArray(data)?data:[];
+                const mergedBase=incoming.length?incoming:local;
+                currentData = combinarHistoricoComCRM(mergedBase);
+
                 try {
-                    localStorage.setItem('calculosDesconto', JSON.stringify(data));
+                    if(incoming.length) localStorage.setItem('calculosDesconto', JSON.stringify(incoming));
                 } catch (error) {
                     console.error("❌ Erro ao sincronizar localStorage:", error);
                 }
-                
+
                 if (vendedorAtual) {
                     requestAnimationFrame(() => {
                         aplicarFiltroData();
@@ -2028,7 +2077,7 @@ let currentData = [];
             try {
                 const dadosLocais = JSON.parse(localStorage.getItem('calculosDesconto') || '[]');
                 if (dadosLocais.length > 0) {
-                    currentData = dadosLocais;
+                    currentData = combinarHistoricoComCRM(dadosLocais);
                     if (vendedorAtual) {
                         aplicarFiltroData();
                     }
@@ -4870,7 +4919,7 @@ window.FSCRMBridge = {
     if (!row || row.venda_bem_sucedida === sold) return;
     row.venda_bem_sucedida = sold;
     localStorage.setItem('calculosDesconto', JSON.stringify(rows));
-    currentData = rows;
+    currentData = combinarHistoricoComCRM(rows);
     if (typeof aplicarFiltroData === 'function') aplicarFiltroData();
   }
 };
@@ -4878,7 +4927,7 @@ window.FSCRMBridge = {
 <script src="./crm-config-v2.js?v=65"></script>
 <script src="./crm-api-v2.js?v=65"></script>
 <script src="./crm-core-v2.js?v=65"></script>
-<script src="./crm-ui-v2.js?v=65"></script>
+<script src="./crm-ui-v2.js?v=69"></script>
 </body>
 </html>
 

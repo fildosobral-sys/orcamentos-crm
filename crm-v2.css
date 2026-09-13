@@ -280,3 +280,12 @@ body:has(dialog[open]) [role="alert"]{
   box-shadow:0 6px 18px rgba(130,32,52,.12)!important;
 }
 #fscrm-modal-error:empty{display:none!important}
+
+.fscrm-card-actions{display:flex;gap:7px;flex-wrap:wrap}
+.fscrm-card-actions button{flex:1;min-width:105px}
+.fscrm-delete-record{color:#9f263b!important;border-color:#e8bdc5!important;background:#fff7f8!important}
+.fscrm-delete-record:hover{background:#ffecee!important}
+@media(max-width:600px){
+  .fscrm-card-actions{display:grid;grid-template-columns:1fr auto;width:100%}
+  .fscrm-delete-record{min-width:82px!important}
+}

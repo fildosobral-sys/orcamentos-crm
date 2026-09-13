@@ -38,7 +38,12 @@
   const actor = () => remote?.session ? {...remote.session.actor,canManage:false} : ({name:localStorage.getItem('fs_nome')||'',branch:localStorage.getItem('fs_filial')||'',role:localStorage.getItem('fs_cargo')||'',canManage:false});
   function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;return r;}
   async function refreshData(){
-    if(remote?.enabled){await remote.connect();serverRows=(await remote.call('listMine')).records;for(const record of serverRows)window.FSCRMBridge?.setSale(record.id,record.status==='ganha');}
+    if(remote?.enabled){
+      await remote.connect();
+      serverRows=(await remote.call('listMine')).records;
+      for(const record of serverRows)window.FSCRMBridge?.setSale(record.id,record.status==='ganha');
+      window.dispatchEvent(new CustomEvent('fscrm:records',{detail:{records:serverRows}}));
+    }
     await reconcile();render();
     const link=$('fscrm-team-link');if(link)link.hidden=remote?.enabled?!remote.session?.actor.canManage:!['DESENVOLVEDOR_MASTER','DESENVOLVER_MASTER'].includes(C.norm(actor().role));
   }
@@ -166,7 +171,7 @@
     rows.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const wins = rows.filter(r => r.status === 'ganha');
     $('fscrm-stats').innerHTML = [['Orçamentos',rows.length],['Em negociação',rows.filter(r=>!C.closed(r)).length],['Vendas concluídas',wins.length],['Conversão',rows.length ? (100*wins.length/rows.length).toFixed(1)+'%' : '—'],['Valor concluído',money(wins.reduce((s,r)=>s+r.amount,0))]].map(([k,v])=>`<div><small>${k}</small><strong>${v}</strong></div>`).join('');
-    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-card"><div><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span><h4>${esc(r.client)}</h4><p>${esc(r.product)}</p><small>${esc(r.seller)} · ${date(r.createdAt)} · ${r.channel === 'online' ? 'Online' : 'Presencial'} · ${r.buyer === 'terceiro' ? 'Para terceiro' : 'Para si'}</small></div><div class="fscrm-card-side"><strong>${money(r.amount)}</strong><small>${r.next ? 'Retorno: '+date(r.next) : r.reason ? esc(r.reason) : r.delivered ? 'Entrega: '+date(r.delivered) : 'Entrega ainda não informada'}</small><button type="button" data-action="open" data-id="${esc(r.id)}">Acompanhar</button></div></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
+    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-card"><div><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span><h4>${esc(r.client)}</h4><p>${esc(r.product)}</p><small>${esc(r.seller)} · ${date(r.createdAt)} · ${r.channel === 'online' ? 'Online' : 'Presencial'} · ${r.buyer === 'terceiro' ? 'Para terceiro' : 'Para si'}</small></div><div class="fscrm-card-side"><strong>${money(r.amount)}</strong><small>${r.next ? 'Retorno: '+date(r.next) : r.reason ? esc(r.reason) : r.delivered ? 'Entrega: '+date(r.delivered) : 'Entrega ainda não informada'}</small><div class="fscrm-card-actions"><button type="button" data-action="open" data-id="${esc(r.id)}">Acompanhar</button><button type="button" class="fscrm-delete-record" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}">Excluir</button></div></div></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
     
     const old = source().filter(r => r.fs_crm_v1?.kind!=='simulacao' && !db.get(r.__backendId) && r.__backendId && (C.leader(a) || C.norm(r.vendedor) === C.norm(a.name)));
     $('fscrm-old-list').innerHTML = old.length ? old.map(r => `<div class="fscrm-old-row"><span>${esc(r.cliente)} · ${esc(r.codigo_produto)} · ${esc(r.vendedor)}</span><button type="button" data-action="enroll" data-id="${esc(r.__backendId)}">Classificar</button></div>`).join('') : '<p>Nenhum registro anterior aguardando classificação.</p>';
@@ -217,7 +222,6 @@
     ['note','issue','issueOwner','relation','lossNote','lossCompetitor'].forEach(k=>{ if(patch[k]) patch[k]=patch[k].toUpperCase(); });
     patch.lossCompetitorPrice=Number($('fscrm-edit-lossCompetitorPrice').value||0);
     patch.consent=$('fscrm-edit-consent').checked;
-    if (!draft.consent && patch.consent && draft.history.some(h=>h.type==='nao_contatar')) throw Error('Cliente com pedido de interrupção. A reautorização deve ser documentada antes de retomar; mantenha sem contato nesta versão.');
     let r = C.edit(draft,patch,actor()); await save(r,revision);
     const file=$('fscrm-evidence-file')?.files?.[0];
     if(file){
@@ -270,6 +274,25 @@
     next.history.push({at:new Date().toISOString(),actor:actor().name,type:'nao_contatar',detail:'Cliente pediu interrupção dos contatos. Bloqueio também considerado em outros orçamentos com o mesmo telefone nesta filial.'});
     if(next.revision===r.revision) next.revision++;
     next.updatedAt=new Date().toISOString(); await save(next,r.revision,{action:'stop'});modal.close();notify('Pedido de interrupção registrado.');
+  }
+
+
+  async function deleteRecord(id, expectedRevision){
+    const r=db.get(id); if(!r)throw Error('Registro não encontrado.');
+    const ok=window.confirm('Excluir este orçamento? Use esta opção apenas para lançamento feito por engano. Esta ação remove o registro do acompanhamento e dos indicadores.');
+    if(!ok)return;
+    if(remote?.enabled){
+      await remote.call('delete',{id,expectedRevision:Number(expectedRevision)});
+      serverRows=serverRows.filter(x=>x.id!==id);
+    }else{
+      localStorage.removeItem(C.PREFIX+id);
+    }
+    try{
+      const rows=JSON.parse(localStorage.getItem('calculosDesconto')||'[]');
+      localStorage.setItem('calculosDesconto',JSON.stringify(rows.filter(x=>x.__backendId!==id)));
+    }catch(_e){}
+    window.dispatchEvent(new CustomEvent('fscrm:records',{detail:{records:serverRows}}));
+    render(); notify('Orçamento excluído.');
   }
 
   async function viewEvidence(fileId){
@@ -328,6 +351,7 @@
           window.open('https://wa.me/'+C.phone(r.phone)+'?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');break;
         }
         case 'copy':await navigator.clipboard.writeText($('fscrm-message').value);$('fscrm-modal-error').textContent='Mensagem copiada. O contato ainda não foi registrado.';break;
+        case 'delete-record':await deleteRecord(b.dataset.id,b.dataset.revision);break;
         case 'view-evidence':await viewEvidence(b.dataset.fileId);break;
         case 'enroll':enroll(b.dataset.id);break;
         case 'enroll-confirm':{
