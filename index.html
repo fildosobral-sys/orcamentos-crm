@@ -1626,7 +1626,7 @@
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
- <link rel="stylesheet" href="./crm-v2.css?v=66">
+ <link rel="stylesheet" href="./crm-v2.css?v=67">
 
 <style>
 @media(max-width:600px){
@@ -1639,6 +1639,22 @@
 }
 </style>
 
+
+<style id="v67-mobile-final">
+@media(max-width:640px){
+  #historySection .dashboard-summary{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;padding:10px!important;margin-bottom:14px!important;}
+  #historySection .dashboard-summary>.summary-card{width:auto!important;min-width:0!important;min-height:108px!important;margin:0!important;padding:12px 8px!important;border-radius:14px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;}
+  #historySection .summary-number{font-size:1.55rem!important;line-height:1!important;margin:0 0 8px!important;}
+  #historySection .summary-label{font-size:.66rem!important;line-height:1.25!important;text-align:center!important;}
+  #historySection .history-item{position:relative!important;padding:15px 13px!important;}
+  #historySection .history-header{position:relative!important;display:block!important;padding-right:42px!important;}
+  #historySection .history-header>div{display:flex!important;flex-wrap:wrap!important;gap:7px!important;align-items:center!important;margin-top:9px!important;}
+  #historySection .history-header button[title="Excluir registro"]{position:absolute!important;top:0!important;right:0!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;margin:0!important;padding:0!important;border-radius:50%!important;}
+  #historySection .history-details{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;}
+  #historySection .history-details>.detail-item{min-width:0!important;min-height:82px!important;padding:11px 9px!important;margin:0!important;}
+  #historySection .history-details>.detail-item:nth-child(5){grid-column:1/-1!important;}
+}
+</style>
 </head>
  <body>
   <header class="header">
