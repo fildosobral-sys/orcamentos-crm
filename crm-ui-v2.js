@@ -3,7 +3,7 @@
   const C = window.FSCRMCore;
   const remote=window.FSCRMRemote; let serverRows=[], syncing=null;
   if (!C) return;
-  let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7';
+  let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7', authReady = !!remote?.session;
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
   const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -35,11 +35,18 @@
 
   function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=()=>reject(Error('Falha ao ler o arquivo.'));r.readAsDataURL(file);});}
 
-  const actor = () => remote?.session ? {...remote.session.actor,canManage:false} : ({name:localStorage.getItem('fs_nome')||'',branch:localStorage.getItem('fs_filial')||'',role:localStorage.getItem('fs_cargo')||'',canManage:false});
+  const actor = () => remote?.session
+    ? {...remote.session.actor,canManage:false}
+    : ({name:localStorage.getItem('crm_nome')||'',branch:localStorage.getItem('crm_filial')||'',role:localStorage.getItem('crm_cargo')||'',canManage:false});
   function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;return r;}
   async function refreshData(){
+    if(remote?.enabled && !authReady && !remote?.session){
+      if(panel) panel.hidden=true;
+      return;
+    }
     if(remote?.enabled){
       await remote.connect();
+      authReady=!!remote.session;
       serverRows=(await remote.call('listMine')).records;
       for(const record of serverRows)window.FSCRMBridge?.setSale(record.id,record.status==='ganha');
       window.dispatchEvent(new CustomEvent('fscrm:records',{detail:{records:serverRows}}));
@@ -144,16 +151,49 @@
     $('fscrm-search').addEventListener('input', render);
     $('fscrm-file').addEventListener('change', restore);
     window.addEventListener('storage', e => { if(e.key&&e.key.startsWith('fs_')&&!e.key.startsWith(C.PREFIX)){serverRows=[];panel.hidden=true;location.reload();return;}
-      if(e.key===null||e.key.startsWith(C.PREFIX)||e.key==='calculosDesconto'){refreshData().catch(fail);} });
-    document.addEventListener('visibilitychange', () => { if(!document.hidden){ refreshData().catch(fail); scheduleWarmRefresh(); } });
+      if(e.key===null||e.key.startsWith(C.PREFIX)||e.key==='calculosDesconto'){
+        if(!remote?.enabled || authReady || remote?.session) refreshData().catch(fail);
+      } });
+    document.addEventListener('visibilitychange', () => {
+      if(!document.hidden && (!remote?.enabled || authReady || remote?.session)){
+        refreshData().catch(fail);
+        scheduleWarmRefresh();
+      }
+    });
     render();
     if(remote?.enabled)panel.querySelector('[data-action="restore"]').hidden=true;
-    refreshData().catch(fail);
-    scheduleWarmRefresh();
+
+    if(remote?.enabled){
+      panel.hidden=true;
+      document.addEventListener('fscrm:authenticated',async function(){
+        authReady=true;
+        try{
+          await refreshData();
+          scheduleWarmRefresh();
+        }catch(e){fail(e);}
+      });
+      document.addEventListener('fscrm:auth-required',function(){
+        authReady=false;
+        serverRows=[];
+        if(panel)panel.hidden=true;
+        const notice=$('fscrm-notice');
+        if(notice){notice.textContent='';notice.dataset.error='false';}
+      });
+
+      // Se o crm-api já autenticou antes de o painel terminar de montar.
+      if(remote.session){
+        authReady=true;
+        refreshData().catch(fail);
+        scheduleWarmRefresh();
+      }
+    }else{
+      refreshData().catch(fail);
+      scheduleWarmRefresh();
+    }
   }
   function render() {
     const a = actor();
-    panel.hidden = !a.name || !a.branch || document.documentElement.classList.contains('fs-module-auth-lock');
+    panel.hidden = (remote?.enabled && !authReady && !remote?.session) || !a.name || !a.branch || document.documentElement.classList.contains('fs-module-auth-lock');
     if (panel.hidden) return;
     const all = available(), today = C.day();
     const sellerChoice = $('fscrm-seller-filter').value;

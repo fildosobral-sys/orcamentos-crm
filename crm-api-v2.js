@@ -54,6 +54,12 @@ function supportUrl(reason){
 function openSupport(reason){window.open(supportUrl(reason||'Solicitação de suporte pelo menu.'),'_blank','noopener');}
 window.FSCRMOpenSupport=openSupport;
 
+function emitAuthState(ok, actor=null){
+  try{
+    document.dispatchEvent(new CustomEvent(ok?'fscrm:authenticated':'fscrm:auth-required',{detail:{actor}}));
+  }catch(_e){}
+}
+
 function applyRoleUI(actor){
   const canManage=!!actor?.canManage;
   const menuHeader=document.querySelector('#menuDropdown .menu-header');
@@ -65,14 +71,23 @@ function applyRoleUI(actor){
 }
 
 async function connect(){session=null;session=await call('session');return session;}
-window.FSCRMRemote={enabled:!!config.apiUrl,call,connect,get session(){return session;},clearCredentials};
+window.FSCRMRemote={
+  enabled:!!config.apiUrl,
+  call,
+  connect,
+  get session(){return session;},
+  clearCredentials,
+  hasCredentials(){
+    try{storedCredentials();return true;}catch(_e){return false;}
+  }
+};
 function hidePrivateArea(){
   ['loginCard','calculatorCard','historySection','headerActions'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   const panel=document.getElementById('fscrm-panel');if(panel)panel.hidden=true;
 }
 function buildLoginCard(message){
   const card=document.getElementById('authCard');if(!card)return;
-  hidePrivateArea();card.style.display='block';
+  hidePrivateArea();card.style.display='block';emitAuthState(false,null);
   const attempts=getLoginAttempts(),showSupport=attempts>=5;
   card.innerHTML=`<div class="login-header"><h2>🔐 Acesso ao Orçamentos CRM</h2><p>Entre com sua credencial individual cadastrada no sistema.</p></div>
   <form id="crmStandaloneLoginForm" autocomplete="off">
@@ -106,7 +121,7 @@ function buildLoginCard(message){
       const s=await connect(),actor=s&&s.actor?s.actor:null;if(!actor||!actor.name)throw Error('O CRM não retornou a identificação do usuário.');
       resetLoginAttempts();
       localStorage.setItem('crm_nome',actor.name);localStorage.setItem('crm_cargo',actor.role||'');localStorage.setItem('crm_filial',actor.branch||branch);localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
-      applyRoleUI(actor);location.reload();
+      applyRoleUI(actor);emitAuthState(true,actor);location.reload();
     }catch(err){
       const n=addLoginAttempt();
       clearCredentials();
@@ -129,7 +144,7 @@ async function verifyStandaloneAccess(){
 
     const s=await connect(),actor=s&&s.actor?s.actor:null;if(!actor||!actor.name)throw Error('Usuário não identificado pelo CRM.');
     localStorage.setItem('crm_nome',actor.name);localStorage.setItem('crm_cargo',actor.role||'');localStorage.setItem('crm_filial',actor.branch||creds.branch);localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||creds.branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
-    applyRoleUI(actor);
+    applyRoleUI(actor);emitAuthState(true,actor);
     if(!cachedName&&typeof window.entrarNaCalculadora==='function'){window.vendedorAtual=actor.name;window.entrarNaCalculadora(actor.name);}
   }catch(err){
     // Credencial ausente/realmente inválida: pede login. Falha transitória de rede não apaga a sessão salva.
