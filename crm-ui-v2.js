@@ -47,6 +47,9 @@
     await reconcile();render();
     const link=$('fscrm-team-link');if(link)link.hidden=remote?.enabled?!remote.session?.actor.canManage:!['DESENVOLVEDOR_MASTER','DESENVOLVER_MASTER'].includes(C.norm(actor().role));
   }
+  function scheduleWarmRefresh(){
+    [250,900,2200].forEach(ms=>setTimeout(()=>refreshData().catch(fail),ms));
+  }
   const opt = (v, label, selected) => `<option value="${esc(v)}" ${v === selected ? 'selected' : ''}>${esc(label)}</option>`;
   const field = (label, id, value, type = 'text', extra = '') => `<label>${label}<input id="${id}" type="${type}" value="${esc(value)}" ${extra}></label>`;
   const select = (label, id, entries, val) => `<label>${label}<select id="${id}">${entries.map(([k,v]) => opt(k,v,val)).join('')}</select></label>`;
@@ -148,10 +151,11 @@
     $('fscrm-file').addEventListener('change', restore);
     window.addEventListener('storage', e => { if(e.key&&e.key.startsWith('fs_')&&!e.key.startsWith(C.PREFIX)){serverRows=[];panel.hidden=true;location.reload();return;}
       if(e.key===null||e.key.startsWith(C.PREFIX)||e.key==='calculosDesconto'){refreshData().catch(fail);} });
-    document.addEventListener('visibilitychange', () => { if(!document.hidden)refreshData().catch(fail); });
+    document.addEventListener('visibilitychange', () => { if(!document.hidden){ refreshData().catch(fail); scheduleWarmRefresh(); } });
     render();
     if(remote?.enabled)panel.querySelector('[data-action="restore"]').hidden=true;
     refreshData().catch(fail);
+    scheduleWarmRefresh();
   }
   function render() {
     const a = actor();
@@ -171,7 +175,7 @@
     rows.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const wins = rows.filter(r => r.status === 'ganha');
     $('fscrm-stats').innerHTML = [['Orçamentos',rows.length],['Em negociação',rows.filter(r=>!C.closed(r)).length],['Vendas concluídas',wins.length],['Conversão',rows.length ? (100*wins.length/rows.length).toFixed(1)+'%' : '—'],['Valor concluído',money(wins.reduce((s,r)=>s+r.amount,0))]].map(([k,v])=>`<div><small>${k}</small><strong>${v}</strong></div>`).join('');
-    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-card"><div><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span><h4>${esc(r.client)}</h4><p>${esc(r.product)}</p><small>${esc(r.seller)} · ${date(r.createdAt)} · ${r.channel === 'online' ? 'Online' : 'Presencial'} · ${r.buyer === 'terceiro' ? 'Para terceiro' : 'Para si'}</small></div><div class="fscrm-card-side"><strong>${money(r.amount)}</strong><small>${r.next ? 'Retorno: '+date(r.next) : r.reason ? esc(r.reason) : r.delivered ? 'Entrega: '+date(r.delivered) : 'Entrega ainda não informada'}</small><div class="fscrm-card-actions"><button type="button" data-action="open" data-id="${esc(r.id)}">Acompanhar</button><button type="button" class="fscrm-delete-record" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}">Excluir</button></div></div></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
+    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-card"><div class="fscrm-card-header"><div class="fscrm-card-title"><h4>${esc(r.client)}</h4><p>${esc(r.product)}</p></div><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span></div><div class="fscrm-card-meta"><span>${esc(r.seller)}</span><span>${date(r.createdAt)}</span><span>${r.channel === 'online' ? 'Online' : 'Presencial'}</span><span>${r.buyer === 'terceiro' ? 'Para terceiro' : 'Para si'}</span></div><div class="fscrm-card-summary"><strong class="fscrm-card-amount">${money(r.amount)}</strong><small class="fscrm-card-note">${r.next ? 'Retorno: '+date(r.next) : r.reason ? esc(r.reason) : r.delivered ? 'Entrega: '+date(r.delivered) : 'Entrega ainda não informada'}</small></div><div class="fscrm-card-actions"><button type="button" data-action="open" data-id="${esc(r.id)}">Acompanhar</button><button type="button" class="fscrm-delete-record" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}">Excluir</button></div></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
     
     const old = source().filter(r => r.fs_crm_v1?.kind!=='simulacao' && !db.get(r.__backendId) && r.__backendId && (C.leader(a) || C.norm(r.vendedor) === C.norm(a.name)));
     $('fscrm-old-list').innerHTML = old.length ? old.map(r => `<div class="fscrm-old-row"><span>${esc(r.cliente)} · ${esc(r.codigo_produto)} · ${esc(r.vendedor)}</span><button type="button" data-action="enroll" data-id="${esc(r.__backendId)}">Classificar</button></div>`).join('') : '<p>Nenhum registro anterior aguardando classificação.</p>';
@@ -369,7 +373,7 @@
       return deleteRecord(id,r.revision);
     },
     async saved(row){try{await ingest(row);render();}catch(e){fail(Error('Cálculo salvo no histórico. Não foi possível atualizar o acompanhamento: '+e.message));}},
-    async refresh(){try{await refreshData();}catch(e){fail(e);}}
+    async refresh(){try{await refreshData(); scheduleWarmRefresh();}catch(e){fail(e);}}
   };
   document.addEventListener('DOMContentLoaded',()=>{try{mount();}catch(e){console.error('Acompanhamento comercial:',e);if(typeof showToast==='function')showToast('Não foi possível carregar o acompanhamento. Os cálculos originais continuam disponíveis.','error');}});
 })();

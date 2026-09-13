@@ -6,6 +6,11 @@ const labels={negociacao:'Em negociação',aguardando:'Aguardando resposta',agen
 const date=s=>s?new Date(s.length===10?s+'T12:00:00Z':s).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}):'—';
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const pct=v=>v===null?'—':v.toFixed(1).replace('.',',')+'%';
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
+function sameDayValue(v){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(v));}catch(e){return '';}}
+function readLegacyRows(){try{const rows=JSON.parse(localStorage.getItem('calculosDesconto')||'[]');return Array.isArray(rows)?rows.filter(r=>r&&r.fs_crm_v1&&r.fs_crm_v1.kind==='cliente'):[];}catch(e){return [];}}
+function legacyMatchesRecord(row,record){return norm(row.vendedor)===norm(record.seller)&&norm(row.cliente)===norm(record.client)&&norm(row.codigo_produto)===norm(record.product)&&sameDayValue(row.data_calculo)===sameDayValue(record.createdAt)&&Math.abs(Number(row.preco_promocional||0)-Number(record.amount||0))<0.01;}
+async function syncLegacyRowsToCentral(records,branch){if(!R.enabled)return 0;const rows=readLegacyRows();if(!rows.length)return 0;const branchNorm=norm(branch||localStorage.getItem('fs_filial')||'');let created=0;for(const row of rows){const meta=row.fs_crm_v1||{};if(meta.kind!=='cliente')continue;const rowBranch=norm(meta.branch||branchNorm);if(branchNorm&&rowBranch&&rowBranch!==branchNorm)continue;if((records||[]).some(r=>legacyMatchesRecord(row,r)))continue;try{await R.call('create',{legacy:row,meta:{kind:'cliente',channel:meta.channel||'presencial',buyer:meta.buyer||'proprio',next:meta.next||sameDayValue(new Date())||'',consent:!!meta.consent},imported:true});created++;}catch(e){}}return created;}
 let data=null,kind='mes',summary=null,loading=false,lastFocus=null;
 let lastAccess=null;
 
@@ -77,23 +82,88 @@ async function showLossEvidence(recordId){
 async function printLossReport(){
  if(!data)return;
  const anchor=$('anchor').value,p=B.period(kind,anchor),selected=$('seller').value;
+ const sellerName=selected?($('seller').selectedOptions[0]?.textContent||'Colaborador selecionado'):'Toda a equipe';
  const records=data.records.filter(r=>(!selected||r.ownerId===selected));
- const lost=lossRecords(records,p),reasons=rankBy(lost,r=>r.reason==='Preço'?'Preço da concorrência':r.reason);
- const win=window.open('','_blank');if(!win)return;
- win.document.write('<!doctype html><meta charset="utf-8"><title>Relatório de perdas</title><style>body{font-family:Arial,sans-serif;color:#243047;margin:28px}h1{margin-bottom:4px}.meta{color:#677085;margin-bottom:20px}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpis div,.case{border:1px solid #dfe3eb;border-radius:10px;padding:12px;margin:10px 0}.rank{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:7px 0}.evidence{max-width:420px;max-height:300px;object-fit:contain;border:1px solid #ddd;margin:6px} @media print{button{display:none}}</style>');
- win.document.write('<h1>Relatório de perdas de vendas</h1><div class="meta">'+esc(data.actor.branch)+' · '+date(p.start)+' a '+date(p.end)+'</div>');
- win.document.write('<div class="kpis"><div><b>Perdas</b><br>'+lost.length+'</div><div><b>Valor potencial</b><br>'+money(lost.reduce((s,r)=>s+Number(r.amount||0),0))+'</div><div><b>Com evidência</b><br>'+lost.filter(r=>(r.evidence||[]).length).length+'</div></div>');
- win.document.write('<h2>Ranking dos motivos</h2>'+reasons.map(([k,v],i)=>'<div class="rank"><span>'+(i+1)+'. '+esc(k||'Não informado')+'</span><b>'+v+'</b></div>').join(''));
- win.document.write('<h2>Casos detalhados</h2>');
- for(const r of lost){
-   let ev='';
+ const lost=lossRecords(records,p);
+ const potential=lost.reduce((s,r)=>s+Number(r.amount||0),0);
+ const evidenceCount=lost.filter(r=>(r.evidence||[]).length).length;
+ const reasons=rankBy(lost,r=>r.reason==='Preço'?'Preço da concorrência':r.reason);
+ const competitors=rankBy(lost.filter(r=>r.lossCompetitor),r=>r.lossCompetitor);
+ const compRows=lost.filter(r=>r.lossCompetitorPrice>0),diff=compRows.reduce((s,r)=>s+Math.max(0,Number(r.amount||0)-Number(r.lossCompetitorPrice||0)),0);
+ const kpiHtml = [
+   ['Perdas registradas',lost.length,'Casos não convertidos',1],
+   ['Valor potencial',money(potential),'Volume em negociação perdido',2],
+   ['Com evidência',evidenceCount,'Foto, print ou PDF',3],
+   ['Gap médio concorrência',compRows.length?money(diff/compRows.length):'—','Diferença média de preço',4]
+ ].map(([k,v,s,i])=>'<div class="loss-kpi kpi-'+i+'"><span class="kpi-index">0'+i+'</span><small>'+k+'</small><strong>'+v+'</strong><em>'+s+'</em></div>').join('');
+ const rankingHtml = $('loss-ranking')?.innerHTML || '<p>Nenhum dado de perda no período.</p>';
+ const donutHtml = $('loss-donut')?.innerHTML || '<div class="donut-empty"><span>0</span><small>Sem perdas no período</small></div>';
+ const competitorsHtml = $('competitor-ranking')?.innerHTML || '<p>Nenhum concorrente informado.</p>';
+ const trendHtml = $('loss-trend')?.innerHTML || '<p>Nenhuma perda registrada no período.</p>';
+
+ let casesHtml='';
+ for(const r of lost.sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))){
+   let evidenceHtml='';
    for(const meta of (r.evidence||[])){
-     try{const item=await R.call('attachment',{id:r.id,fileId:meta.id});if(item.mime.startsWith('image/'))ev+='<img class="evidence" src="data:'+item.mime+';base64,'+item.base64+'">';else ev+='<p>Anexo PDF: '+esc(item.name)+'</p>';}catch(e){ev+='<p>Anexo não carregado: '+esc(meta.name)+'</p>';}
+     try{
+       const item=await R.call('attachment',{id:r.id,fileId:meta.id});
+       const src='data:'+item.mime+';base64,'+item.base64;
+       evidenceHtml += item.mime==='application/pdf'
+         ? '<a class="evidence-link" href="'+src+'" target="_blank" rel="noopener">📄 '+esc(item.name)+'</a>'
+         : '<figure class="case-evidence"><img src="'+src+'" alt="Evidência comercial"><figcaption>'+esc(item.name)+'</figcaption></figure>';
+     }catch(e){
+       evidenceHtml += '<div class="evidence-missing">Não foi possível carregar '+esc(meta.name)+'.</div>';
+     }
    }
-   win.document.write('<div class="case"><b>'+esc(r.client)+'</b> · '+esc(r.product)+'<br><small>'+esc(r.seller)+' · '+date(r.createdAt)+'</small><p><b>Motivo:</b> '+esc(r.reason==='Preço'?'Preço da concorrência':r.reason||'Não informado')+'</p>'+(r.lossCompetitor?'<p><b>Concorrente:</b> '+esc(r.lossCompetitor)+(r.lossCompetitorPrice?' · '+money(r.lossCompetitorPrice):'')+'</p>':'')+(r.lossNote?'<p><b>Observação:</b> '+esc(r.lossNote)+'</p>':'')+ev+'</div>');
+   casesHtml += '<article class="print-case">'
+      + '<div class="print-case-head"><span class="loss-badge">'+esc(r.reason==='Preço'?'Preço da concorrência':r.reason||'Não informado')+'</span><strong>'+esc(r.client)+'</strong></div>'
+      + '<p class="print-case-meta">'+esc(r.product)+' · '+esc(r.seller)+' · '+date(r.createdAt)+' · Proposta '+money(r.amount)+'</p>'
+      + (r.lossCompetitor?'<p><strong>Concorrente:</strong> '+esc(r.lossCompetitor)+(r.lossCompetitorPrice?' · '+money(r.lossCompetitorPrice):'')+'</p>':'')
+      + (r.lossNote?'<p><strong>Observação:</strong> '+esc(r.lossNote)+'</p>':'')
+      + (evidenceHtml?'<div class="print-evidence-grid">'+evidenceHtml+'</div>':'<p class="no-evidence">Sem evidência anexada.</p>')
+      + '</article>';
  }
- win.document.write('<script>window.onload=function(){setTimeout(function(){window.print()},500)}<\/script>');win.document.close();
+ if(!casesHtml) casesHtml='<p class="empty-state">Nenhuma perda registrada no período.</p>';
+
+ const win=window.open('','_blank');if(!win)return;
+ const styles = `
+ <style>
+ :root{--bg:#f5f7fb;--card:#ffffff;--line:#e7ecf3;--text:#243047;--muted:#6e7891;--shadow:0 10px 24px rgba(38,52,80,.08);--accent:#6653c9;--accent2:#3777e6;--accent3:#1f9a79;--accent4:#d87943;--danger:#b95167}
+ *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+ .page{max-width:1120px;margin:0 auto;padding:28px 24px 42px}
+ .hero{position:relative;overflow:hidden;padding:28px 30px;border-radius:24px;color:#fff;background:linear-gradient(128deg,#1f4bd8 0%,#4f46c8 48%,#7355c7 100%);box-shadow:0 20px 50px rgba(65,62,173,.22)}
+ .eyebrow{font-size:11px;letter-spacing:1.6px;font-weight:800;text-transform:uppercase;opacity:.95;margin:0 0 8px}
+ h1{margin:0;font-size:34px;letter-spacing:-.6px} .hero p{margin:10px 0 0;max-width:760px;line-height:1.55}
+ .hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.chip{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.14);backdrop-filter:blur(10px);font-size:12px}
+ .chip.live:before{content:"";width:8px;height:8px;border-radius:50%;margin-right:8px;background:#6ee7b7;box-shadow:0 0 0 4px rgba(110,231,183,.14)}
+ .section{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:22px}
+ .section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;border-bottom:1px solid #eef1f6;padding-bottom:14px;margin-bottom:16px}
+ .section-head h2{margin:0;font-size:24px;letter-spacing:-.3px}.section-head p{margin:6px 0 0;color:var(--muted);line-height:1.5}
+ .loss-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.loss-kpi{position:relative;overflow:hidden;background:linear-gradient(180deg,#fff,#f8f9fc);border:1px solid #e6eaf2;border-radius:16px;padding:16px 16px 15px;min-height:118px}
+ .loss-kpi .kpi-index{position:absolute;right:12px;top:9px;font-size:11px;font-weight:850;color:#c2c8d5}.loss-kpi small{text-transform:uppercase;letter-spacing:.4px;font-size:9px;font-weight:800;color:#7d8697}.loss-kpi strong{display:block;margin-top:8px;font-size:24px;color:#202b44;letter-spacing:-.3px}.loss-kpi em{display:block;font-style:normal;font-size:10px;color:#8a92a2;margin-top:7px}.loss-kpi:before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:#755bc4}.loss-kpi.kpi-2:before{background:#d65f70}.loss-kpi.kpi-3:before{background:#1d9c75}.loss-kpi.kpi-4:before{background:#387be8}
+ .loss-grid-3{display:grid;grid-template-columns:1fr 1.05fr 1fr;gap:12px}.loss-panel{background:#fff;border:1px solid #e8ebf1;border-radius:16px;padding:17px;box-shadow:0 5px 16px rgba(43,56,84,.04)}
+ .panel-title{display:flex;align-items:center;gap:10px;margin-bottom:13px}.panel-title h3{margin:1px 0 0;font-size:15px}.panel-title small{font-size:9px;letter-spacing:1px;color:#969dae;font-weight:800}.panel-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:#f0edfb;color:#604ead;font-size:10px;font-weight:850}
+ .loss-rank-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0}.loss-rank-pos{min-width:28px;height:28px;border-radius:999px;background:#f2f0fb;color:#6553b2;display:grid;place-items:center;font-size:12px;font-weight:800}.loss-rank-main{flex:1}.loss-rank-main>div:first-child{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.loss-rank-main strong{display:block}.loss-rank-main span{color:#6f7890;font-size:12px}.loss-rank-bar{height:8px;background:#f0f2f7;border-radius:999px;overflow:hidden;margin-top:8px}.loss-rank-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5b4cc4,#7c67d3)}
+ .donut-wrap{display:flex;align-items:center;gap:18px;min-height:205px}.donut-chart{position:relative;width:145px;min-width:145px;height:145px}.donut-chart svg{width:100%;height:100%;transform:rotate(-90deg)}.donut-bg,.donut-seg{fill:none;stroke-width:12}.donut-bg{stroke:#edf0f5}.donut-seg{stroke-linecap:round}.donut-seg.seg-1,.legend-dot.seg-1{stroke:#5b4cc4;background:#5b4cc4}.donut-seg.seg-2,.legend-dot.seg-2{stroke:#3478e5;background:#3478e5}.donut-seg.seg-3,.legend-dot.seg-3{stroke:#1f9a79;background:#1f9a79}.donut-seg.seg-4,.legend-dot.seg-4{stroke:#db7d45;background:#db7d45}.donut-seg.seg-5,.legend-dot.seg-5{stroke:#b95167;background:#b95167}.legend-dot.seg-other{background:#aab1bf}.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}.donut-center strong{font-size:28px;line-height:1;color:#202c46}.donut-center span{font-size:10px;color:#8a93a4;margin-top:4px;text-transform:uppercase;letter-spacing:.8px}.donut-legend{flex:1;min-width:0}.donut-legend-row{display:flex;justify-content:space-between;gap:9px;padding:6px 0;border-bottom:1px solid #f0f2f6;font-size:10px}.donut-legend-row>span{display:flex;align-items:center;gap:7px;min-width:0;overflow-wrap:anywhere}.legend-dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}.donut-legend-row strong{font-size:11px}.donut-legend-row small{font-weight:500;color:#8b93a2}.donut-empty{min-height:205px;display:flex;align-items:center;justify-content:center;flex-direction:column;border:1px dashed #dfe4ed;border-radius:14px;background:#fafbfc}.donut-empty span{font-size:30px;font-weight:800;color:#c1c7d2}.donut-empty small{color:#8d95a3}
+ .loss-trend{height:188px;min-height:188px;padding:10px 4px 0;background:linear-gradient(180deg,#fbfcff,#fff);border-radius:10px;border:1px solid #f0f2f7;display:flex;align-items:flex-end;gap:12px;overflow-x:auto}.loss-trend p{padding:16px;color:var(--muted)} .loss-trend-col{height:155px;min-width:48px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px}.loss-trend-col i{display:block;width:28px;border-radius:12px 12px 6px 6px;background:linear-gradient(180deg,#7a63cf,#4d6ed8);box-shadow:0 5px 12px rgba(91,72,177,.18)}.loss-trend-col span{font-size:10px;color:#7d8697}.loss-trend-col strong{color:#3e4a63;font-size:12px}
+ .loss-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#fff0f2;color:#a2354a;font-size:11px;font-weight:700}.print-cases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.print-case{border:1px solid #e8ebf1;border-radius:16px;padding:16px;background:#fff;box-shadow:0 5px 16px rgba(43,56,84,.04);break-inside:avoid}.print-case-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}.print-case-head strong{font-size:16px}.print-case p{margin:7px 0;line-height:1.5}.print-case-meta{color:#6f7890;font-size:12px}.print-evidence-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.case-evidence,.evidence-missing{border:1px solid #e7ecf3;border-radius:12px;padding:8px;background:#fafbfe}.case-evidence img{display:block;width:100%;max-height:210px;object-fit:contain;border-radius:8px;background:#fff}.case-evidence figcaption{margin-top:6px;font-size:11px;color:#6f7890}.evidence-link{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:10px;background:#f5f7fb;border:1px solid #e7ecf3;color:#243047;text-decoration:none}.no-evidence,.empty-state{color:#7d8697}
+ .footer-note{margin-top:18px;color:#7d8697;font-size:11px;line-height:1.5}
+ @media print{body{background:#fff}.page{max-width:none;padding:14px 12px 22px}.hero,.section,.loss-panel,.print-case{box-shadow:none}.section{break-inside:avoid}.print-cases{grid-template-columns:1fr 1fr}.print-controls{display:none}}
+ @media (max-width:960px){.loss-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.loss-grid-3{grid-template-columns:1fr 1fr}.loss-grid-3 .loss-panel:nth-child(2){grid-column:1/-1}.print-cases{grid-template-columns:1fr}}
+ </style>`;
+ const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório de perdas</title>'+styles+'</head><body>'
+ + '<div class="page">'
+ + '<section class="hero"><p class="eyebrow">ACOMPANHAMENTO COMERCIAL</p><h1>Relatório de perdas de vendas</h1><p>Mesmo padrão visual do dashboard, com os indicadores consolidados do período, ranking dos motivos, concorrentes, tendência e casos detalhados.</p><div class="hero-meta"><span class="chip">'+esc(data.actor.branch)+'</span><span class="chip">'+date(p.start)+' a '+date(p.end)+'</span><span class="chip">'+esc(sellerName)+'</span><span class="chip live">BI atualizado</span></div></section>'
+ + '<section class="section"><div class="section-head"><div><h2>Análise de perdas</h2><p>Indicadores principais e participação das causas registradas pela equipe.</p></div></div><div class="loss-kpis">'+kpiHtml+'</div><div class="loss-grid-3" style="margin-top:14px"><section class="loss-panel"><div class="panel-title"><span class="panel-icon">01</span><div><small>CAUSA</small><h3>Ranking dos motivos</h3></div></div>'+rankingHtml+'</section><section class="loss-panel"><div class="panel-title"><span class="panel-icon">02</span><div><small>PARTICIPAÇÃO</small><h3>Distribuição das perdas</h3></div></div>'+donutHtml+'</section><section class="loss-panel"><div class="panel-title"><span class="panel-icon">03</span><div><small>MERCADO</small><h3>Concorrentes mais citados</h3></div></div>'+competitorsHtml+'</section></div><section class="loss-panel" style="margin-top:12px"><div class="panel-title"><span class="panel-icon">04</span><div><small>TENDÊNCIA</small><h3>Evolução das perdas no período</h3></div></div><div class="loss-trend">'+trendHtml+'</div></section></section>'
+ + '<section class="section"><div class="section-head"><div><h2>Casos detalhados</h2><p>'+lost.length+' caso'+(lost.length===1?'':'s')+' listado'+(lost.length===1?'':'s')+' para consulta e apresentação.</p></div></div><div class="print-cases">'+casesHtml+'</div></section>'
+ + '<p class="footer-note">Relatório gerado automaticamente a partir do painel de gestão. Motivos, observações, concorrentes e evidências são registrados pelo vendedor responsável e consolidados para análise da liderança.</p>'
+ + '<div class="print-controls" style="margin-top:18px;display:flex;gap:10px"><button onclick="window.print()">Imprimir</button><button onclick="window.close()">Fechar</button></div>'
+ + '</div><script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>';
+ win.document.open();
+ win.document.write(html);
+ win.document.close();
 }
+
 
 const clean=s=>String(s||'').trim();
 const digits=s=>String(s||'').replace(/\D/g,'');
@@ -136,6 +206,8 @@ async function refresh(){
   await R.connect();
   if(!R.session.actor.canManage)throw Error('Acesso restrito. Você pode consultar somente seus próprios orçamentos. A visão da equipe exige autorização do desenvolvedor.');
   data=await R.call('team');
+  const synced=await syncLegacyRowsToCentral(data.records,data.actor.branch);
+  if(synced) data=await R.call('team');
   if(!data.actor.canManage)throw Error('Autorização da equipe não concedida.');
   $('identity').textContent=data.actor.name+' · '+data.actor.branch;
   $('access-admin').hidden=!data.actor.isOwner; if(data.actor.isOwner){$('access-branch').value=$('access-branch').value||data.actor.branch;renderAccessUsers();}

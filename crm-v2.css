@@ -17,14 +17,14 @@
 .fscrm-toolbar,.fscrm-modal-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.fscrm-local,.fscrm-hint{color:#657087;font-size:12px}
 #fscrm-notice:not(:empty){padding:10px 12px;background:#e9f7ef;border-radius:8px;margin:12px 0}#fscrm-notice[data-error=true],#fscrm-modal-error:not(:empty){background:#fff0f0;color:#982339;padding:12px;border-radius:8px}
 .fscrm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:16px 0}.fscrm-stats>div{border:1px solid #e0e3ee;padding:12px;background:#fafaff;border-radius:10px}.fscrm-stats strong{display:block;font-size:22px;color:#453d8c}
-.fscrm-card{display:flex;justify-content:space-between;gap:20px;border:1px solid #e0e3ec;border-radius:12px;padding:17px;margin:12px 0;overflow-wrap:anywhere}.fscrm-card h4{margin:8px 0}.fscrm-card p{margin:5px 0 10px}.fscrm-card-side{display:flex;flex-direction:column;gap:8px;align-items:flex-end;min-width:150px}
+.fscrm-card{display:flex;flex-direction:column;gap:10px;border:1px solid #e0e3ec;border-radius:14px;padding:14px;margin:10px 0;overflow-wrap:anywhere;background:#fff;box-shadow:0 2px 10px rgba(20,42,71,.04)}.fscrm-card h4{margin:0;font-size:14px}.fscrm-card p{margin:2px 0 0;font-size:12px;color:#46526a}.fscrm-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.fscrm-card-title{min-width:0;flex:1}.fscrm-card-title p{white-space:normal}.fscrm-card-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;font-size:11px;color:#6b7487}.fscrm-card-meta span{display:block;padding:6px 8px;border-radius:8px;background:#f8f9fc;border:1px solid #edf0f5}.fscrm-card-summary{display:grid;grid-template-columns:minmax(110px,auto) minmax(0,1fr);align-items:center;gap:10px}.fscrm-card-amount{display:block;font-size:16px;color:#202b44}.fscrm-card-note{margin:0;font-size:12px;color:#5f6880}.fscrm-card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.fscrm-card-actions button{width:100%;min-height:40px}.fscrm-delete-record{background:#faf7ff}
 .fscrm-badge{display:inline-block;font-size:12px;border-radius:6px;padding:3px 8px;background:#eeecfc;color:#5142a5}.fscrm-badge[data-status=ganha]{background:#e0f6e9;color:#12683a}.fscrm-badge[data-status=perdida]{background:#f5e7e8;color:#913445}
 .fscrm .fscrm-agenda-row{display:flex;justify-content:space-between;gap:16px;width:100%;text-align:left;margin:6px 0;background:#fafaff}.fscrm-overdue{color:#b52e41}.fscrm-empty{padding:18px;background:#f6f7fa;border-radius:10px;color:#656e7e}
 .fscrm-table-scroll{overflow-x:auto}.fscrm table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}.fscrm th,.fscrm td{padding:12px;text-align:left;border-bottom:1px solid #e3e6ee}.fscrm th{background:#f5f5fc}
 .fscrm-old{border-top:1px solid #e2e5ed;margin-top:24px}.fscrm-old-row{display:flex;justify-content:space-between;align-items:center;gap:15px;border-bottom:1px solid #e3e6ee;padding:12px 0;overflow-wrap:anywhere}
 #fscrm-modal{border:0;border-radius:16px;padding:24px;width:min(720px,calc(100vw - 24px));max-height:90vh;overflow-y:auto;margin:auto;background:#fff;box-shadow:0 20px 70px #14214250}
 #fscrm-modal::backdrop{background:#16203999}.fscrm-modal-head{display:flex;justify-content:space-between;align-items:center;gap:16px}.fscrm-modal-head h2{margin:0}.fscrm-modal-head button{font-size:24px;min-width:42px;padding:0}.fscrm-modal-actions{padding-top:16px;border-top:1px solid #e3e6ee}.fscrm-history{padding-left:22px;max-height:260px;overflow-y:auto;overflow-wrap:anywhere}.fscrm-history li{margin:12px 0}.fscrm-history strong{font-size:12px}
-@media(max-width:600px){.fscrm-body{padding:14px}#fscrm-panel>details>summary{padding:16px}.fscrm-grid{grid-template-columns:1fr}.fscrm-card{flex-direction:column;gap:12px}.fscrm-card-side{align-items:flex-start}.fscrm-card-side button{width:100%}.fscrm-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.fscrm .fscrm-agenda-row{flex-direction:column;gap:4px}#fscrm-modal{padding:18px}.fscrm-modal-actions button{flex:1 1 150px}.fscrm-old-row{align-items:flex-start;flex-direction:column}}
+@media(max-width:600px){.fscrm-body{padding:14px}#fscrm-panel>details>summary{padding:16px}.fscrm-grid{grid-template-columns:1fr}.fscrm-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.fscrm .fscrm-agenda-row{flex-direction:column;gap:4px}#fscrm-modal{padding:18px}.fscrm-modal-actions button{flex:1 1 150px}.fscrm-old-row{align-items:flex-start;flex-direction:column}}
 
 .fscrm-toolbar a{padding:10px 14px;border:1px solid #5948bf;border-radius:9px;color:#493a9d;background:#f4f1ff;text-decoration:none;font-weight:650}
 .fs-orcamentos-v2 .page-wrapper>.container{width:100%;max-width:900px;min-width:0}
@@ -183,21 +183,31 @@ button.home-fixed:active{
 
 /* CRM record cards created by new module */
 @media(max-width:600px){
+  #fscrm-records{display:grid;grid-template-columns:1fr;gap:10px}
   .fscrm-card{
     position:relative!important;
-    padding:15px!important;
-    gap:12px!important;
+    padding:12px!important;
+    gap:8px!important;
+    margin:0!important;
   }
-  .fscrm-card-side{
-    width:100%!important;
-    min-width:0!important;
-    display:grid!important;
-    grid-template-columns:1fr 1fr!important;
+  .fscrm-card-header{
+    align-items:flex-start!important;
     gap:8px!important;
   }
-  .fscrm-card-side button{
-    width:100%!important;
-  }
+  .fscrm-card h4{font-size:13px!important;line-height:1.25!important}
+  .fscrm-card p{font-size:11px!important;line-height:1.3!important}
+  .fscrm-badge{font-size:11px!important;padding:4px 8px!important;border-radius:999px!important;white-space:nowrap!important}
+  .fscrm-card-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
+  .fscrm-card-meta span{padding:5px 7px!important;font-size:10.5px!important}
+  .fscrm-card-summary{grid-template-columns:1fr 1fr!important;gap:8px!important;align-items:start!important}
+  .fscrm-card-amount{font-size:15px!important}
+  .fscrm-card-note{font-size:11px!important;line-height:1.3!important}
+  .fscrm-card-actions{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .fscrm-card-actions button{width:100%!important;min-height:38px!important;padding:.62rem .7rem!important}
+}
+@media(min-width:860px){
+  #fscrm-records{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .fscrm-card{margin:0!important;height:100%}
 }
 
 /* Keep follow-up section readable but slightly tighter on phones */
