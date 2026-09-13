@@ -300,16 +300,14 @@
     try{return JSON.parse(value||'null');}catch(_e){return null;}
   }
 
-  function looksLikeCRM(){
-    var token=String(localStorage.getItem('fs_access_token')||'').trim();
-    var branch=String(localStorage.getItem('fs_filial')||'').trim();
-    var phone=String(localStorage.getItem('fs_whatsapp')||'').replace(/\D/g,'');
-    return token.length>=12 && !!branch && /^\d{10,11}$/.test(phone);
+  function crmValidated(){
+    try{return localStorage.getItem('fs_crm_validated_v1')==='1';}catch(_e){return false;}
   }
 
   window.FSSaveCRMSession=function(){
     try{
-      if(looksLikeCRM()){
+      // Só persiste o snapshot se o crm-api marcou a sessão como validada pelo servidor.
+      if(crmValidated()){
         localStorage.setItem('fs_crm_auth_snapshot_v1',JSON.stringify(readKeys()));
       }
     }catch(e){}
@@ -325,10 +323,6 @@
     }catch(e){}
   };
 
-  // Mantém uma cópia separada da credencial CRM após a validação.
-  window.addEventListener('load',function(){
-    setTimeout(window.FSSaveCRMSession,350);
-    setTimeout(window.FSSaveCRMSession,1200);
-  });
+  // O snapshot do CRM é salvo somente após validação real do servidor.
 })();
 

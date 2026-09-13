@@ -25,9 +25,12 @@ function saveCRMSnapshot(){
 
 function storedCredentials(){
   const snap=readCRMSnapshot();
-  const token=String((snap&&snap.fs_access_token)||localStorage.getItem('fs_access_token')||'').trim();
-  const branch=String((snap&&snap.fs_filial)||localStorage.getItem('fs_filial')||'').trim();
-  const phone=digits((snap&&snap.fs_whatsapp)||localStorage.getItem('fs_whatsapp')||'');
+  const liveToken=String(localStorage.getItem('fs_access_token')||'').trim();
+  const liveBranch=String(localStorage.getItem('fs_filial')||'').trim();
+  const livePhone=digits(localStorage.getItem('fs_whatsapp')||'');
+  const token=String(liveToken||((snap&&snap.fs_access_token)||'')).trim();
+  const branch=String(liveBranch||((snap&&snap.fs_filial)||'')).trim();
+  const phone=digits(livePhone||((snap&&snap.fs_whatsapp)||''));
   if(!token||!branch||!phone){const e=Error('LOGIN_REQUIRED');e.code='LOGIN_REQUIRED';throw e;}
   if(token.length<12){const e=Error('A credencial individual precisa ter no mínimo 12 caracteres.');e.code='LOGIN_REQUIRED';throw e;}
   if(!/^\d{10,11}$/.test(phone)){const e=Error('Informe um WhatsApp válido com DDD.');e.code='LOGIN_REQUIRED';throw e;}
@@ -48,7 +51,7 @@ async function call(action,data={}){
 }
 function clearCredentials(){
   session=null;
-  ['fs_access_token','fs_filial','fs_whatsapp','fs_nome','fs_cargo','vendedorLogado','nomeVendedorLogado','plataformaAutorizada','dataAutorizacao','fsAuthGlobal'].forEach(k=>localStorage.removeItem(k));
+  ['fs_access_token','fs_filial','fs_whatsapp','fs_nome','fs_cargo','vendedorLogado','nomeVendedorLogado','plataformaAutorizada','dataAutorizacao','fsAuthGlobal','fs_crm_validated_v1'].forEach(k=>localStorage.removeItem(k));
 }
 
 const SUPPORT_PHONE='5588988222564';
@@ -119,14 +122,16 @@ function buildLoginCard(message){
     if(!branch){localFail('Informe sua filial.');return;}
     if(!/^\d{10,11}$/.test(phone)){localFail('Informe um WhatsApp válido com DDD.');return;}
     btn.disabled=true;btn.textContent='Validando...';
+    try{localStorage.removeItem(CRM_SNAPSHOT_KEY);}catch(_e){}
     localStorage.setItem('fs_access_token',token);localStorage.setItem('fs_filial',branch);localStorage.setItem('fs_whatsapp',phone);
     try{
       const s=await connect(),actor=s&&s.actor?s.actor:null;if(!actor||!actor.name)throw Error('O CRM não retornou a identificação do usuário.');
       resetLoginAttempts();
       localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
-      saveCRMSnapshot();applyRoleUI(actor);location.reload();
+      localStorage.setItem('fs_crm_validated_v1','1');localStorage.setItem('fs_crm_validated_v1','1');saveCRMSnapshot();applyRoleUI(actor);location.reload();
     }catch(err){
       const n=addLoginAttempt();
+      try{localStorage.removeItem(CRM_SNAPSHOT_KEY);}catch(_e){}
       clearCredentials();
       box.textContent=err.message||'Não foi possível validar o acesso.';box.style.display='block';btn.disabled=false;btn.textContent='🚀 Entrar no CRM';
       const info=document.getElementById('crmAttemptInfo');if(info)info.textContent=n+' tentativa'+(n===1?'':'s')+' sem sucesso.';
@@ -153,6 +158,7 @@ async function verifyStandaloneAccess(){
     // Credencial ausente/realmente inválida: pede login. Falha transitória de rede não apaga a sessão salva.
     const authFailure=err.code==='LOGIN_REQUIRED'||err.code==='UNAUTHORIZED'||/credencial|revogad|não autorizad|usuário não identificado/i.test(String(err.message||''));
     if(authFailure){
+      try{localStorage.removeItem(CRM_SNAPSHOT_KEY);}catch(_e){}
       const cachedName=String(localStorage.getItem('fs_nome')||localStorage.getItem('vendedorLogado')||'').trim();
       const hasAnyCred=!!(localStorage.getItem('fs_access_token')||localStorage.getItem('fs_filial')||localStorage.getItem('fs_whatsapp'));
       if(cachedName && err.code==='LOGIN_REQUIRED' && hasAnyCred){
