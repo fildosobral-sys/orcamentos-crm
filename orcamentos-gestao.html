@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestão de Orçamentos | FS Soluções</title>
-<link rel="stylesheet" href="./crm-gestao-v2.css?v=61">
+<link rel="stylesheet" href="./crm-gestao-v2.css?v=62">
 </head>
 <body>
 <header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
@@ -41,6 +41,11 @@
 </section>
 
 <div class="section-kicker"><span>Visão executiva</span><strong>Escolha o período e refine a análise</strong></div>
+<div class="manager-readonly">
+  <strong>Visão de gestão · somente consulta</strong>
+  <span>Os motivos, observações, concorrentes e evidências são registrados pelo vendedor responsável. A liderança acompanha e analisa sem alterar o registro original.</span>
+</div>
+
 <section class="filters" aria-label="Filtros de acompanhamento">
 <div class="periods" role="group" aria-label="Período"><button data-period="dia">Dia</button><button data-period="semana">Semana</button><button data-period="quinzena">Quinzena</button><button data-period="mes" aria-pressed="true">Mês</button></div>
 <div class="filter-fields"><label>Data de referência<input type="date" id="anchor"></label><label>Vendedor<select id="seller"><option value="">Toda a equipe</option></select></label><label>Ordenar por<select id="sort"><option value="name">Nome</option><option value="total">Mais orçamentos</option><option value="contacts">Mais contatos</option><option value="conversion">Maior conversão</option><option value="late">Mais retornos atrasados</option></select></label></div>
@@ -72,5 +77,5 @@
 </div>
 </main>
 <dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><h2 id="detail-title"></h2><button id="close-detail" aria-label="Fechar">×</button></div><div id="detail-body"></div></dialog>
-<script src="./crm-config-v2.js?v=61"></script><script src="./crm-api-v2.js?v=61"></script><script src="./crm-bi-v2.js?v=61"></script><script src="./crm-gestao-v2.js?v=61"></script>
+<script src="./crm-config-v2.js?v=62"></script><script src="./crm-api-v2.js?v=62"></script><script src="./crm-bi-v2.js?v=62"></script><script src="./crm-gestao-v2.js?v=62"></script>
 </body></html>

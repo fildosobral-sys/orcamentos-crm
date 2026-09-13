@@ -62,7 +62,7 @@ function renderLossIntel(records,p){
 async function showLossEvidence(recordId){
  const r=data.records.find(x=>x.id===recordId);if(!r)return;
  const items=Array.isArray(r.evidence)?r.evidence:[];
- lastFocus=document.activeElement;$('detail-title').textContent='Evidências · '+r.client;
+ lastFocus=document.activeElement;$('detail-title').textContent='Evidências · '+r.client+' · SOMENTE LEITURA';
  $('detail-body').innerHTML='<p>Carregando '+items.length+' anexo(s)…</p>';$('detail').showModal();
  const blocks=[];
  for(const meta of items){
@@ -171,7 +171,7 @@ function render(){
 }
 function openDetail(id){
  const r=summary?.perSeller.find(r=>r.user.id===id);if(!r)return;
- lastFocus=document.activeElement;$('detail-title').textContent=r.user.name;
+ lastFocus=document.activeElement;$('detail-title').textContent=r.user.name+' · SOMENTE LEITURA';
  $('detail-body').innerHTML=r.records.map(q=>'<article class="detail-record"><small>'+esc(labels[q.status])+' · '+date(q.createdAt)+'</small><h3>'+esc(q.client)+'</h3><p>'+esc(q.product)+'</p><p>'+money(q.amount)+' · Próximo retorno: '+date(q.next)+'</p>'+(q.reason?'<p>Motivo: '+esc(q.reason)+'</p>':'')+'<details><summary>Histórico de acompanhamento</summary><ol>'+q.history.slice().reverse().map(h=>'<li><strong>'+esc(h.actor)+' · '+date(h.at)+'</strong><br>'+esc(h.detail)+'</li>').join('')+'</ol></details></article>').join('')||'<p>Nenhum orçamento criado no período escolhido. Os contatos e atrasos podem se referir a orçamentos anteriores.</p>';
  $('detail').showModal();
 }
