@@ -79,18 +79,14 @@
     if (kind === 'simulacao') return { kind };
     const a = actor();
     if (!a.name || !a.branch) throw Error('Entre pela página inicial para identificar vendedor e filial.');
-    const next = $('fscrm-next').value;
-    if (!C.validDate(next) || next < C.day()) throw Error('Informe uma data de retorno a partir de hoje.');
-    const consent = $('fscrm-consent').checked;
     const number = $('whatsapp').value.trim();
     if (number && !C.validPhone(number)) throw Error('Informe o WhatsApp do cliente com DDD.');
-    if (consent && !number) throw Error('Informe o WhatsApp autorizado pelo cliente.');
-    return { kind, ownerId:a.id||null, version:2,storage:remote?.enabled?'central':'local', branch: a.branch, channel: $('fscrm-channel').value, buyer: $('fscrm-buyer').value, next, consent };
+    return { kind, ownerId:a.id||null, version:2,storage:remote?.enabled?'central':'local', branch: a.branch, channel: $('fscrm-channel').value, buyer: $('fscrm-buyer').value, next: C.plus(C.day(),2), consent: true };
   }
   function captureSafe() { try { return capture(); } catch(e) { fail(e); return false; } }
   async function save(r, oldRevision, command) {
     if(remote?.enabled){
-      const keys=['status','reason','lossNote','lossCompetitor','lossCompetitorPrice','next','note','phone','consent','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer'];
+      const keys=['status','reason','lossNote','lossCompetitor','lossCompetitorPrice','note','phone','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer'];
       const patch={};keys.forEach(k=>patch[k]=r[k]);
       r=cacheRecord(await remote.call(command?.action||'update',{id:r.id,expectedRevision:oldRevision,requestId:crypto.randomUUID(),patch,...(command?.data||{})}));
     }else db.put(r,oldRevision);
@@ -111,19 +107,17 @@
     db=remote?.enabled?{all:()=>serverRows,get:id=>serverRows.find(r=>r.id===id)||null}:C.store(localStorage);
     const metadata = document.createElement('div');
     metadata.id = 'fscrm-capture'; metadata.className = 'fscrm';
-    metadata.innerHTML = `<h3>Acompanhamento do cliente</h3><p>Pesquisas reais entram no painel. Simulações internas continuam apenas no histórico de cálculos.</p><div class="fscrm-grid">
+    metadata.innerHTML = `<h3>Acompanhamento do cliente</h3><p class="fscrm-capture-copy">Pesquisas reais entram no painel. Simulações internas continuam apenas no histórico de cálculos.</p><div class="fscrm-grid fscrm-capture-grid">
       ${select('Tipo de registro', 'fscrm-kind', [['cliente','Pesquisa de cliente'],['simulacao','Simulação interna']], 'cliente')}
       ${select('Atendimento', 'fscrm-channel', [['presencial','Presencial'],['online','Online']], 'presencial')}
       ${select('Compra para', 'fscrm-buyer', [['proprio','O próprio cliente'],['terceiro','Terceiro']], 'proprio')}
-      ${field('Próximo retorno', 'fscrm-next', C.plus(C.day(),2), 'date')}
-      </div><label class="fscrm-check"><input type="checkbox" id="fscrm-consent"> Cliente autorizou contato pelo WhatsApp sobre esta negociação.</label>`;
+      </div>`;
     $('discountForm').appendChild(metadata);
     $('discountForm').addEventListener('reset', () => setTimeout(() => {
-      ['fscrm-channel','fscrm-buyer','fscrm-next','fscrm-consent'].forEach(id => $(id).disabled = false);
-      $('fscrm-next').value = C.plus(C.day(),2);
+      ['fscrm-channel','fscrm-buyer'].forEach(id => $(id).disabled = false);
     },0));
     $('fscrm-kind').addEventListener('change', () => {
-      ['fscrm-channel','fscrm-buyer','fscrm-next','fscrm-consent'].forEach(id => $(id).disabled = $('fscrm-kind').value === 'simulacao');
+      ['fscrm-channel','fscrm-buyer'].forEach(id => $(id).disabled = $('fscrm-kind').value === 'simulacao');
     });
     panel = document.createElement('section'); panel.id = 'fscrm-panel'; panel.className = 'fscrm';
     panel.innerHTML = `<details open><summary>Acompanhamento comercial <span id="fscrm-count"></span></summary>
@@ -191,10 +185,10 @@
     show('Acompanhar negociação', `<p><strong>${esc(r.client)}</strong> · ${esc(r.product)}<br>${esc(r.seller)} · ${money(r.amount)}</p><div class="fscrm-grid">
       ${select('Status','fscrm-edit-status',Object.entries(C.STATUS),r.status)}
       ${select('Motivo da perda','fscrm-edit-reason',[['','Selecione'],...C.REASONS.filter(x=>x!=='Preço').map(x=>[x,x])],r.reason==='Preço'?'Preço da concorrência':r.reason)}
-      ${field('Próximo retorno','fscrm-edit-next',r.next,'date')}${field('WhatsApp com DDD','fscrm-edit-phone',r.phone,'tel')}
+      ${field('WhatsApp com DDD','fscrm-edit-phone',r.phone,'tel')}
       ${select('Atendimento','fscrm-edit-channel',[['presencial','Presencial'],['online','Online']],r.channel)}
       ${select('Compra para','fscrm-edit-buyer',[['proprio','O próprio cliente'],['terceiro','Terceiro']],r.buyer)}
-      </div><label class="fscrm-check"><input type="checkbox" id="fscrm-edit-consent" ${r.consent?'checked':''}> Cliente autoriza contato pelo WhatsApp.</label>
+      </div>
       <label>Observações gerais<textarea id="fscrm-edit-note" rows="3" maxlength="2000">${esc(r.note)}</textarea></label>
       <section id="fscrm-loss-box" class="fscrm-loss-box">
         <h3>Registro da perda / negativa</h3>
@@ -222,10 +216,9 @@
     const modalError=$('fscrm-modal-error');
     if(modalError){modalError.textContent='';delete modalError.dataset.error;}
     const patch = {};
-    ['status','reason','next','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer','lossNote','lossCompetitor'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
+    ['status','reason','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer','lossNote','lossCompetitor'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
     ['note','issue','issueOwner','relation','lossNote','lossCompetitor'].forEach(k=>{ if(patch[k]) patch[k]=patch[k].toUpperCase(); });
     patch.lossCompetitorPrice=Number($('fscrm-edit-lossCompetitorPrice').value||0);
-    patch.consent=$('fscrm-edit-consent').checked;
     let r = C.edit(draft,patch,actor()); await save(r,revision);
     const file=$('fscrm-evidence-file')?.files?.[0];
     if(file){
@@ -312,7 +305,7 @@
   function enroll(id) {
     const r=source().find(x=>x.__backendId===id); if(!r || (!C.leader(actor())&&C.norm(r.vendedor)!==C.norm(actor().name))) throw Error('Registro não disponível.');
     draft=r;
-    show('Classificar pesquisa anterior', `<p>${esc(r.cliente)} · ${esc(r.codigo_produto)}</p><p>Confirme que foi uma pesquisa real de cliente e que pertence à ${esc(actor().branch)}.</p><div class="fscrm-grid">${select('Atendimento','fscrm-enroll-channel',[['presencial','Presencial'],['online','Online']],'presencial')}${select('Compra para','fscrm-enroll-buyer',[['proprio','O próprio cliente'],['terceiro','Terceiro']],'proprio')}${field('Próximo retorno','fscrm-enroll-next',C.plus(C.day(),2),'date')}</div><label class="fscrm-check"><input id="fscrm-enroll-consent" type="checkbox"> Cliente autorizou contato pelo WhatsApp.</label>`, `<button type="button" data-action="enroll-confirm" class="fscrm-primary">Incluir pesquisa no acompanhamento</button>`);
+    show('Classificar pesquisa anterior', `<p>${esc(r.cliente)} · ${esc(r.codigo_produto)}</p><p>Confirme que foi uma pesquisa real de cliente e que pertence à ${esc(actor().branch)}.</p><div class="fscrm-grid">${select('Atendimento','fscrm-enroll-channel',[['presencial','Presencial'],['online','Online']],'presencial')}${select('Compra para','fscrm-enroll-buyer',[['proprio','O próprio cliente'],['terceiro','Terceiro']],'proprio')}</div>`, `<button type="button" data-action="enroll-confirm" class="fscrm-primary">Incluir pesquisa no acompanhamento</button>`);
   }
   function exportBackup() {
     const payload={type:'fs-crm-backup',version:1,branch:actor().branch,exportedAt:new Date().toISOString(),records:available()};
@@ -361,7 +354,7 @@
         case 'view-evidence':await viewEvidence(b.dataset.fileId);break;
         case 'enroll':enroll(b.dataset.id);break;
         case 'enroll-confirm':{
-          const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:$('fscrm-enroll-next').value,consent:$('fscrm-enroll-consent').checked},actor());if(remote?.enabled)cacheRecord(await remote.call('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:r.consent},imported:true}));else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');break;
+          const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:C.plus(C.day(),2),consent:true},actor());if(remote?.enabled)cacheRecord(await remote.call('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:true},imported:true}));else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');break;
         }
         case 'export':exportBackup();break;
         case 'restore':$('fscrm-file').click();break;
