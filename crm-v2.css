@@ -301,3 +301,65 @@ button.home-fixed:active{
     margin-bottom:6px!important;
   }
 }
+
+
+/* =========================================================
+   FS — PADRÃO VISUAL DA CASINHA
+   Somente aparência. Não altera navegação/autenticação.
+   ========================================================= */
+html body .fs-back-home {
+  position: fixed !important;
+  right: 14px !important;
+  bottom: 14px !important;
+  left: auto !important;
+  z-index: 9999 !important;
+
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border-radius: 50% !important;
+  background: rgba(255,255,255,.62) !important;
+  border: 1px solid rgba(255,255,255,.80) !important;
+  color: inherit !important;
+
+  font-size: 20px !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+
+  opacity: .62 !important;
+  box-shadow: 0 5px 18px rgba(15,23,42,.12) !important;
+  backdrop-filter: blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(120%) !important;
+
+  transition:
+    opacity .18s ease,
+    transform .18s ease,
+    background .18s ease !important;
+}
+
+html body .fs-back-home:hover {
+  opacity: .90 !important;
+  background: rgba(255,255,255,.82) !important;
+  transform: translateY(-1px) !important;
+  filter: none !important;
+}
+
+@media (max-width: 640px) {
+  html body .fs-back-home {
+    right: 10px !important;
+    bottom: 10px !important;
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+    font-size: 18px !important;
+    opacity: .58 !important;
+  }
+}
