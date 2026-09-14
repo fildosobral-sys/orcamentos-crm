@@ -1,24 +1,10 @@
 (function () {
   'use strict';
 
-  function veioDaCentral() {
-    try {
-      if (!document.referrer) return false;
+  // Home real da Central FS.
+  const CENTRAL_HOME = '../index.html';
 
-      var atual = new URL(window.location.href);
-      var anterior = new URL(document.referrer);
-
-      if (anterior.origin !== atual.origin) return false;
-
-      // Se o anterior não era o próprio repositório do Orçamentos,
-      // então o acesso veio da Central / outro módulo da plataforma.
-      return !anterior.pathname.toLowerCase().startsWith('/orcamentos-crm/');
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function voltarHome(event) {
+  function voltarParaCentral(event) {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -27,103 +13,105 @@
       }
     }
 
-    /*
-      FLUXO CORRETO:
-      Central -> Orçamentos -> casinha
-      Volta pela pilha real do navegador, preservando a Central já autenticada.
-    */
-    if (veioDaCentral() && window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
-    /*
-      Se o usuário entrou diretamente no Orçamentos, sem vir da Central,
-      a casinha retorna para a tela inicial do próprio módulo.
-    */
-    window.location.assign('./orcamentos.html');
+    window.location.assign(CENTRAL_HOME);
   }
 
-  window.FSVoltarHome = voltarHome;
+  window.FSVoltarHome = voltarParaCentral;
 
   function aplicarVisual() {
-    if (document.getElementById('fs-home-button-style-final')) return;
+    if (document.getElementById('fs-home-button-central-final')) return;
 
-    var style = document.createElement('style');
-    style.id = 'fs-home-button-style-final';
+    const style = document.createElement('style');
+    style.id = 'fs-home-button-central-final';
     style.textContent = `
-      .fs-back-home,
-      .bottom-home-button,
-      .floating-home-button,
-      .fixed-home-btn,
-      #btnHome,
-      #homeBtn,
-      #fsUniversalHomeButton {
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
+      .fs-back-home {
+        position: fixed !important;
+        right: 14px !important;
+        bottom: 14px !important;
+        left: auto !important;
+        z-index: 9999 !important;
+
+        width: 50px !important;
+        height: 50px !important;
+        min-width: 50px !important;
+        min-height: 50px !important;
         padding: 0 !important;
+
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+
         border-radius: 50% !important;
-        background: rgba(255,255,255,.16) !important;
-        border: 1px solid rgba(255,255,255,.32) !important;
-        color: #fff !important;
-        opacity: .68 !important;
-        box-shadow: 0 5px 14px rgba(15,23,42,.14) !important;
+        background: rgba(255,255,255,.68) !important;
+        border: 1px solid rgba(255,255,255,.90) !important;
+        box-shadow: 0 5px 16px rgba(15,23,42,.10) !important;
+
         backdrop-filter: blur(10px) !important;
         -webkit-backdrop-filter: blur(10px) !important;
+
+        color: inherit !important;
         text-decoration: none !important;
-        font-size: 16px !important;
-        transition: opacity .18s ease, background .18s ease, transform .18s ease !important;
+        font-size: 19px !important;
+        line-height: 1 !important;
+
+        opacity: .58 !important;
+        transition:
+          opacity .18s ease,
+          transform .18s ease,
+          background .18s ease !important;
       }
 
-      .fs-back-home:hover,
-      .bottom-home-button:hover,
-      .floating-home-button:hover,
-      .fixed-home-btn:hover,
-      #btnHome:hover,
-      #homeBtn:hover,
-      #fsUniversalHomeButton:hover {
-        opacity: .95 !important;
-        background: rgba(255,255,255,.24) !important;
+      .fs-back-home:hover {
+        opacity: .90 !important;
+        background: rgba(255,255,255,.86) !important;
         transform: translateY(-1px) !important;
+        filter: none !important;
+      }
+
+      .fs-back-home:active {
+        transform: scale(.96) !important;
+      }
+
+      @media (max-width: 640px) {
+        .fs-back-home {
+          right: 10px !important;
+          bottom: 10px !important;
+          width: 46px !important;
+          height: 46px !important;
+          min-width: 46px !important;
+          min-height: 46px !important;
+          font-size: 18px !important;
+          opacity: .54 !important;
+        }
+      }
+
+      body:has(input:focus) .fs-back-home,
+      body:has(textarea:focus) .fs-back-home,
+      body:has(select:focus) .fs-back-home {
+        opacity: .22 !important;
       }
     `;
+
     document.head.appendChild(style);
   }
 
   function vincular() {
     aplicarVisual();
 
-    var seletor = [
-      '.fs-back-home',
-      '.bottom-home-button',
-      '.floating-home-button',
-      '.fixed-home-btn',
-      '#btnHome',
-      '#homeBtn',
-      '#fsUniversalHomeButton'
-    ].join(',');
+    document.querySelectorAll('.fs-back-home').forEach(function (botao) {
+      if (botao.dataset.fsCentralHome === '1') return;
 
-    document.querySelectorAll(seletor).forEach(function (botao) {
-      if (botao.dataset.fsHomeHistory === '1') return;
+      botao.dataset.fsCentralHome = '1';
+      botao.setAttribute('href', CENTRAL_HOME);
+      botao.setAttribute('title', 'Voltar para a Central');
+      botao.setAttribute('aria-label', 'Voltar para a Central');
 
-      botao.dataset.fsHomeHistory = '1';
-      botao.setAttribute('title', 'Voltar');
-      botao.setAttribute('aria-label', 'Voltar');
-
-      if (botao.tagName === 'A') {
-        botao.setAttribute('href', '#');
-      }
-
-      botao.addEventListener('click', voltarHome, true);
+      botao.addEventListener('click', voltarParaCentral, true);
     });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', vincular);
+    document.addEventListener('DOMContentLoaded', vincular, { once: true });
   } else {
     vincular();
   }
