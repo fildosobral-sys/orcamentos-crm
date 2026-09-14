@@ -3,7 +3,7 @@
   const C = window.FSCRMCore;
   const remote=window.FSCRMRemote; let serverRows=[], syncing=null;
   if (!C) return;
-  let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7', authReady = !!remote?.session;
+  let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7', authReady = !!remote?.session || !!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_nome')&&localStorage.getItem('crm_filial'));
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
   const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -41,7 +41,8 @@
   function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;return r;}
   async function refreshData(){
     if(remote?.enabled && !authReady && !remote?.session){
-      if(panel) panel.hidden=true;
+      // Mantém a estrutura do acompanhamento visível com a sessão local já conhecida.
+      render();
       return;
     }
     if(remote?.enabled){
@@ -55,7 +56,7 @@
     const link=$('fscrm-team-link');if(link)link.hidden=remote?.enabled?!remote.session?.actor.canManage:!['DESENVOLVEDOR_MASTER','DESENVOLVER_MASTER'].includes(C.norm(actor().role));
   }
   function scheduleWarmRefresh(){
-    [250,900,2200].forEach(ms=>setTimeout(()=>refreshData().catch(fail),ms));
+    [500,2200].forEach(ms=>setTimeout(()=>refreshData().catch(()=>{}),ms));
   }
   const opt = (v, label, selected) => `<option value="${esc(v)}" ${v === selected ? 'selected' : ''}>${esc(label)}</option>`;
   const field = (label, id, value, type = 'text', extra = '') => `<label>${label}<input id="${id}" type="${type}" value="${esc(value)}" ${extra}></label>`;
@@ -110,8 +111,20 @@
     } catch(e) { fail(e); }
     return true;
   }
+  function setupHistoryFilterCollapse(){
+    const section=document.getElementById('historySection');
+    if(!section||section.querySelector('.history-filter-details'))return;
+    const title=section.querySelector('.history-title'),filter=section.querySelector('.date-filter');
+    if(!title||!filter)return;
+    const details=document.createElement('details');details.className='history-filter-details';
+    const summary=document.createElement('summary');
+    const hint=document.createElement('span');hint.className='history-filter-hint';hint.textContent='Filtros';
+    title.parentNode.insertBefore(details,title);
+    summary.appendChild(title);summary.appendChild(hint);details.appendChild(summary);details.appendChild(filter);
+  }
   function mount() {
     db=remote?.enabled?{all:()=>serverRows,get:id=>serverRows.find(r=>r.id===id)||null}:C.store(localStorage);
+    setupHistoryFilterCollapse();
     const metadata = document.createElement('div');
     metadata.id = 'fscrm-capture'; metadata.className = 'fscrm';
     metadata.innerHTML = `<h3>Acompanhamento do cliente</h3><p class="fscrm-capture-copy">Pesquisas reais entram no painel. Simulações internas continuam apenas no histórico de cálculos.</p><div class="fscrm-grid fscrm-capture-grid">
@@ -146,6 +159,7 @@
     modal.addEventListener('close', () => lastFocus?.focus());
     modal.addEventListener('click', click);
     panel.addEventListener('click', click);
+    panel.addEventListener('keydown',e=>{const card=e.target.closest?.('.fscrm-card[data-action="open"]');if(card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(card.dataset.id);}});
     panel.addEventListener('change', e => { if(e.target.id === 'fscrm-activity-period') { activityPeriod = e.target.value; render(); } });
     ['fscrm-from','fscrm-to','fscrm-status-filter','fscrm-seller-filter'].forEach(id => $(id).addEventListener('change', render));
     $('fscrm-search').addEventListener('input', render);
@@ -156,7 +170,7 @@
       } });
     document.addEventListener('visibilitychange', () => {
       if(!document.hidden && (!remote?.enabled || authReady || remote?.session)){
-        refreshData().catch(fail);
+        refreshData().catch(()=>{});
         scheduleWarmRefresh();
       }
     });
@@ -164,7 +178,7 @@
     if(remote?.enabled)panel.querySelector('[data-action="restore"]').hidden=true;
 
     if(remote?.enabled){
-      panel.hidden=true;
+      panel.hidden=!(actor().name&&actor().branch);
       document.addEventListener('fscrm:authenticated',async function(){
         authReady=true;
         try{
@@ -183,7 +197,7 @@
       // Se o crm-api já autenticou antes de o painel terminar de montar.
       if(remote.session){
         authReady=true;
-        refreshData().catch(fail);
+        refreshData().catch(()=>{});
         scheduleWarmRefresh();
       }
     }else{
@@ -193,7 +207,7 @@
   }
   function render() {
     const a = actor();
-    panel.hidden = (remote?.enabled && !authReady && !remote?.session) || !a.name || !a.branch || document.documentElement.classList.contains('fs-module-auth-lock');
+    panel.hidden = !a.name || !a.branch || document.documentElement.classList.contains('fs-module-auth-lock');
     if (panel.hidden) return;
     const all = available(), today = C.day();
     const sellerChoice = $('fscrm-seller-filter').value;
@@ -209,7 +223,7 @@
     rows.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const wins = rows.filter(r => r.status === 'ganha');
     $('fscrm-stats').innerHTML = [['Orçamentos',rows.length],['Em negociação',rows.filter(r=>!C.closed(r)).length],['Vendas concluídas',wins.length],['Conversão',rows.length ? (100*wins.length/rows.length).toFixed(1)+'%' : '—'],['Valor concluído',money(wins.reduce((s,r)=>s+r.amount,0))]].map(([k,v])=>`<div><small>${k}</small><strong>${v}</strong></div>`).join('');
-    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-card"><div class="fscrm-card-header"><div class="fscrm-card-title"><h4>${esc(r.client)}</h4><p>${esc(r.product)}</p></div><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span></div><div class="fscrm-card-meta"><span>${esc(r.seller)}</span><span>${date(r.createdAt)}</span><span>${r.channel === 'online' ? 'Online' : 'Presencial'}</span><span>${r.buyer === 'terceiro' ? 'Para terceiro' : 'Para si'}</span></div><div class="fscrm-card-summary"><strong class="fscrm-card-amount">${money(r.amount)}</strong><small class="fscrm-card-note">${r.next ? 'Retorno: '+date(r.next) : r.reason ? esc(r.reason) : r.delivered ? 'Entrega: '+date(r.delivered) : 'Entrega ainda não informada'}</small></div><div class="fscrm-card-actions"><button type="button" data-action="open" data-id="${esc(r.id)}">Acompanhar</button><button type="button" class="fscrm-delete-record" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}">Excluir</button></div></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
+    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-card fscrm-card-clickable" data-action="open" data-id="${esc(r.id)}" tabindex="0" role="button" aria-label="Abrir acompanhamento de ${esc(r.client)}"><div class="fscrm-card-header"><div class="fscrm-card-title"><h4>${esc(r.client)}</h4><p>${esc(r.product)}</p></div><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span></div><div class="fscrm-card-meta"><span>${esc(r.seller)}</span><span>${date(r.createdAt)}</span><span>${r.channel === 'online' ? 'Online' : 'Presencial'}</span><span>${r.buyer === 'terceiro' ? 'Para terceiro' : 'Para si'}</span></div><div class="fscrm-card-summary"><strong class="fscrm-card-amount">${money(r.amount)}</strong><small class="fscrm-card-note">${r.next ? 'Retorno: '+date(r.next) : r.reason ? esc(r.reason) : r.delivered ? 'Entrega: '+date(r.delivered) : 'Entrega ainda não informada'}</small></div><div class="fscrm-card-actions"><button type="button" data-action="open" data-id="${esc(r.id)}">Acompanhar</button><button type="button" class="fscrm-delete-record" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}">Excluir</button></div></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
     
     const old = source().filter(r => r.fs_crm_v1?.kind!=='simulacao' && !db.get(r.__backendId) && r.__backendId && (C.leader(a) || C.norm(r.vendedor) === C.norm(a.name)));
     $('fscrm-old-list').innerHTML = old.length ? old.map(r => `<div class="fscrm-old-row"><span>${esc(r.cliente)} · ${esc(r.codigo_produto)} · ${esc(r.vendedor)}</span><button type="button" data-action="enroll" data-id="${esc(r.__backendId)}">Classificar</button></div>`).join('') : '<p>Nenhum registro anterior aguardando classificação.</p>';
@@ -290,10 +304,12 @@
     const kind=r.post==='problema'?'suporte':r.status==='ganha'?(r.post==='bem'||r.post==='resolvido'?'relacionamento':'pos'):'retorno';
     const block=C.contactBlock(r,kind,db.all()); if(block) throw Error(block);
     const task=C.tasks(r).find(t=>t.kind===kind);
-    if(task?.date && task.date>C.day()) throw Error('Este contato está agendado para '+date(task.date)+'. Ajuste a agenda se combinou outra data com o cliente.');
-    if(remote?.enabled)await remote.call('checkContact',{id:r.id,kind});
+    const lastContact=db.all().filter(x=>x.id===r.id||C.sameClient(r,x)).flatMap(x=>x.history||[]).filter(h=>String(h.type||'').startsWith('contato_')).sort((a,b)=>String(b.at).localeCompare(String(a.at)))[0];
+    const advisories=[];
+    if(task?.date && task.date>C.day())advisories.push('Contato preferencialmente agendado para '+date(task.date)+'. Você pode enviar antes se a negociação exigir.');
+    if(lastContact && Date.now()-new Date(lastContact.at).getTime()<2*86400000)advisories.push('Já houve contato recente com este cliente. Prefira espaçar as mensagens quando possível.');
     messageDraft={r,kind};
-    show('Preparar contato', `<p><strong>${esc(r.client)}</strong> · ${esc(r.phone)}</p><label>Mensagem para revisar<textarea id="fscrm-message" rows="7" maxlength="2000">${esc(C.message(r,kind,actor()))}</textarea></label><p>O WhatsApp será aberto para você revisar e enviar. Só confirme o contato depois de realizá-lo.</p>
+    show('Preparar contato', `<p><strong>${esc(r.client)}</strong> · ${esc(r.phone)}</p>${advisories.length?'<div class="fscrm-contact-advisory">'+advisories.map(x=>'<p>ℹ️ '+esc(x)+'</p>').join('')+'</div>':''}<label>Mensagem para revisar<textarea id="fscrm-message" rows="7" maxlength="2000">${esc(C.message(r,kind,actor()))}</textarea></label><p>O WhatsApp será aberto para você revisar e enviar. Só confirme o contato depois de realizá-lo.</p>
       ${select('Resultado do contato','fscrm-outcome',[['','Selecione após o contato'],['Mensagem enviada','Mensagem enviada'],['Cliente respondeu','Cliente respondeu'],['Sem resposta','Sem resposta']], '')}
       ${field('Observação do contato (opcional)','fscrm-contact-note','')}
       ${kind==='retorno'||kind==='relacionamento'?field('Próximo contato','fscrm-contact-next',C.plus(C.day(),kind==='relacionamento'?60:3),'date'):''}`,
@@ -372,8 +388,9 @@
     }catch(err){fail(err);}finally{e.target.value='';}
   }
   async function click(e) {
-    const b=e.target.closest('button[data-action]');if(!b||b.disabled)return;
-    b.disabled=true;
+    const b=e.target.closest('button[data-action], .fscrm-card[data-action="open"]');if(!b)return;
+    if(b.tagName==='BUTTON'&&b.disabled)return;
+    if(b.tagName==='BUTTON')b.disabled=true;
     try {
       switch(b.dataset.action){
         case 'close':modal.close();break;
@@ -385,7 +402,6 @@
         case 'confirm-contact':await confirmContact();break;
         case 'whatsapp': {
           const {r,kind}=messageDraft,block=C.contactBlock(db.get(r.id),kind,db.all());if(block)throw Error(block);
-          if(remote?.enabled)await remote.call('checkContact',{id:r.id,kind});
           const text=$('fscrm-message').value.trim();if(!text)throw Error('Escreva a mensagem antes de abrir o WhatsApp.');
           window.open('https://wa.me/'+C.phone(r.phone)+'?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');break;
         }
@@ -399,7 +415,7 @@
         case 'export':exportBackup();break;
         case 'restore':$('fscrm-file').click();break;
       }
-    }catch(err){fail(err);}finally{b.disabled=false;}
+    }catch(err){fail(err);}finally{if(b.tagName==='BUTTON')b.disabled=false;}
   }
   window.FSCRM={capture:captureSafe,has:id=>!!db?.get(id),setLegacyStatus,remove:async id=>{
       const r=db?.get(id);if(!r)throw Error('Registro não encontrado.');

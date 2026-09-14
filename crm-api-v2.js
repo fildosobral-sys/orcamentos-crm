@@ -2,6 +2,7 @@
 'use strict';
 const config=window.FSCRMConfig||{};let session=null;
 const digits=s=>String(s||'').replace(/\D/g,'').replace(/^55(?=\d{10,11}$)/,'');
+const SESSION_OK_KEY='crm_session_ok_v1';
 
 
 function storedCredentials(){
@@ -28,7 +29,7 @@ async function call(action,data={}){
 }
 function clearCredentials(){
   session=null;
-  ['crm_access_token','crm_filial','crm_whatsapp','crm_nome','crm_cargo'].forEach(k=>localStorage.removeItem(k));
+  ['crm_access_token','crm_filial','crm_whatsapp','crm_nome','crm_cargo',SESSION_OK_KEY].forEach(k=>localStorage.removeItem(k));
   ['vendedorLogado','nomeVendedorLogado','plataformaAutorizada','dataAutorizacao'].forEach(k=>localStorage.removeItem(k));
   // fs_* pertence à Central quando o CRM foi aberto por ela. Não apagamos essas chaves aqui.
 }
@@ -120,7 +121,7 @@ function buildLoginCard(message){
     try{
       const s=await connect(),actor=s&&s.actor?s.actor:null;if(!actor||!actor.name)throw Error('O CRM não retornou a identificação do usuário.');
       resetLoginAttempts();
-      localStorage.setItem('crm_nome',actor.name);localStorage.setItem('crm_cargo',actor.role||'');localStorage.setItem('crm_filial',actor.branch||branch);localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
+      localStorage.setItem('crm_nome',actor.name);localStorage.setItem('crm_cargo',actor.role||'');localStorage.setItem('crm_filial',actor.branch||branch);localStorage.setItem(SESSION_OK_KEY,new Date().toISOString());localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
       applyRoleUI(actor);emitAuthState(true,actor);location.reload();
     }catch(err){
       const n=addLoginAttempt();
@@ -143,27 +144,22 @@ async function verifyStandaloneAccess(){
     }else hidePrivateArea();
 
     const s=await connect(),actor=s&&s.actor?s.actor:null;if(!actor||!actor.name)throw Error('Usuário não identificado pelo CRM.');
-    localStorage.setItem('crm_nome',actor.name);localStorage.setItem('crm_cargo',actor.role||'');localStorage.setItem('crm_filial',actor.branch||creds.branch);localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||creds.branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
+    localStorage.setItem('crm_nome',actor.name);localStorage.setItem('crm_cargo',actor.role||'');localStorage.setItem('crm_filial',actor.branch||creds.branch);localStorage.setItem(SESSION_OK_KEY,new Date().toISOString());localStorage.setItem('fs_nome',actor.name);localStorage.setItem('fs_cargo',actor.role||'');localStorage.setItem('fs_filial',actor.branch||creds.branch);localStorage.setItem('vendedorLogado',actor.name);localStorage.setItem('nomeVendedorLogado',actor.name);localStorage.setItem('plataformaAutorizada','true');
     applyRoleUI(actor);emitAuthState(true,actor);
     if(!cachedName&&typeof window.entrarNaCalculadora==='function'){window.vendedorAtual=actor.name;window.entrarNaCalculadora(actor.name);}
   }catch(err){
     // Credencial ausente/realmente inválida: pede login. Falha transitória de rede não apaga a sessão salva.
-    const authFailure=err.code==='LOGIN_REQUIRED'||err.code==='UNAUTHORIZED'||/credencial|revogad|não autorizad|usuário não identificado/i.test(String(err.message||''));
-    if(authFailure){
-      const cachedName=String(localStorage.getItem('crm_nome')||localStorage.getItem('fs_nome')||localStorage.getItem('vendedorLogado')||'').trim();
-      const hasAnyCred=!!(localStorage.getItem('crm_access_token')||localStorage.getItem('crm_filial')||localStorage.getItem('crm_whatsapp'));
-      if(cachedName && err.code==='LOGIN_REQUIRED' && hasAnyCred){
-        // Mantém a sessão visual durante uma inconsistência transitória de leitura/localStorage.
-        if(typeof window.showToast==='function')window.showToast('Reconectando ao CRM…','warning');
-      }else{
-        clearCredentials();
-        buildLoginCard(err.code==='LOGIN_REQUIRED'?'Informe suas credenciais para iniciar esta sessão.':(err.message||'Não foi possível validar seu acesso.'));
-      }
-    }
-    else{
-      const cachedName=String(localStorage.getItem('crm_nome')||localStorage.getItem('fs_nome')||'').trim();
-      if(!cachedName)buildLoginCard('Não foi possível confirmar a conexão agora. Tente novamente.');
-      else if(typeof window.showToast==='function')window.showToast('Sem conexão para validar o CRM. Sua sessão local foi mantida.','warning');
+    const cachedName=String(localStorage.getItem('crm_nome')||localStorage.getItem('fs_nome')||localStorage.getItem('vendedorLogado')||'').trim();
+    const hasStoredCredentials=!!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_filial')&&localStorage.getItem('crm_whatsapp'));
+    const explicitRevocation=err.code==='UNAUTHORIZED'||err.code==='REVOKED'||/revogad|não autorizad/i.test(String(err.message||''));
+    if(explicitRevocation){
+      clearCredentials();
+      buildLoginCard(err.message||'Seu acesso foi revogado. Entre novamente.');
+    }else if(cachedName&&hasStoredCredentials){
+      // Sessão já validada neste aparelho: falha de rede/tempo não força novo login.
+      emitAuthState(true,{name:cachedName,branch:localStorage.getItem('crm_filial')||'',role:localStorage.getItem('crm_cargo')||''});
+    }else{
+      buildLoginCard(err.code==='LOGIN_REQUIRED'?'Informe suas credenciais para iniciar esta sessão.':'Não foi possível confirmar a conexão agora. Tente novamente.');
     }
   }
 }

@@ -95,8 +95,8 @@
     if (kind === 'pos' && (r.status !== 'ganha' || !r.delivered || !['pendente', 'sem_resposta'].includes(r.post))) return 'O pós-venda exige venda concluída e entrega confirmada, com acompanhamento pendente.';
     if (kind === 'relacionamento' && (r.status !== 'ganha' || !['bem', 'resolvido'].includes(r.post))) return 'Conclua o pós-venda antes do contato comercial.';
     if (kind === 'suporte' && r.post !== 'problema') return 'Não há atendimento pendente.';
-    const last = group.flatMap(x => x.history).filter(h => h.type.startsWith('contato_')).sort((a,b) => b.at.localeCompare(a.at))[0];
-    if (last && kind !== 'suporte' && now - new Date(last.at) < 2 * 86400000) return 'Já houve contato com este cliente há menos de 2 dias. Aguarde para evitar mensagens repetidas.';
+    // Intervalos entre contatos são orientação comercial, não bloqueio técnico.
+    // O vendedor pode contatar antes quando houver necessidade real da negociação.
     return '';
   }
   function contact(record, kind, outcome, note, next, actor, records, now = new Date()) {

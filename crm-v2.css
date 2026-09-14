@@ -363,3 +363,19 @@ html body .fs-back-home:hover {
     opacity: .58 !important;
   }
 }
+
+/* V7 — interface compacta e previsível */
+.history-filter-details{margin:0 0 14px;border:0}
+.history-filter-details>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:0 0 12px}
+.history-filter-details>summary::-webkit-details-marker{display:none}
+.history-filter-details>summary:after{content:"⌄";width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#f1f3f8;color:#56627a;font-size:18px;transition:.2s ease}
+.history-filter-details[open]>summary:after{transform:rotate(180deg)}
+.history-filter-details .history-title{margin:0;flex:1}
+.history-filter-hint{font-size:11px;color:#7b8497;font-weight:700}
+.history-filter-details .date-filter{margin-top:0}
+.fscrm-card-clickable{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.fscrm-card-clickable:hover,.fscrm-card-clickable:focus-visible{transform:translateY(-1px);box-shadow:0 8px 22px rgba(20,42,71,.10);border-color:#cfd6e5;outline:none}
+.fscrm-card-clickable .fscrm-card-actions{position:relative;z-index:2}
+.fscrm-contact-advisory{margin:10px 0 14px;padding:10px 12px;border:1px solid #f0d9a8;border-radius:10px;background:#fff9ed;color:#74561d;font-size:12px;line-height:1.45}
+.fscrm-contact-advisory p{margin:4px 0}
+@media(max-width:600px){#fscrm-modal{width:calc(100vw - 20px);max-height:88dvh;padding:16px;border-radius:18px}.fscrm-modal-head{position:sticky;top:-16px;background:#fff;padding:8px 0 10px;z-index:4}.history-filter-details>summary{padding-bottom:8px}.history-filter-hint{display:none}}
