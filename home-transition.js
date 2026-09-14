@@ -13,6 +13,11 @@
       }
     }
 
+    try{
+      sessionStorage.removeItem('crm_sso_from_central');
+      sessionStorage.removeItem('fs_module_from_index');
+      sessionStorage.setItem('fs_returning_home','1');
+    }catch(_e){}
     window.location.assign(CENTRAL_HOME);
   }
 

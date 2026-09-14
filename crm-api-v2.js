@@ -5,13 +5,39 @@ const digits=s=>String(s||'').replace(/\D/g,'').replace(/^55(?=\d{10,11}$)/,'');
 const SESSION_OK_KEY='crm_session_ok_v1';
 
 
+function centralSSOCredentials(){
+  try{
+    const fromCentral=sessionStorage.getItem('fs_module_from_index')==='1'||sessionStorage.getItem('crm_sso_from_central')==='1';
+    if(!fromCentral)return null;
+
+    const token=String(localStorage.getItem('fs_access_token')||'').trim();
+    const branch=String(localStorage.getItem('fs_filial')||'').trim();
+    const name=String(localStorage.getItem('fs_nome')||'').trim();
+    const role=String(localStorage.getItem('fs_cargo')||'').trim();
+    const phone=digits(localStorage.getItem('fs_whatsapp')||'');
+    const deviceId=String(localStorage.getItem('fs_device_id')||'').trim();
+
+    if(!token||!branch||!name||!role||!/^\\d{10,11}$/.test(phone))return null;
+
+    return {
+      mode:'central',
+      central:{token,branch,name,role,phone,deviceId}
+    };
+  }catch(_e){
+    return null;
+  }
+}
+
 function storedCredentials(){
+  const central=centralSSOCredentials();
+  if(central)return central;
+
   const token=String(localStorage.getItem('crm_access_token')||'').trim();
   const branch=String(localStorage.getItem('crm_filial')||'').trim();
   const phone=digits(localStorage.getItem('crm_whatsapp')||'');
   if(!token||!branch||!phone){const e=Error('LOGIN_REQUIRED');e.code='LOGIN_REQUIRED';throw e;}
   if(token.length<12){const e=Error('A credencial individual precisa ter no mínimo 12 caracteres.');e.code='LOGIN_REQUIRED';throw e;}
-  if(!/^\d{10,11}$/.test(phone)){const e=Error('Informe um WhatsApp válido com DDD.');e.code='LOGIN_REQUIRED';throw e;}
+  if(!/^\\d{10,11}$/.test(phone)){const e=Error('Informe um WhatsApp válido com DDD.');e.code='LOGIN_REQUIRED';throw e;}
   return {token,branch,phone,deviceId:localStorage.getItem('fs_device_id')||''};
 }
 async function call(action,data={}){
@@ -136,7 +162,7 @@ async function verifyStandaloneAccess(){
   try{
     const creds=storedCredentials();
     // Se já existe sessão local válida, não mostra a tela de credencial enquanto confirma no servidor.
-    const cachedName=String(localStorage.getItem('crm_nome')||localStorage.getItem('fs_nome')||localStorage.getItem('vendedorLogado')||'').trim();
+    const cachedName=String(localStorage.getItem('crm_nome')||localStorage.getItem('vendedorLogado')||'').trim();
     const a=document.getElementById('authCard'),l=document.getElementById('loginCard');
     if(a)a.style.display='none';if(l)l.style.display='none';
     if(cachedName&&typeof window.entrarNaCalculadora==='function'){
@@ -149,7 +175,7 @@ async function verifyStandaloneAccess(){
     if(!cachedName&&typeof window.entrarNaCalculadora==='function'){window.vendedorAtual=actor.name;window.entrarNaCalculadora(actor.name);}
   }catch(err){
     // Credencial ausente/realmente inválida: pede login. Falha transitória de rede não apaga a sessão salva.
-    const cachedName=String(localStorage.getItem('crm_nome')||localStorage.getItem('fs_nome')||localStorage.getItem('vendedorLogado')||'').trim();
+    const cachedName=String(localStorage.getItem('crm_nome')||localStorage.getItem('vendedorLogado')||'').trim();
     const hasStoredCredentials=!!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_filial')&&localStorage.getItem('crm_whatsapp'));
     const explicitRevocation=err.code==='UNAUTHORIZED'||err.code==='REVOKED'||/revogad|não autorizad/i.test(String(err.message||''));
     if(explicitRevocation){
