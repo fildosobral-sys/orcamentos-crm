@@ -1,0 +1,27 @@
+AJUSTES 01 — BRANCH codex-ajustes
+
+Substituir SOMENTE estes arquivos na branch codex-ajustes:
+
+- crm-api-v2.js
+- crm-config-v2.js
+- crm-core-v2.js
+- crm-ui-v2.js
+- crm-v2.css
+- orcamentos-gestao.html
+- crm-gestao-v2.css
+
+O que foi ajustado:
+1. Sessão/login mais persistente no aparelho.
+2. Falhas temporárias de rede não devem derrubar a sessão nem forçar novo login.
+3. Timeout de conexão aumentado para 45s.
+4. Atualizações automáticas silenciosas para evitar avisos repetidos de "A conexão demorou".
+5. Acompanhamento comercial permanece visível com sessão local válida enquanto reconecta.
+6. Card do cliente inteiro passa a abrir "Acompanhar negociação".
+7. Regra de 2 dias vira orientação, não bloqueio para abrir/enviar WhatsApp.
+8. Agendamento futuro vira aviso preferencial, não bloqueio de envio.
+9. Histórico de cálculos: filtros fechados por padrão; lista do dia continua visível.
+10. Acesso da equipe: criação de novo acesso fechada por padrão.
+11. Visão executiva: bloco de filtros fechado por padrão.
+12. Pop-up de acompanhamento otimizado no mobile.
+
+NÃO subir para a branch principal ainda.
