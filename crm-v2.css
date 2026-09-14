@@ -379,3 +379,29 @@ html body .fs-back-home:hover {
 .fscrm-contact-advisory{margin:10px 0 14px;padding:10px 12px;border:1px solid #f0d9a8;border-radius:10px;background:#fff9ed;color:#74561d;font-size:12px;line-height:1.45}
 .fscrm-contact-advisory p{margin:4px 0}
 @media(max-width:600px){#fscrm-modal{width:calc(100vw - 20px);max-height:88dvh;padding:16px;border-radius:18px}.fscrm-modal-head{position:sticky;top:-16px;background:#fff;padding:8px 0 10px;z-index:4}.history-filter-details>summary{padding-bottom:8px}.history-filter-hint{display:none}}
+
+
+/* ===== Ajuste mobile compacto — acompanhamento comercial ===== */
+.fscrm-toolbar{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;align-items:stretch!important}
+.fscrm-toolbar>a,.fscrm-toolbar>button{min-width:0!important;width:100%!important;padding:9px 6px!important;font-size:11.5px!important;line-height:1.15!important;white-space:normal!important;text-align:center!important;display:flex!important;align-items:center!important;justify-content:center!important}
+
+.fscrm-deal-row{position:relative;display:grid;grid-template-columns:5px minmax(0,1fr) 28px 12px;gap:10px;align-items:center;margin:7px 0;padding:11px 10px;border:1px solid #e6e9f0;border-radius:14px;background:#fff;box-shadow:0 2px 9px rgba(20,42,71,.035);cursor:pointer;transition:.15s ease}
+.fscrm-deal-row:hover,.fscrm-deal-row:focus-visible{border-color:#cfd5e4;box-shadow:0 6px 18px rgba(20,42,71,.07);outline:none;transform:translateY(-1px)}
+.fscrm-status-dot{width:5px;height:42px;border-radius:999px;background:#6b7280;display:block}
+.fscrm-status-dot[data-status="negociacao"]{background:#6653c9}.fscrm-status-dot[data-status="aguardando"]{background:#d68b35}.fscrm-status-dot[data-status="agendado"]{background:#3276d9}.fscrm-status-dot[data-status="ganha"]{background:#2f9d68}.fscrm-status-dot[data-status="perdida"]{background:#c94b58}
+.fscrm-deal-main{min-width:0}.fscrm-deal-top{display:flex;gap:8px;align-items:center;justify-content:space-between;min-width:0}.fscrm-deal-top>strong{font-size:13.5px;color:#202b44;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fscrm-deal-product{margin-top:2px;color:#687287;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fscrm-deal-foot{display:flex;align-items:center;gap:9px;margin-top:5px;color:#7a8292;font-size:10.5px}.fscrm-deal-foot span:first-child{font-weight:700;color:#3b4559}.fscrm-deal-delete{width:28px!important;height:28px!important;min-height:28px!important;min-width:28px!important;padding:0!important;border-radius:50%!important;border:1px solid #f0d5d9!important;background:#fff7f8!important;color:#b83d4b!important;font-size:18px!important;line-height:1!important;position:relative;z-index:3}.fscrm-deal-chevron{font-size:22px;color:#9ba3b3;line-height:1}
+
+@media(max-width:640px){
+  .fscrm-toolbar{gap:5px!important;margin:10px 0 12px!important}
+  .fscrm-toolbar>a,.fscrm-toolbar>button{font-size:10.5px!important;padding:8px 4px!important;min-height:38px!important;border-radius:10px!important}
+  .fscrm-deal-row{grid-template-columns:4px minmax(0,1fr) 26px 10px;gap:8px;padding:9px 8px;border-radius:13px;margin:6px 0}
+  .fscrm-status-dot{width:4px;height:38px}
+  .fscrm-deal-top>strong{font-size:13px}.fscrm-deal-product{font-size:11px}.fscrm-deal-foot{font-size:10px;margin-top:4px}
+  .fscrm-badge{font-size:9.5px!important;padding:3px 6px!important}
+  #fscrm-modal{width:calc(100vw - 22px)!important;max-height:calc(100dvh - 32px)!important;padding:16px!important;border-radius:22px!important}
+  #fscrm-modal .fscrm-modal-head{position:sticky;top:-16px;z-index:5;background:#fff;padding:14px 0 10px;margin-top:-14px}
+  #fscrm-modal .fscrm-modal-head h2{font-size:22px!important;line-height:1.1!important}
+}
+
+/* Botão Acompanhar adicionado ao histórico do cálculo */
+.history-actions-compact .history-follow-btn{background:#f2efff!important;color:#5142a5!important;border:1px solid #cfc6f4!important}

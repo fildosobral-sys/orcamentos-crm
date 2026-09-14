@@ -160,7 +160,7 @@
     modal.addEventListener('close', () => lastFocus?.focus());
     modal.addEventListener('click', click);
     panel.addEventListener('click', click);
-    panel.addEventListener('keydown',e=>{const card=e.target.closest?.('.fscrm-card[data-action="open"]');if(card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(card.dataset.id);}});
+    panel.addEventListener('keydown',e=>{const card=e.target.closest?.('.fscrm-deal-row[data-action="open"]');if(card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(card.dataset.id);}});
     panel.addEventListener('change', e => { if(e.target.id === 'fscrm-activity-period') { activityPeriod = e.target.value; render(); } });
     ['fscrm-from','fscrm-to','fscrm-status-filter','fscrm-seller-filter'].forEach(id => $(id).addEventListener('change', render));
     $('fscrm-search').addEventListener('input', render);
@@ -224,7 +224,7 @@
     rows.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const wins = rows.filter(r => r.status === 'ganha');
     $('fscrm-stats').innerHTML = [['Orçamentos',rows.length],['Em negociação',rows.filter(r=>!C.closed(r)).length],['Vendas concluídas',wins.length],['Conversão',rows.length ? (100*wins.length/rows.length).toFixed(1)+'%' : '—'],['Valor concluído',money(wins.reduce((s,r)=>s+r.amount,0))]].map(([k,v])=>`<div><small>${k}</small><strong>${v}</strong></div>`).join('');
-    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-card fscrm-card-clickable" data-action="open" data-id="${esc(r.id)}" tabindex="0" role="button" aria-label="Abrir acompanhamento de ${esc(r.client)}"><div class="fscrm-card-header"><div class="fscrm-card-title"><h4>${esc(r.client)}</h4><p>${esc(r.product)}</p></div><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span></div><div class="fscrm-card-meta"><span>${esc(r.seller)}</span><span>${date(r.createdAt)}</span><span>${r.channel === 'online' ? 'Online' : 'Presencial'}</span><span>${r.buyer === 'terceiro' ? 'Para terceiro' : 'Para si'}</span></div><div class="fscrm-card-summary"><strong class="fscrm-card-amount">${money(r.amount)}</strong><small class="fscrm-card-note">${r.next ? 'Retorno: '+date(r.next) : r.reason ? esc(r.reason) : r.delivered ? 'Entrega: '+date(r.delivered) : 'Entrega ainda não informada'}</small></div><div class="fscrm-card-actions"><button type="button" data-action="open" data-id="${esc(r.id)}">Acompanhar</button><button type="button" class="fscrm-delete-record" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}">Excluir</button></div></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
+    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-deal-row" data-action="open" data-id="${esc(r.id)}" tabindex="0" role="button" aria-label="Acompanhar negociação de ${esc(r.client)}"><i class="fscrm-status-dot" data-status="${r.status}" aria-hidden="true"></i><div class="fscrm-deal-main"><div class="fscrm-deal-top"><strong>${esc(r.client)}</strong><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span></div><div class="fscrm-deal-product">${esc(r.product)}</div><div class="fscrm-deal-foot"><span>${money(r.amount)}</span><span>${r.next ? 'Retorno '+date(r.next) : r.reason ? esc(r.reason) : date(r.createdAt)}</span></div></div><button type="button" class="fscrm-deal-delete" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}" aria-label="Excluir orçamento" title="Excluir">×</button><span class="fscrm-deal-chevron" aria-hidden="true">›</span></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
     
     const old = source().filter(r => r.fs_crm_v1?.kind!=='simulacao' && !db.get(r.__backendId) && r.__backendId && (C.leader(a) || C.norm(r.vendedor) === C.norm(a.name)));
     $('fscrm-old-list').innerHTML = old.length ? old.map(r => `<div class="fscrm-old-row"><span>${esc(r.cliente)} · ${esc(r.codigo_produto)} · ${esc(r.vendedor)}</span><button type="button" data-action="enroll" data-id="${esc(r.__backendId)}">Classificar</button></div>`).join('') : '<p>Nenhum registro anterior aguardando classificação.</p>';
@@ -389,7 +389,7 @@
     }catch(err){fail(err);}finally{e.target.value='';}
   }
   async function click(e) {
-    const b=e.target.closest('button[data-action], .fscrm-card[data-action="open"]');if(!b)return;
+    const b=e.target.closest('button[data-action], .fscrm-deal-row[data-action="open"]');if(!b)return;
     if(b.tagName==='BUTTON'&&b.disabled)return;
     if(b.tagName==='BUTTON')b.disabled=true;
     try {
@@ -410,15 +410,38 @@
         case 'delete-record':await deleteRecord(b.dataset.id,b.dataset.revision);break;
         case 'view-evidence':await viewEvidence(b.dataset.fileId);break;
         case 'enroll':enroll(b.dataset.id);break;
-        case 'enroll-confirm':{
-          const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:C.plus(C.day(),2),consent:true},actor());if(remote?.enabled)cacheRecord(await remote.call('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:true},imported:true}));else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');break;
+        case 'enroll-confirm':
+        case 'enroll-confirm-open':{
+          const shouldOpen=b.dataset.action==='enroll-confirm-open';
+          const legacyId=draft.__backendId;
+          const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:C.plus(C.day(),2),consent:true},actor());if(remote?.enabled)cacheRecord(await remote.call('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:true},imported:true}));else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');if(shouldOpen)setTimeout(()=>open(legacyId),0);break;
         }
         case 'export':exportBackup();break;
         case 'restore':$('fscrm-file').click();break;
       }
     }catch(err){fail(err);}finally{if(b.tagName==='BUTTON')b.disabled=false;}
   }
-  window.FSCRM={capture:captureSafe,has:id=>!!db?.get(id),setLegacyStatus,remove:async id=>{
+  async function openFromHistory(id){
+    try{
+      let r=db?.get(id);
+      if(!r){
+        const legacy=source().find(x=>String(x.__backendId)===String(id));
+        if(!legacy)throw Error('Este registro não está disponível no acompanhamento.');
+        if(legacy.fs_crm_v1?.kind!=='cliente'){
+          draft=legacy;
+          show('Incluir no acompanhamento', `<p><strong>${esc(legacy.cliente||'Cliente')}</strong> · ${esc(legacy.codigo_produto||'Produto')}</p><p>Este cálculo ainda não foi marcado como pesquisa de cliente. Confirme para incluí-lo no acompanhamento comercial.</p><div class="fscrm-grid">${select('Atendimento','fscrm-enroll-channel',[['presencial','Presencial'],['online','Online']],legacy.fs_crm_v1?.channel||'presencial')}${select('Compra para','fscrm-enroll-buyer',[['proprio','O próprio cliente'],['terceiro','Terceiro']],legacy.fs_crm_v1?.buyer||'proprio')}</div>`, `<button type="button" data-action="enroll-confirm-open" class="fscrm-primary">Incluir e acompanhar</button>`);
+          return;
+        }
+        await ingest(legacy);
+        if(remote?.enabled)await refreshData();
+        r=db?.get(id);
+      }
+      if(!r)throw Error('Não foi possível abrir este acompanhamento agora. Atualize o painel e tente novamente.');
+      open(id);
+    }catch(e){fail(e);}
+  }
+
+  window.FSCRM={capture:captureSafe,has:id=>!!db?.get(id),open:id=>openFromHistory(id),openFromHistory,setLegacyStatus,remove:async id=>{
       const r=db?.get(id);if(!r)throw Error('Registro não encontrado.');
       return deleteRecord(id,r.revision);
     },

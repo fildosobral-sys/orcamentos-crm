@@ -2318,6 +2318,15 @@ let currentData = [];
             showToast("📊 Mostrando todos os seus registros", "success");
         }
 
+        function acompanharRegistroHistorico(id) {
+            if (!id) return;
+            if (window.FSCRM && typeof window.FSCRM.openFromHistory === 'function') {
+                window.FSCRM.openFromHistory(String(id));
+                return;
+            }
+            showToast('O acompanhamento ainda está carregando. Tente novamente em alguns segundos.', 'warning');
+        }
+
         // Função para renderizar histórico completo (todos os usuários)
         function renderHistoryComplete(data) {
             data = data.filter(item => String(item.vendedor || '').trim().toUpperCase() === String(localStorage.getItem('fs_nome') || '').trim().toUpperCase());
@@ -2444,6 +2453,7 @@ let currentData = [];
                         </div>
                     ` : ''}
                     <div class="history-actions-compact">
+                        <button type="button" class="btn history-action-btn history-follow-btn" onclick="acompanharRegistroHistorico('${item.__backendId}')" title="Abrir acompanhamento desta negociação">📋 <span>Acompanhar</span></button>
                         ${item.whatsapp ? `
                             <button type="button" class="btn btn-secondary js-ver-msg history-action-btn" data-hist-id="${item.__backendId}" title="Ver mensagem preparada">👁️ <span>Mensagem</span></button>
                             <button type="button" class="btn btn-primary js-enviar-wpp history-action-btn" data-hist-id="${item.__backendId}" title="Enviar pelo WhatsApp">📱 <span>WhatsApp</span></button>
@@ -3611,6 +3621,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
                         </div>
                     ` : ''}
                     <div class="history-actions-compact">
+                        <button type="button" class="btn history-action-btn history-follow-btn" onclick="acompanharRegistroHistorico('${item.__backendId}')" title="Abrir acompanhamento desta negociação">📋 <span>Acompanhar</span></button>
                         ${item.whatsapp ? `
                             <button type="button" class="btn btn-secondary js-ver-msg history-action-btn" data-hist-id="${item.__backendId}" title="Ver mensagem preparada">👁️ <span>Mensagem</span></button>
                             <button type="button" class="btn btn-primary js-enviar-wpp history-action-btn" data-hist-id="${item.__backendId}" title="Enviar pelo WhatsApp">📱 <span>WhatsApp</span></button>
