@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestão de Orçamentos | FS Soluções</title>
-<link rel="stylesheet" href="./crm-gestao-v2.css?v=65">
+<link rel="stylesheet" href="./crm-gestao-v2.css?v=66">
 </head>
 <body>
 <header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
@@ -13,7 +13,16 @@
     <p class="eyebrow">ACOMPANHAMENTO COMERCIAL</p>
     <h1>Gestão da equipe</h1>
     <p>Indicadores, conversão, perdas, concorrência e desempenho comercial em uma única visão.</p>
-    <div class="hero-meta"><span id="identity"></span><span class="live-chip"><i></i> BI atualizado</span></div>
+    <div class="hero-meta">
+      <span id="identity"></span>
+      <span class="live-chip"><i></i> BI atualizado</span>
+      <label id="hero-team-wrap" class="hero-team-wrap">
+        <span>Equipe</span>
+        <select id="hero-branch" aria-label="Selecionar equipe ou filial">
+          <option value="">Todas as filiais</option>
+        </select>
+      </label>
+    </div>
   </div>
   <div class="hero-mark" aria-hidden="true">
     <span>FS</span><small>BI</small>

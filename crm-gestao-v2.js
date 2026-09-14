@@ -44,7 +44,7 @@ function branchGroups(){
 function selectedBranchKey(){
  if(!data)return '';
  if(!data.actor.isOwner)return norm(data.actor.branch);
- return $('branch')?.value||'';
+ return $('hero-branch')?.value ?? $('branch')?.value ?? '';
 }
 function scopedData(branchKey){
  if(!data)return {users:[],records:[]};
@@ -65,17 +65,54 @@ function refreshSellerOptions(){
 function setupBranchControls(){
  if(!data)return;
  const groups=branchGroups();
- const isMultiOwner=data.actor.isOwner&&groups.length>1;
- const label=$('branch-filter-label'),select=$('branch');
- if(label)label.hidden=!isMultiOwner;
+ const isOwner=!!data.actor.isOwner;
+ const isMultiOwner=isOwner&&groups.length>1;
+ const label=$('branch-filter-label'),select=$('branch'),hero=$('hero-branch'),heroWrap=$('hero-team-wrap');
+
+ // O seletor principal fica sempre no cabeçalho da gestão.
+ if(heroWrap)heroWrap.hidden=false;
+
  if(select){
   const prev=select.value;
   select.innerHTML='<option value="">Todas as filiais</option>'+groups.map(g=>'<option value="'+esc(g.key)+'">'+esc(g.name)+'</option>').join('');
-  select.value=groups.some(g=>g.key===prev)?prev:'';
+  if(isOwner){
+    select.value=groups.some(g=>g.key===prev)?prev:'';
+    select.disabled=false;
+  }else{
+    select.innerHTML='<option value="'+esc(norm(data.actor.branch))+'">'+esc(prettyBranch(data.actor.branch))+'</option>';
+    select.value=norm(data.actor.branch);
+    select.disabled=true;
+  }
  }
+
+ if(hero){
+  const previous=hero.value;
+  if(isOwner){
+    hero.innerHTML='<option value="">Todas as filiais</option>'+groups.map(g=>'<option value="'+esc(g.key)+'">'+esc(g.name)+'</option>').join('');
+    hero.value=groups.some(g=>g.key===previous)?previous:(select?.value||'');
+    hero.disabled=false;
+  }else{
+    hero.innerHTML='<option value="'+esc(norm(data.actor.branch))+'">Minha equipe · '+esc(prettyBranch(data.actor.branch))+'</option>';
+    hero.value=norm(data.actor.branch);
+    hero.disabled=true;
+  }
+ }
+
+ // O filtro detalhado de filial continua disponível apenas quando realmente
+ // houver mais de uma filial para o administrador geral.
+ if(label)label.hidden=!isMultiOwner;
+
  const overview=$('branch-overview');
  if(overview)overview.hidden=!isMultiOwner;
  refreshSellerOptions();
+}
+function syncBranchSelectors(source){
+ const branch=$('branch'),hero=$('hero-branch');
+ if(!branch||!hero)return;
+ if(source==='hero')branch.value=hero.value;
+ else hero.value=branch.value;
+ refreshSellerOptions();
+ render();
 }
 function branchSummaryHtml(name,users,records,p){
  const s=B.summarize(records,users,p),t=s.totals;
@@ -351,7 +388,8 @@ function openDetail(id){
 $('anchor').value=B.day(new Date());
 document.querySelectorAll('[data-period]').forEach(b=>b.addEventListener('click',()=>{kind=b.dataset.period;render();}));
 ['anchor','seller','sort'].forEach(id=>$(id).addEventListener('change',render));
-$('branch')?.addEventListener('change',()=>{refreshSellerOptions();render();});
+$('branch')?.addEventListener('change',()=>syncBranchSelectors('filter'));
+$('hero-branch')?.addEventListener('change',()=>syncBranchSelectors('hero'));
 $('refresh').addEventListener('click',refresh);
 $('seller-cards').addEventListener('click',e=>{const b=e.target.closest('[data-seller]');if(b)openDetail(b.dataset.seller);});
 $('branch-list')?.addEventListener('click',e=>{const b=e.target.closest('[data-branch-panel]');if(b)openBranchDashboard(b.dataset.branchPanel);});
