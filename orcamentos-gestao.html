@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestão de Orçamentos | FS Soluções</title>
-<link rel="stylesheet" href="./crm-gestao-v2.css?v=63">
+<link rel="stylesheet" href="./crm-gestao-v2.css?v=65">
 </head>
 <body>
 <header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
@@ -48,11 +48,16 @@
   <span>Os motivos, observações, concorrentes e evidências são registrados pelo vendedor responsável. A liderança acompanha e analisa sem alterar o registro original.</span>
 </div>
 
+<section id="branch-overview" class="branch-overview" hidden>
+  <div class="section-heading branch-heading"><div><h2>Filiais</h2><span>Toque em uma filial para abrir o painel consolidado.</span></div><span id="branch-count"></span></div>
+  <div id="branch-list" class="branch-list"></div>
+</section>
+
 <details class="executive-filter-wrap">
  <summary><span>Filtros da visão executiva</span><small>Período, vendedor e ordenação</small></summary>
  <section class="filters" aria-label="Filtros de acompanhamento">
  <div class="periods" role="group" aria-label="Período"><button data-period="dia">Dia</button><button data-period="semana">Semana</button><button data-period="quinzena">Quinzena</button><button data-period="mes" aria-pressed="true">Mês</button></div>
- <div class="filter-fields"><label>Data de referência<input type="date" id="anchor"></label><label>Vendedor<select id="seller"><option value="">Toda a equipe</option></select></label><label>Ordenar por<select id="sort"><option value="name">Nome</option><option value="total">Mais orçamentos</option><option value="contacts">Mais contatos</option><option value="conversion">Maior conversão</option><option value="late">Mais retornos atrasados</option></select></label></div>
+ <div class="filter-fields"><label id="branch-filter-label" hidden>Filial<select id="branch"><option value="">Todas as filiais</option></select></label><label>Data de referência<input type="date" id="anchor"></label><label>Vendedor<select id="seller"><option value="">Toda a equipe</option></select></label><label>Ordenar por<select id="sort"><option value="name">Nome</option><option value="total">Mais orçamentos</option><option value="contacts">Mais contatos</option><option value="conversion">Maior conversão</option><option value="late">Mais retornos atrasados</option></select></label></div>
  <div class="filter-footer"><strong id="period-label"></strong><button id="refresh">Atualizar</button></div>
  </section>
 </details>
@@ -81,10 +86,14 @@
 <p id="updated" class="updated"></p>
 </div>
 </main>
+<dialog id="branch-detail" class="branch-detail" aria-labelledby="branch-detail-title">
+  <div class="dialog-head"><div><p class="eyebrow-dark">PAINEL DA FILIAL</p><h2 id="branch-detail-title"></h2><small id="branch-detail-period"></small></div><button id="close-branch-detail" aria-label="Fechar">×</button></div>
+  <div id="branch-detail-body"></div>
+</dialog>
 <dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><h2 id="detail-title"></h2><button id="close-detail" aria-label="Fechar">×</button></div><div id="detail-body"></div></dialog>
 <script src="./crm-config-v2.js?v=62"></script>
 <script src="./crm-api-v2.js?v=91"></script>
 <script src="./crm-bi-v2.js?v=62"></script>
-<script src="./crm-gestao-v2.js?v=64"></script>
+<script src="./crm-gestao-v2.js?v=66"></script>
 <script src="./crm-relatorio-a4.js?v=1"></script>
 </body></html>

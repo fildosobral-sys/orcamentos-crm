@@ -2405,10 +2405,6 @@ let currentData = [];
                     <div class="history-header">
                         <span class="client-name">👤 <strong>${item.vendedor || 'Usuário Desconhecido'}</strong> • 📦 ${item.codigo_produto || 'N/A'} - 👤 ${item.cliente}${item.whatsapp ? ` - 📱 ${item.whatsapp}` : ''}</span>
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">
-                                ${item.venda_bem_sucedida ? '✅ Bem-Sucedida' : '⏳ Pendente'}
-                            </span>
-                            <span class="history-date">${new Date(item.data_calculo).toLocaleDateString('pt-BR')} às ${new Date(item.data_calculo).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span>
                             <button type="button" onclick="excluirRegistro('${item.__backendId}', '${item.cliente.replace(/'/g, "\\'")}', '${item.codigo_produto || 'Produto'}')" 
                                     style="background: rgba(244, 67, 54, 0.1); border: 1px solid rgba(244, 67, 54, 0.3); color: #c62828; 
                                            width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; font-weight: bold; 
@@ -2462,6 +2458,10 @@ let currentData = [];
                         <button type="button" class="btn ${item.venda_bem_sucedida ? 'btn-secondary' : 'btn-primary'} history-action-btn history-status-btn" onclick="alterarStatusVenda('${item.__backendId}', ${!item.venda_bem_sucedida})" title="${item.venda_bem_sucedida ? 'Marcar venda como pendente' : 'Marcar venda como realizada'}">
                             ${item.venda_bem_sucedida ? '⏳ <span>Pendente</span>' : '✅ <span>Realizada</span>'}
                         </button>
+                        <div class="history-state-meta">
+                            <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">${item.venda_bem_sucedida ? '✅ Bem-Sucedida' : '⏳ Pendente'}</span>
+                            <span class="history-date">${new Date(item.data_calculo).toLocaleDateString('pt-BR')} às ${new Date(item.data_calculo).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -3573,10 +3573,6 @@ Zenir - O Melhor Está Aqui! 🏆`;
                     <div class="history-header">
                         <span class="client-name">📦 ${item.codigo_produto || 'N/A'} - 👤 ${item.cliente}${item.whatsapp ? ` - 📱 ${item.whatsapp}` : ''}</span>
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">
-                                ${item.venda_bem_sucedida ? '✅ Bem-Sucedida' : '⏳ Pendente'}
-                            </span>
-                            <span class="history-date">${new Date(item.data_calculo).toLocaleDateString('pt-BR')} às ${new Date(item.data_calculo).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span>
                             <button type="button" onclick="excluirRegistro('${item.__backendId}', '${item.cliente.replace(/'/g, "\\'")}', '${item.codigo_produto || 'Produto'}')" 
                                     style="background: rgba(244, 67, 54, 0.1); border: 1px solid rgba(244, 67, 54, 0.3); color: #c62828; 
                                            width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; font-weight: bold; 
@@ -3630,6 +3626,10 @@ Zenir - O Melhor Está Aqui! 🏆`;
                         <button type="button" class="btn ${item.venda_bem_sucedida ? 'btn-secondary' : 'btn-primary'} history-action-btn history-status-btn" onclick="alterarStatusVenda('${item.__backendId}', ${!item.venda_bem_sucedida})" title="${item.venda_bem_sucedida ? 'Marcar venda como pendente' : 'Marcar venda como realizada'}">
                             ${item.venda_bem_sucedida ? '⏳ <span>Pendente</span>' : '✅ <span>Realizada</span>'}
                         </button>
+                        <div class="history-state-meta">
+                            <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">${item.venda_bem_sucedida ? '✅ Bem-Sucedida' : '⏳ Pendente'}</span>
+                            <span class="history-date">${new Date(item.data_calculo).toLocaleDateString('pt-BR')} às ${new Date(item.data_calculo).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -4651,7 +4651,40 @@ window.FSCRMBridge = {
   }
   @media (max-width:340px){
     .history-actions-compact{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .history-actions-compact .history-status-btn{grid-column:1/-1;}
+    .history-actions-compact .history-status-btn{grid-column:auto;}
+  }
+  /* Cabeçalho limpo: status e data ficam na área de ações. */
+  .history-actions-compact .js-ver-msg{
+    background:#eaf2ff!important;
+    border-color:#b8d2ff!important;
+    color:#1f4f91!important;
+  }
+  .history-actions-compact .js-ver-msg span{color:#1f4f91!important;}
+  .history-state-meta{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:.35rem;
+    flex-wrap:wrap;
+    padding:.18rem .1rem;
+  }
+  .history-state-meta .success-status{
+    margin:0!important;
+    padding:.42rem .62rem!important;
+    font-size:.74rem!important;
+    white-space:nowrap;
+  }
+  .history-state-meta .history-date{
+    margin:0!important;
+    padding:.42rem .62rem!important;
+    font-size:.72rem!important;
+    white-space:nowrap;
+  }
+  @media (max-width:420px){
+    .history-actions-compact{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .history-state-meta{grid-column:2/4;justify-content:flex-start;}
+    .history-actions-compact .history-status-btn{grid-column:1;}
   }
 </style>
 <script src="./home-transition.js?v=90"></script>

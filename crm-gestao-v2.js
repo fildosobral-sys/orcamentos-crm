@@ -14,6 +14,106 @@ async function syncLegacyRowsToCentral(records,branch){if(!R.enabled)return 0;co
 let data=null,kind='mes',summary=null,loading=false,lastFocus=null;
 let lastAccess=null;
 
+
+function prettyBranch(value){
+ const raw=String(value||'').trim().replace(/\s+/g,' ');
+ if(!raw)return 'Filial não informada';
+ return raw.split(' ').map(part=>{
+  if(/^\d+$/.test(part))return part;
+  if(/^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/i.test(part))return part.toUpperCase();
+  return part.charAt(0).toUpperCase()+part.slice(1).toLowerCase();
+ }).join(' ');
+}
+function branchGroups(){
+ if(!data)return [];
+ const map=new Map();
+ (data.users||[]).forEach(u=>{
+  const key=norm(u.branch);if(!key)return;
+  if(!map.has(key))map.set(key,{key,name:prettyBranch(u.branch),users:[],records:[]});
+  map.get(key).users.push(u);
+ });
+ (data.records||[]).forEach(r=>{
+  const key=norm(r.branch);if(!key)return;
+  if(!map.has(key))map.set(key,{key,name:prettyBranch(r.branch),users:[],records:[]});
+  map.get(key).records.push(r);
+ });
+ // Garante registros mesmo quando a filial já veio pela lista de usuários.
+ for(const g of map.values())g.records=(data.records||[]).filter(r=>norm(r.branch)===g.key);
+ return [...map.values()];
+}
+function selectedBranchKey(){
+ if(!data)return '';
+ if(!data.actor.isOwner)return norm(data.actor.branch);
+ return $('branch')?.value||'';
+}
+function scopedData(branchKey){
+ if(!data)return {users:[],records:[]};
+ if(!branchKey)return {users:[...(data.users||[])],records:[...(data.records||[])]};
+ return {
+  users:(data.users||[]).filter(u=>norm(u.branch)===branchKey),
+  records:(data.records||[]).filter(r=>norm(r.branch)===branchKey)
+ };
+}
+function refreshSellerOptions(){
+ if(!data)return;
+ const current=$('seller').value;
+ const scope=scopedData(selectedBranchKey());
+ const users=scope.users.filter(u=>u.track!==false);
+ $('seller').innerHTML='<option value="">Toda a equipe</option>'+users.map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name)+'</option>').join('');
+ $('seller').value=users.some(u=>u.id===current)?current:'';
+}
+function setupBranchControls(){
+ if(!data)return;
+ const groups=branchGroups();
+ const isMultiOwner=data.actor.isOwner&&groups.length>1;
+ const label=$('branch-filter-label'),select=$('branch');
+ if(label)label.hidden=!isMultiOwner;
+ if(select){
+  const prev=select.value;
+  select.innerHTML='<option value="">Todas as filiais</option>'+groups.map(g=>'<option value="'+esc(g.key)+'">'+esc(g.name)+'</option>').join('');
+  select.value=groups.some(g=>g.key===prev)?prev:'';
+ }
+ const overview=$('branch-overview');
+ if(overview)overview.hidden=!isMultiOwner;
+ refreshSellerOptions();
+}
+function branchSummaryHtml(name,users,records,p){
+ const s=B.summarize(records,users,p),t=s.totals;
+ const reasons={};s.perSeller.forEach(r=>Object.entries(r.reasons).forEach(([k,v])=>reasons[k]=(reasons[k]||0)+v));
+ const reasonRows=Object.entries(reasons).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const sellers=s.perSeller.slice().sort((a,b)=>a.user.name.localeCompare(b.user.name,'pt-BR'));
+ return '<div class="branch-dialog-metrics">'+[
+  ['Orçamentos',t.total],['Vendas',t.wins],['Conversão',pct(t.conversion)],['Contatos',t.contacts],['Atrasados',t.late],['Valor concluído',money(t.value)]
+ ].map(([k,v])=>'<div><small>'+esc(k)+'</small><strong>'+v+'</strong></div>').join('')+'</div>'+
+ '<section class="branch-dialog-section"><h3>Principais motivos de não fechamento</h3>'+(reasonRows.length?reasonRows.map(([k,v])=>'<div class="branch-reason-row"><span>'+esc(k||'Não informado')+'</span><strong>'+v+'</strong></div>').join(''):'<p class="branch-empty">Nenhuma perda registrada no período.</p>')+'</section>'+
+ '<section class="branch-dialog-section"><div class="branch-dialog-section-head"><h3>Vendedores</h3><span>'+sellers.length+' colaborador'+(sellers.length===1?'':'es')+'</span></div><div class="branch-seller-list">'+(sellers.length?sellers.map(r=>{
+  const initials=r.user.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('');
+  return '<details class="branch-seller-row"><summary><span class="avatar">'+esc(initials)+'</span><div><strong>'+esc(r.user.name)+'</strong><small>'+esc(prettyBranch(r.user.branch||name))+'</small></div><span class="branch-seller-conv">'+pct(r.conversion)+'</span></summary><div class="branch-seller-detail"><span><b>'+r.total+'</b> orçamentos</span><span><b>'+r.wins+'</b> vendas</span><span><b>'+r.contacts+'</b> contatos</span><span><b>'+r.late+'</b> atrasados</span><span><b>'+money(r.value)+'</b> concluído</span><div class="tags">'+Object.entries(r.status).map(([k,v])=>'<span class="tag '+(k==='ganha'?'won':k==='perdida'?'lost':'')+'">'+esc(labels[k])+': '+v+'</span>').join('')+'</div></div></details>';
+ }).join(''):'<p class="branch-empty">Nenhum vendedor cadastrado.</p>')+'</div></section>';
+}
+function renderBranchOverview(p){
+ const groups=branchGroups(),box=$('branch-list');if(!box)return;
+ if(!data.actor.isOwner||groups.length<=1){$('branch-overview').hidden=true;return;}
+ $('branch-overview').hidden=false;$('branch-count').textContent=groups.length+' filiais';
+ const entries=[{key:'',name:'Todas as filiais',users:data.users,records:data.records},...groups];
+ box.innerHTML=entries.map(g=>{
+  const s=B.summarize(g.records||[],g.users||[],p),t=s.totals;
+  return '<button type="button" class="branch-card '+(g.key===''?'all':'')+'" data-branch-panel="'+esc(g.key)+'"><span><strong>'+esc(g.name)+'</strong><small>'+(g.key===''?groups.length+' filiais':(g.users||[]).filter(u=>u.track!==false).length+' colaboradores')+'</small></span><span class="branch-card-kpi"><b>'+t.total+'</b> orç. · <b>'+t.wins+'</b> vendas · <b>'+pct(t.conversion)+'</b></span><i>›</i></button>';
+ }).join('');
+}
+function openBranchDashboard(branchKey){
+ if(!data)return;
+ const p=B.period(kind,$('anchor').value),groups=branchGroups();
+ const g=branchKey?groups.find(x=>x.key===branchKey):null;
+ const scope=g?{users:g.users,records:g.records}:scopedData('');
+ const name=g?g.name:'Todas as filiais';
+ lastFocus=document.activeElement;
+ $('branch-detail-title').textContent=name;
+ $('branch-detail-period').textContent=date(p.start)+' a '+date(p.end);
+ $('branch-detail-body').innerHTML=branchSummaryHtml(name,scope.users,scope.records,p);
+ $('branch-detail').showModal();
+}
+
 function lossRecords(records,p){
  return records.filter(r=>r.status==='perdida'&&B.day(r.createdAt)>=p.start&&B.day(r.createdAt)<=p.end);
 }
@@ -207,24 +307,25 @@ async function refresh(){
   if(!R.session.actor.canManage)throw Error('Acesso restrito. Você pode consultar somente seus próprios orçamentos. A visão da equipe exige autorização do desenvolvedor.');
   data=await R.call('team');
   const synced=await syncLegacyRowsToCentral(data.records,data.actor.branch);
-  if(synced) data=await R.call('team');
+  if(synced)data=await R.call('team');
   if(!data.actor.canManage)throw Error('Autorização da equipe não concedida.');
-  $('identity').textContent=data.actor.name+' · '+data.actor.branch;
-  $('access-admin').hidden=!data.actor.isOwner; if(data.actor.isOwner){$('access-branch').value=$('access-branch').value||data.actor.branch;renderAccessUsers();}
-  const selected=$('seller').value;
-  $('seller').innerHTML='<option value="">Toda a equipe</option>'+data.users.filter(u=>u.track!==false).map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name)+'</option>').join('');
-  $('seller').value=selected;render();$('content').hidden=false;state('');
+  $('identity').textContent=data.actor.name+' · '+prettyBranch(data.actor.branch);
+  $('access-admin').hidden=!data.actor.isOwner;
+  if(data.actor.isOwner){$('access-branch').value=$('access-branch').value||prettyBranch(data.actor.branch);renderAccessUsers();}
+  setupBranchControls();
+  render();$('content').hidden=false;state('');
   $('updated').textContent='Atualizado em '+new Date(data.updatedAt).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+'. Atualização automática a cada minuto enquanto esta página estiver visível.';
  }catch(e){clear();state(e.message,true);}finally{loading=false;$('refresh').disabled=false;}
 }
 function render(){
  if(!data)return;
  const anchor=$('anchor').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(anchor))return;
- const p=B.period(kind,anchor),selected=$('seller').value;
- const users=data.users.filter(u=>!selected||u.id===selected),records=data.records.filter(r=>!selected||r.ownerId===selected);
+ const p=B.period(kind,anchor),branchKey=selectedBranchKey(),scope=scopedData(branchKey),selected=$('seller').value;
+ const users=scope.users.filter(u=>!selected||u.id===selected),records=scope.records.filter(r=>!selected||r.ownerId===selected);
  summary=B.summarize(records,users,p);
  $('period-label').textContent=date(p.start)+' a '+date(p.end);
  document.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.period===kind)));
+ renderBranchOverview(p);
  const t=summary.totals;
  const metrics=[['Pesquisas de orçamento',t.total,'Criadas no período'],['Vendas concluídas',t.wins,'Dos orçamentos do período'],['Conversão',pct(t.conversion),'Vendas ÷ pesquisas'],['Contatos registrados',t.contacts,'Realizados no período'],['Retornos atrasados',t.late,'Pendências atuais'],['Valor concluído',money(t.value),'Dos orçamentos do período']];
  $('metrics').innerHTML=metrics.map(m=>'<div class="metric"><small>'+m[0]+'</small><strong>'+m[1]+'</strong><span>'+m[2]+'</span></div>').join('');
@@ -234,12 +335,12 @@ function render(){
  $('roster-count').textContent=summary.perSeller.length+' colaboradores';
  $('seller-cards').innerHTML=summary.perSeller.map(r=>{
   const initials=r.user.name.split(/\s+/).slice(0,2).map(s=>s[0]).join('');
-  return '<article class="seller-card"><div class="seller-top"><span class="avatar">'+esc(initials)+'</span><div><h3>'+esc(r.user.name)+'</h3><small>'+(r.user.active?'Cadastrado':'Inativo · histórico preservado')+'</small></div></div><div class="seller-numbers"><div><strong>'+r.total+'</strong><small>Orçamentos</small></div><div><strong>'+r.wins+'</strong><small>Vendas</small></div><div><strong>'+r.contacts+'</strong><small>Contatos</small></div></div><div class="conversion"><div class="conversion-label"><span>Conversão</span><strong>'+pct(r.conversion)+'</strong></div><div class="bar" role="img" aria-label="Conversão '+pct(r.conversion)+'"><i style="width:'+Math.max(0,Math.min(100,r.conversion||0))+'%"></i></div></div><div class="tags">'+Object.entries(r.status).map(([k,v])=>'<span class="tag '+(k==='ganha'?'won':k==='perdida'?'lost':'')+'">'+esc(labels[k])+': '+v+'</span>').join('')+'</div><p class="late">'+r.late+' retorno(s) atrasado(s)</p><p class="updated">'+(r.returns?r.onTime+'/'+r.returns+' retornos realizados no prazo':'Sem retornos confirmados no período')+'</p><button data-seller="'+esc(r.user.id)+'">Ver orçamentos e histórico</button></article>';
+  return '<article class="seller-card"><div class="seller-top"><span class="avatar">'+esc(initials)+'</span><div><h3>'+esc(r.user.name)+'</h3><small>'+esc(prettyBranch(r.user.branch||data.actor.branch))+' · '+(r.user.active?'Cadastrado':'Inativo · histórico preservado')+'</small></div></div><div class="seller-numbers"><div><strong>'+r.total+'</strong><small>Orçamentos</small></div><div><strong>'+r.wins+'</strong><small>Vendas</small></div><div><strong>'+r.contacts+'</strong><small>Contatos</small></div></div><div class="conversion"><div class="conversion-label"><span>Conversão</span><strong>'+pct(r.conversion)+'</strong></div><div class="bar" role="img" aria-label="Conversão '+pct(r.conversion)+'"><i style="width:'+Math.max(0,Math.min(100,r.conversion||0))+'%"></i></div></div><div class="tags">'+Object.entries(r.status).map(([k,v])=>'<span class="tag '+(k==='ganha'?'won':k==='perdida'?'lost':'')+'">'+esc(labels[k])+': '+v+'</span>').join('')+'</div><p class="late">'+r.late+' retorno(s) atrasado(s)</p><p class="updated">'+(r.returns?r.onTime+'/'+r.returns+' retornos realizados no prazo':'Sem retornos confirmados no período')+'</p><button data-seller="'+esc(r.user.id)+'">Ver orçamentos e histórico</button></article>';
  }).join('')||'<p>Nenhum colaborador cadastrado para este filtro.</p>';
  const reasons={};summary.perSeller.forEach(r=>Object.entries(r.reasons).forEach(([k,v])=>reasons[k]=(reasons[k]||0)+v));
  $('reasons').innerHTML=Object.entries(reasons).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<div class="reason"><span>'+esc(k||'Não informado')+'</span><strong>'+v+'</strong></div>').join('')||'<p>Nenhum motivo de perda registrado nos orçamentos deste período.</p>';
  $('permissions').hidden=!data.actor.isOwner;
- if(data.actor.isOwner)$('permission-list').innerHTML=data.users.map(u=>'<div class="permission"><span>'+esc(u.name)+'<br><small>'+esc(u.role)+'</small></span>'+(u.isOwner?'<strong>Desenvolvedor</strong>':'<label><input type="checkbox" data-permission="'+esc(u.id)+'" '+(u.canManage?'checked':'')+'>Ver equipe</label>')+'</div>').join('');
+ if(data.actor.isOwner)$('permission-list').innerHTML=data.users.map(u=>'<div class="permission"><span>'+esc(u.name)+'<br><small>'+esc(prettyBranch(u.branch))+' · '+esc(u.role)+'</small></span>'+(u.isOwner?'<strong>Desenvolvedor</strong>':'<label><input type="checkbox" data-permission="'+esc(u.id)+'" '+(u.canManage?'checked':'')+'>Ver equipe</label>')+'</div>').join('');
 }
 function openDetail(id){
  const r=summary?.perSeller.find(r=>r.user.id===id);if(!r)return;
@@ -250,8 +351,12 @@ function openDetail(id){
 $('anchor').value=B.day(new Date());
 document.querySelectorAll('[data-period]').forEach(b=>b.addEventListener('click',()=>{kind=b.dataset.period;render();}));
 ['anchor','seller','sort'].forEach(id=>$(id).addEventListener('change',render));
+$('branch')?.addEventListener('change',()=>{refreshSellerOptions();render();});
 $('refresh').addEventListener('click',refresh);
 $('seller-cards').addEventListener('click',e=>{const b=e.target.closest('[data-seller]');if(b)openDetail(b.dataset.seller);});
+$('branch-list')?.addEventListener('click',e=>{const b=e.target.closest('[data-branch-panel]');if(b)openBranchDashboard(b.dataset.branchPanel);});
+$('close-branch-detail')?.addEventListener('click',()=>$('branch-detail').close());
+$('branch-detail')?.addEventListener('close',()=>lastFocus?.focus());
 $('close-detail').addEventListener('click',()=>$('detail').close());
 $('detail').addEventListener('close',()=>lastFocus?.focus());
 $('access-create')?.addEventListener('click',createAccess);
