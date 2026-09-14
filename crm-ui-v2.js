@@ -140,7 +140,7 @@
       ['fscrm-channel','fscrm-buyer'].forEach(id => $(id).disabled = $('fscrm-kind').value === 'simulacao');
     });
     panel = document.createElement('section'); panel.id = 'fscrm-panel'; panel.className = 'fscrm';
-    panel.innerHTML = `<details open><summary>Acompanhamento comercial <span id="fscrm-count"></span></summary>
+    panel.innerHTML = `<details><summary>Acompanhamento comercial <span id="fscrm-count"></span></summary>
       <div class="fscrm-body"><p class="fscrm-local">${remote?.enabled?'Banco central configurado • Somente seus registros':'Modo local de preparação • Sem dados compartilhados entre aparelhos'}</p>
       <div id="fscrm-notice" role="status" aria-live="polite"></div>
       <div class="fscrm-toolbar"><a id="fscrm-team-link" href="./orcamentos-gestao.html" hidden>Gestão da equipe</a><button type="button" data-action="refresh">Atualizar painel</button><button type="button" data-action="export">Exportar backup</button><button type="button" data-action="restore">Restaurar backup</button><input id="fscrm-file" type="file" accept="application/json,.json" hidden></div>
@@ -155,6 +155,7 @@
       <details class="fscrm-old"><summary>Classificar registros anteriores</summary><p>Registros antigos não entram automaticamente nos indicadores. Inclua apenas pesquisas reais de clientes. A inclusão mantém o cálculo original.</p><div id="fscrm-old-list"></div></details>
       </div></details>`;
     $('historySection').before(panel);
+    panel.hidden=true;
     modal = document.createElement('dialog'); modal.id = 'fscrm-modal'; modal.className = 'fscrm'; modal.setAttribute('aria-labelledby','fscrm-modal-title'); document.body.appendChild(modal);
     modal.addEventListener('close', () => lastFocus?.focus());
     modal.addEventListener('click', click);
@@ -207,7 +208,7 @@
   }
   function render() {
     const a = actor();
-    panel.hidden = !a.name || !a.branch || document.documentElement.classList.contains('fs-module-auth-lock');
+    panel.hidden = (remote?.enabled && !authReady && !remote?.session) || !a.name || !a.branch || document.documentElement.classList.contains('fs-module-auth-lock');
     if (panel.hidden) return;
     const all = available(), today = C.day();
     const sellerChoice = $('fscrm-seller-filter').value;

@@ -15,8 +15,10 @@
 
     try{
       sessionStorage.removeItem('crm_sso_from_central');
-      sessionStorage.removeItem('fs_module_from_index');
       sessionStorage.setItem('fs_returning_home','1');
+      const raw=localStorage.getItem('fs_central_return_ticket_backup_v3')||'';
+      const t=raw?JSON.parse(raw):null;
+      if(t&&t.nonce)sessionStorage.setItem('fs_returning_home_nonce_v3',t.nonce);
     }catch(_e){}
     window.location.assign(CENTRAL_HOME);
   }
