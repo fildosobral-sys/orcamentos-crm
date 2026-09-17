@@ -1,0 +1,20 @@
+{
+  "id": "./orcamentos.html",
+  "name": "Orçamentos CRM - FS Soluções",
+  "short_name": "Orçamentos CRM",
+  "description": "Orçamentos, acompanhamento comercial e gestão de equipe da FS Soluções.",
+  "lang": "pt-BR",
+  "start_url": "./orcamentos.html?crm=1&app=1",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#5b4cc4",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Meus orçamentos", "short_name": "Orçamentos", "url": "./orcamentos.html?crm=1&app=1" },
+    { "name": "Gestão da equipe", "short_name": "Gestão", "url": "./orcamentos-gestao.html?app=1" }
+  ]
+}
