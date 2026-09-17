@@ -1668,6 +1668,12 @@
 @media(max-width:520px){.approval-quick-card{border-radius:20px;padding:16px}.approval-quick-overlay{align-items:flex-end;padding:10px}.approval-quick-card{margin-bottom:10px}}
 </style>
 
+
+<style id="fs-final-menu-custom-style">
+.menu-current-user{display:flex;align-items:center;gap:.7rem}.menu-user-copy{min-width:0;flex:1}.menu-user-copy small{display:block;color:rgba(255,255,255,.68);font-size:.65rem;margin-top:.2rem}.menu-user-avatar{width:50px;height:50px;min-width:50px;border:1px solid rgba(255,255,255,.35);border-radius:16px;background:rgba(255,255,255,.16);color:#fff;font-weight:800;font-size:1rem;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer}.menu-user-avatar img{width:100%;height:100%;object-fit:cover;display:block}.fscrm-custom-choice{grid-column:1/-1;margin:-6px 0 2px;padding:7px 10px;border-radius:10px;background:#f3f1ff;color:#5b4db5;font-size:.74rem;font-weight:800;letter-spacing:.02em}.fscrm-custom-choice:empty{display:none}.fscrm-custom-prompt-backdrop{position:fixed;inset:0;z-index:50000;background:rgba(15,20,40,.52);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:16px}.fscrm-custom-prompt-card{width:min(440px,100%);background:#fff;border-radius:20px;padding:16px;box-shadow:0 25px 70px rgba(20,24,50,.35)}.fscrm-custom-prompt-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.fscrm-custom-prompt-head h3{margin:0;color:#30374b;font-size:1.08rem}.fscrm-custom-prompt-head button{width:42px;height:42px;border:1px solid #d7d9e1;border-radius:12px;background:#fff;font-size:1.35rem}.fscrm-custom-prompt-card input{width:100%;min-height:50px;margin-top:14px;border:1px solid #d7d9e1;border-radius:12px;padding:0 13px;font:inherit;text-transform:uppercase}.fscrm-custom-prompt-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.fscrm-custom-prompt-actions button{min-height:46px;border-radius:12px;border:1px solid #d7d9e1;background:#fff;font:inherit}.fscrm-custom-prompt-actions .fscrm-primary{border:0;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+@media(max-width:768px){.menu-dropdown{max-width:calc(100vw - 28px)!important;min-width:0!important}.menu-current-user{padding:.7rem .8rem}.menu-actions{padding:.35rem 0}.menu-item{padding:.72rem .9rem}.fscrm-custom-prompt-backdrop{align-items:flex-end;padding:10px}.fscrm-custom-prompt-card{border-radius:20px;margin-bottom:8px}}
+</style>
+
 </head>
  <body>
   <header class="header">
@@ -1744,12 +1750,9 @@
          👤 Menu do Usuário
         </div>
         <div class="menu-current-user">
-         <div class="current-user-label">
-          👤 Usuário Ativo
-         </div>
-         <div class="current-user-name" id="menuCurrentUser">
-          -
-         </div>
+         <button type="button" class="menu-user-avatar" id="menuUserAvatar" onclick="escolherFotoPerfil()" title="Adicionar ou trocar foto" aria-label="Adicionar ou trocar foto"><span id="menuUserAvatarContent">👤</span></button>
+         <div class="menu-user-copy"><div class="current-user-label">👤 Usuário Ativo</div><div class="current-user-name" id="menuCurrentUser">-</div><small>Toque na foto para alterar</small></div>
+         <input id="menuUserPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
         </div>
         <div class="menu-actions"><button class="menu-item" onclick="trocarUsuario()"> 🔄 Trocar Usuário </button> <button class="menu-item" onclick="verHistoricoCompleto()"> 📊 Ver Meus Registros </button> <button class="menu-item" onclick="window.FSCRMOpenSupport && window.FSCRMOpenSupport('Solicitação de suporte pelo menu do sistema.')"> 📱 Suporte WhatsApp </button> <button class="menu-item danger" onclick="logout()"> 🚪 Sair do Sistema </button>
         </div>
@@ -2289,12 +2292,52 @@ let currentData = [];
         }
 
         // Funções do menu de usuários
+        function posicionarMenuUsuario() {
+            const dropdown=document.getElementById('menuDropdown');
+            const toggle=document.querySelector('#userMenu .menu-toggle');
+            if(!dropdown||!toggle||window.innerWidth>768)return;
+            const r=toggle.getBoundingClientRect();
+            dropdown.style.position='fixed';
+            dropdown.style.top=Math.min(r.bottom+8,window.innerHeight-420)+'px';
+            dropdown.style.left='50%';
+            dropdown.style.right='auto';
+            dropdown.style.width=Math.min(330,window.innerWidth-28)+'px';
+            dropdown.style.transform='translateX(-50%)';
+        }
+
         function toggleUserMenu() {
             const dropdown = document.getElementById('menuDropdown');
             if (dropdown) {
                 dropdown.classList.toggle('active');
+                if(dropdown.classList.contains('active')) posicionarMenuUsuario();
             }
         }
+
+        const FS_PROFILE_PHOTO_KEY='fs_profile_photo_v1';
+        function nomeAtualPerfil(){
+            return String(window.FSCRMRemote?.session?.actor?.name||localStorage.getItem('crm_nome')||localStorage.getItem('fs_nome')||vendedorAtual||'').trim();
+        }
+        function iniciaisPerfil(nome){
+            return String(nome||'').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase()||'👤';
+        }
+        function atualizarFotoMenu(){
+            const box=document.getElementById('menuUserAvatarContent');if(!box)return;
+            const img=localStorage.getItem(FS_PROFILE_PHOTO_KEY)||'';
+            box.innerHTML=img?'<img src="'+img+'" alt="Foto do usuário">':iniciaisPerfil(nomeAtualPerfil());
+        }
+        function escolherFotoPerfil(){ document.getElementById('menuUserPhotoInput')?.click(); }
+        async function comprimirFotoPerfil(file){
+            const img=await new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),i=new Image();i.onload=()=>{URL.revokeObjectURL(url);resolve(i)};i.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Não foi possível ler a foto.'))};i.src=url;});
+            const size=180,canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;const ctx=canvas.getContext('2d');
+            const s=Math.max(size/img.width,size/img.height),w=img.width*s,h=img.height*s;ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);
+            return canvas.toDataURL('image/jpeg',.78);
+        }
+        document.addEventListener('DOMContentLoaded',()=>{
+            atualizarFotoMenu();
+            const input=document.getElementById('menuUserPhotoInput');
+            input?.addEventListener('change',async()=>{const f=input.files?.[0];if(!f)return;try{if(!['image/jpeg','image/png','image/webp'].includes(f.type))throw Error('Use uma foto JPG, PNG ou WEBP.');const data=await comprimirFotoPerfil(f);localStorage.setItem(FS_PROFILE_PHOTO_KEY,data);atualizarFotoMenu();showToast('✅ Foto do perfil atualizada neste aparelho.','success');}catch(e){showToast('❌ '+(e.message||'Não foi possível usar a foto.'),'error')}finally{input.value='';}});
+            window.addEventListener('resize',()=>{if(document.getElementById('menuDropdown')?.classList.contains('active'))posicionarMenuUsuario();});
+        });
 
         function trocarUsuario() {
             console.log("🔄 Trocando usuário...");
@@ -4785,8 +4828,8 @@ window.FSCRMBridge = {
 </script>
 <script src="./crm-config-v2.js?v=71"></script>
 <script src="./crm-api-v2.js?v=110"></script>
-<script src="./crm-core-v2.js?v=70"></script>
-<script src="./crm-ui-v2.js?v=110"></script>
+<script src="./crm-core-v2.js?v=130"></script>
+<script src="./crm-ui-v2.js?v=130"></script>
 
 <style>
   /* Histórico: ações compactas para reduzir a altura de cada registro */

@@ -213,6 +213,8 @@
     modal = document.createElement('dialog'); modal.id = 'fscrm-modal'; modal.className = 'fscrm'; modal.setAttribute('aria-labelledby','fscrm-modal-title'); document.body.appendChild(modal);
     modal.addEventListener('close', () => lastFocus?.focus());
     modal.addEventListener('click', click);
+    modal.addEventListener('focusin',e=>{if(e.target?.id==='fscrm-edit-status'||e.target?.id==='fscrm-edit-reason')e.target.dataset.before=e.target.value;});
+    modal.addEventListener('change',handleCustomSelect);
     panel.addEventListener('click', click);
     panel.addEventListener('keydown',e=>{const card=e.target.closest?.('.fscrm-deal-row[data-action="open"]');if(card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(card.dataset.id);}});
     panel.addEventListener('change', e => { if(e.target.id === 'fscrm-activity-period') { activityPeriod = e.target.value; render(); } });
@@ -285,7 +287,7 @@
     rows.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const wins = rows.filter(r => r.status === 'ganha');
     $('fscrm-stats').innerHTML = [['Orçamentos',rows.length],['Em negociação',rows.filter(r=>!C.closed(r)).length],['Vendas concluídas',wins.length],['Conversão',rows.length ? (100*wins.length/rows.length).toFixed(1)+'%' : '—'],['Valor concluído',money(wins.reduce((s,r)=>s+r.amount,0))]].map(([k,v])=>`<div><small>${k}</small><strong>${v}</strong></div>`).join('');
-    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-deal-row" data-action="open" data-id="${esc(r.id)}" tabindex="0" role="button" aria-label="Acompanhar negociação de ${esc(r.client)}"><i class="fscrm-status-dot" data-status="${r.status}" aria-hidden="true"></i><div class="fscrm-deal-main"><div class="fscrm-deal-top"><strong>${esc(r.client)}</strong><span class="fscrm-badge" data-status="${r.status}">${C.STATUS[r.status]}</span></div><div class="fscrm-deal-product">${esc(r.product)}</div><div class="fscrm-deal-foot"><span>${money(r.amount)}</span><span>${r.next ? 'Retorno '+date(r.next) : r.reason ? esc(r.reason) : date(r.createdAt)}</span></div></div><button type="button" class="fscrm-deal-delete" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}" aria-label="Excluir orçamento" title="Excluir">×</button><span class="fscrm-deal-chevron" aria-hidden="true">›</span></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
+    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-deal-row" data-action="open" data-id="${esc(r.id)}" tabindex="0" role="button" aria-label="Acompanhar negociação de ${esc(r.client)}"><i class="fscrm-status-dot" data-status="${r.status}" aria-hidden="true"></i><div class="fscrm-deal-main"><div class="fscrm-deal-top"><strong>${esc(r.client)}</strong><span class="fscrm-badge" data-status="${r.status}">${r.status==='outro'?(r.customStatus||'Outro'):C.STATUS[r.status]}</span></div><div class="fscrm-deal-product">${esc(r.product)}</div><div class="fscrm-deal-foot"><span>${money(r.amount)}</span><span>${r.next ? 'Retorno '+date(r.next) : r.reason ? esc(r.reason==='Outro'&&r.customReason?r.customReason:r.reason) : date(r.createdAt)}</span></div></div><button type="button" class="fscrm-deal-delete" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}" aria-label="Excluir orçamento" title="Excluir">×</button><span class="fscrm-deal-chevron" aria-hidden="true">›</span></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
     
     const old = source().filter(r => r.fs_crm_v1?.kind!=='simulacao' && !db.get(r.__backendId) && r.__backendId && (C.leader(a) || C.norm(r.vendedor) === C.norm(a.name)));
     $('fscrm-old-list').innerHTML = old.length ? old.map(r => `<div class="fscrm-old-row"><span>${esc(r.cliente)} · ${esc(r.codigo_produto)} · ${esc(r.vendedor)}</span><button type="button" data-action="enroll" data-id="${esc(r.__backendId)}">Classificar</button></div>`).join('') : '<p>Nenhum registro anterior aguardando classificação.</p>';
@@ -295,12 +297,60 @@
     modal.innerHTML = `<div class="fscrm-modal-head"><h2 id="fscrm-modal-title">${esc(title)}</h2><button type="button" data-action="close" aria-label="Fechar">×</button></div><div id="fscrm-modal-error" role="alert"></div>${body}<div class="fscrm-modal-actions">${actions}<button type="button" data-action="close">Fechar</button></div>`;
     if (!modal.open) modal.showModal();
   }
+  async function askUppercase(title, placeholder, initial='') {
+    return new Promise(resolve => {
+      document.getElementById('fscrm-custom-prompt')?.remove();
+      const wrap=document.createElement('div');
+      wrap.id='fscrm-custom-prompt';
+      wrap.className='fscrm-custom-prompt-backdrop';
+      wrap.innerHTML=`<div class="fscrm-custom-prompt-card" role="dialog" aria-modal="true">
+        <div class="fscrm-custom-prompt-head"><h3>${esc(title)}</h3><button type="button" data-cancel aria-label="Fechar">×</button></div>
+        <input id="fscrm-custom-prompt-input" type="text" maxlength="120" value="${esc(String(initial||'').toUpperCase())}" placeholder="${esc(placeholder)}">
+        <div class="fscrm-custom-prompt-actions"><button type="button" data-cancel>Cancelar</button><button type="button" class="fscrm-primary" data-ok>Confirmar</button></div>
+      </div>`;
+      document.body.appendChild(wrap);
+      const input=wrap.querySelector('#fscrm-custom-prompt-input');
+      const done=v=>{wrap.remove();resolve(v);};
+      input.addEventListener('input',()=>{const p=input.selectionStart;input.value=String(input.value||'').toUpperCase();try{input.setSelectionRange(p,p)}catch(_e){}});
+      wrap.querySelectorAll('[data-cancel]').forEach(b=>b.addEventListener('click',()=>done(null)));
+      wrap.querySelector('[data-ok]').addEventListener('click',()=>{const v=String(input.value||'').trim().toUpperCase();if(v)done(v);});
+      wrap.addEventListener('click',e=>{if(e.target===wrap)done(null)});
+      setTimeout(()=>input.focus(),30);
+    });
+  }
+
+  async function handleCustomSelect(e){
+    const el=e.target;
+    if(el?.id==='fscrm-edit-status'){
+      if(el.value==='outro'){
+        const hidden=$('fscrm-edit-customStatus');
+        const v=await askUppercase('OUTRO STATUS','INFORME O STATUS',hidden?.value||'');
+        if(v){ hidden.value=v; $('fscrm-custom-status-view').textContent='STATUS: '+v; }
+        else { el.value=el.dataset.before||'negociacao'; hidden.value=''; $('fscrm-custom-status-view').textContent=''; }
+      }else{
+        $('fscrm-edit-customStatus').value=''; $('fscrm-custom-status-view').textContent='';
+      }
+    }
+    if(el?.id==='fscrm-edit-reason'){
+      if(el.value==='Outro'){
+        const hidden=$('fscrm-edit-customReason');
+        const v=await askUppercase('OUTRO MOTIVO DA PERDA','INFORME O MOTIVO',hidden?.value||'');
+        if(v){ hidden.value=v; $('fscrm-custom-reason-view').textContent='MOTIVO: '+v; }
+        else { el.value=el.dataset.before||''; hidden.value=''; $('fscrm-custom-reason-view').textContent=''; }
+      }else{
+        $('fscrm-edit-customReason').value=''; $('fscrm-custom-reason-view').textContent='';
+      }
+    }
+  }
+
   function open(id) {
     draft = db.get(id); if (!draft || !C.canRead(draft,actor())) throw Error('Orçamento não disponível para este usuário.');
     const r = draft; revision=r.revision;
     show('Acompanhar negociação', `<p><strong>${esc(r.client)}</strong> · ${esc(r.product)}<br>${esc(r.seller)} · ${money(r.amount)}</p><div class="fscrm-grid">
       ${select('Status','fscrm-edit-status',Object.entries(C.STATUS),r.status)}
+      <input id="fscrm-edit-customStatus" type="hidden" value="${esc(r.customStatus||'')}"><p id="fscrm-custom-status-view" class="fscrm-custom-choice">${r.status==='outro'&&r.customStatus?'STATUS: '+esc(r.customStatus):''}</p>
       ${select('Motivo da perda','fscrm-edit-reason',[['','Selecione'],...C.REASONS.filter(x=>x!=='Preço').map(x=>[x,x])],r.reason==='Preço'?'Preço da concorrência':r.reason)}
+      <input id="fscrm-edit-customReason" type="hidden" value="${esc(r.customReason||'')}"><p id="fscrm-custom-reason-view" class="fscrm-custom-choice">${r.reason==='Outro'&&r.customReason?'MOTIVO: '+esc(r.customReason):''}</p>
       ${field('WhatsApp com DDD','fscrm-edit-phone',r.phone,'tel')}
       <label class="fscrm-consent-check"><input id="fscrm-edit-consent" type="checkbox" ${r.consent?'checked':''}> Cliente autorizou contato pelo WhatsApp</label>
       ${select('Atendimento','fscrm-edit-channel',[['presencial','Presencial'],['online','Online']],r.channel)}
@@ -334,6 +384,8 @@
     if(modalError){modalError.textContent='';delete modalError.dataset.error;}
     const patch = {};
     ['status','reason','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer','lossNote','lossCompetitor'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
+    patch.customStatus=String($('fscrm-edit-customStatus')?.value||'').trim().toUpperCase();
+    patch.customReason=String($('fscrm-edit-customReason')?.value||'').trim().toUpperCase();
     ['note','issue','issueOwner','relation','lossNote','lossCompetitor'].forEach(k=>{ if(patch[k]) patch[k]=patch[k].toUpperCase(); });
     patch.lossCompetitorPrice=Number($('fscrm-edit-lossCompetitorPrice').value||0);
     patch.consent=!!$('fscrm-edit-consent')?.checked;
