@@ -61,7 +61,7 @@ function storedCredentials(){
 async function call(action,data={}){
   if(!config.apiUrl)throw Error('O banco central ainda não foi conectado.');
   if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(config.apiUrl))throw Error('Configure o endereço /exec do Apps Script.');
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||25000);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||45000);
   try{
     const auth=storedCredentials();
     const response=await fetch(config.apiUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({version:2,action,auth,data}),redirect:'follow',cache:'no-store',signal:controller.signal});

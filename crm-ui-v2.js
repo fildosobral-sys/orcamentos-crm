@@ -3,11 +3,19 @@
   const C = window.FSCRMCore;
   const remote=window.FSCRMRemote; let serverRows=[], syncing=null;
   if (!C) return;
-  let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7', authReady = !!remote?.session || !!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_nome')&&localStorage.getItem('crm_filial'));
+  let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7', batchQueue = [], batchIndex = 0, authReady = !!remote?.session || !!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_nome')&&localStorage.getItem('crm_filial'));
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
   const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const date = v => v ? new Date(v.length === 10 ? v + 'T12:00:00' : v).toLocaleDateString('pt-BR') : 'Não definido';
+  const selectedStatuses = () => [...document.querySelectorAll('input[name="fscrm-status-multi"]:checked')].map(x=>x.value);
+  const hardContactBlock = r => {
+    if(!r.consent) return 'Contato sem autorização registrada.';
+    if(!C.validPhone(r.phone)) return 'WhatsApp inválido.';
+    const group=db.all().filter(x=>x.id===r.id||C.sameClient(r,x));
+    if(group.some(x=>(x.history||[]).some(h=>h.type==='nao_contatar')&&!x.consent)) return 'Cliente pediu para não receber contatos.';
+    return '';
+  };
 
   async function prepareEvidence(file){
     if(!file)throw Error('Selecione uma imagem ou PDF.');
@@ -147,10 +155,18 @@
       <h3>Agenda de acompanhamento</h3><p>Retornos de hoje e atrasados, independentemente da data do orçamento. Lembretes atualizados ao abrir esta página.</p><div id="fscrm-agenda"></div>
       <h3>Orçamentos</h3><div class="fscrm-filters">
       ${field('Criados a partir de', 'fscrm-from', '', 'date')}${field('Criados até', 'fscrm-to', '', 'date')}
-      ${select('Situação', 'fscrm-status-filter', [['','Todas'], ...Object.entries(C.STATUS)], '')}
+      <fieldset class="fscrm-status-multi">
+        <legend>Situação · marque uma ou mais</legend>
+        ${Object.entries(C.STATUS).map(([k,v])=>`<label><input type="checkbox" name="fscrm-status-multi" value="${esc(k)}"> <span>${esc(v)}</span></label>`).join('')}
+      </fieldset>
       <label id="fscrm-seller-wrap">Vendedor<select id="fscrm-seller-filter"><option value="">Todos</option></select></label>
       ${field('Buscar cliente ou produto', 'fscrm-search', '', 'search')}
-      </div><div id="fscrm-stats" class="fscrm-stats"></div><div id="fscrm-records"></div>
+      </div>
+      <div class="fscrm-batch-bar">
+        <div><strong>Lembrete em lote</strong><small>Usa os filtros acima e inclui somente contatos com WhatsApp e autorização registrada.</small></div>
+        <button type="button" data-action="prepare-batch">Preparar mensagens</button>
+      </div>
+      <div id="fscrm-stats" class="fscrm-stats"></div><div id="fscrm-records"></div>
       
       <details class="fscrm-old"><summary>Classificar registros anteriores</summary><p>Registros antigos não entram automaticamente nos indicadores. Inclua apenas pesquisas reais de clientes. A inclusão mantém o cálculo original.</p><div id="fscrm-old-list"></div></details>
       </div></details>`;
@@ -162,7 +178,8 @@
     panel.addEventListener('click', click);
     panel.addEventListener('keydown',e=>{const card=e.target.closest?.('.fscrm-deal-row[data-action="open"]');if(card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(card.dataset.id);}});
     panel.addEventListener('change', e => { if(e.target.id === 'fscrm-activity-period') { activityPeriod = e.target.value; render(); } });
-    ['fscrm-from','fscrm-to','fscrm-status-filter','fscrm-seller-filter'].forEach(id => $(id).addEventListener('change', render));
+    ['fscrm-from','fscrm-to','fscrm-seller-filter'].forEach(id => $(id).addEventListener('change', render));
+    document.querySelectorAll('input[name="fscrm-status-multi"]').forEach(el=>el.addEventListener('change',render));
     $('fscrm-search').addEventListener('input', render);
     $('fscrm-file').addEventListener('change', restore);
     window.addEventListener('storage', e => { if(e.key&&e.key.startsWith('fs_')&&!e.key.startsWith(C.PREFIX)){serverRows=[];panel.hidden=true;location.reload();return;}
@@ -218,9 +235,15 @@
     const agenda = rows.flatMap(r => C.tasks(r).filter(t => t.date && t.date <= today).map(t => ({r,t}))).sort((a,b) => a.t.date.localeCompare(b.t.date));
     $('fscrm-count').textContent = `${all.length} registros · ${agenda.length} ações para hoje ou atrasadas`;
     $('fscrm-agenda').innerHTML = agenda.length ? agenda.map(({r,t}) => `<button class="fscrm-agenda-row" data-action="open" data-id="${esc(r.id)}"><span><strong>${esc(t.title)} · ${esc(r.client)}</strong><small>${esc(r.seller)} · ${esc(r.product)}</small></span><span class="${t.date < today ? 'fscrm-overdue' : ''}">${date(t.date)}${t.date < today ? ' · Atrasado' : ' · Hoje'}</span></button>`).join('') : '<p class="fscrm-empty">Nenhuma ação vencendo hoje. Os retornos futuros aparecem nos respectivos orçamentos.</p>';
-    const from = $('fscrm-from').value, to = $('fscrm-to').value, status = $('fscrm-status-filter').value, search = C.norm($('fscrm-search').value);
+    const from = $('fscrm-from').value, to = $('fscrm-to').value, statuses = selectedStatuses(), search = C.norm($('fscrm-search').value);
     if (from && to && from > to) { notify('A data inicial deve ser anterior à data final.',true); return; }
-    rows = rows.filter(r => { const d = C.day(new Date(r.createdAt)); return (!from || d >= from) && (!to || d <= to) && (!status || r.status === status) && (!search || C.norm(r.client + ' ' + r.product).includes(search)); });
+    rows = rows.filter(r => {
+      const d = C.day(new Date(r.createdAt));
+      return (!from || d >= from) &&
+        (!to || d <= to) &&
+        (!statuses.length || statuses.includes(r.status)) &&
+        (!search || C.norm(r.client + ' ' + r.product).includes(search));
+    });
     rows.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const wins = rows.filter(r => r.status === 'ganha');
     $('fscrm-stats').innerHTML = [['Orçamentos',rows.length],['Em negociação',rows.filter(r=>!C.closed(r)).length],['Vendas concluídas',wins.length],['Conversão',rows.length ? (100*wins.length/rows.length).toFixed(1)+'%' : '—'],['Valor concluído',money(wins.reduce((s,r)=>s+r.amount,0))]].map(([k,v])=>`<div><small>${k}</small><strong>${v}</strong></div>`).join('');
@@ -241,6 +264,7 @@
       ${select('Status','fscrm-edit-status',Object.entries(C.STATUS),r.status)}
       ${select('Motivo da perda','fscrm-edit-reason',[['','Selecione'],...C.REASONS.filter(x=>x!=='Preço').map(x=>[x,x])],r.reason==='Preço'?'Preço da concorrência':r.reason)}
       ${field('WhatsApp com DDD','fscrm-edit-phone',r.phone,'tel')}
+      <label class="fscrm-consent-check"><input id="fscrm-edit-consent" type="checkbox" ${r.consent?'checked':''}> Cliente autorizou contato pelo WhatsApp</label>
       ${select('Atendimento','fscrm-edit-channel',[['presencial','Presencial'],['online','Online']],r.channel)}
       ${select('Compra para','fscrm-edit-buyer',[['proprio','O próprio cliente'],['terceiro','Terceiro']],r.buyer)}
       </div>
@@ -274,15 +298,24 @@
     ['status','reason','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer','lossNote','lossCompetitor'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
     ['note','issue','issueOwner','relation','lossNote','lossCompetitor'].forEach(k=>{ if(patch[k]) patch[k]=patch[k].toUpperCase(); });
     patch.lossCompetitorPrice=Number($('fscrm-edit-lossCompetitorPrice').value||0);
+    patch.consent=!!$('fscrm-edit-consent')?.checked;
     let r = C.edit(draft,patch,actor()); await save(r,revision);
+    draft=db.get(r.id)||r;
+    revision=draft.revision;
     const file=$('fscrm-evidence-file')?.files?.[0];
     if(file){
       try{
         if(!remote?.enabled)throw Error('Anexos exigem o banco central conectado.');
         const prepared=await prepareEvidence(file);
         r=cacheRecord(await remote.call('addEvidence',{id:r.id,expectedRevision:r.revision,file:prepared}));
-        notify('Registro salvo com a evidência.');
-        modal.close();
+        draft=r;revision=r.revision;
+        const list=$('fscrm-evidence-list');
+        if(list){
+          list.innerHTML=(Array.isArray(r.evidence)?r.evidence:[]).map(x=>`<button type="button" data-action="view-evidence" data-file-id="${esc(x.id)}">👁 ${esc(x.name)}</button>`).join('')||'<span>Nenhum anexo.</span>';
+        }
+        const input=$('fscrm-evidence-file');if(input)input.value='';
+        notify('Alterações salvas e evidência anexada.');
+        if(modalError){modalError.textContent='✓ Arquivo anexado e disponível para visualização.';modalError.dataset.error='false';}
       }catch(err){
         // O registro principal já foi salvo. A falha do anexo NÃO desfaz a perda/negociação.
         const msg='Registro salvo. A evidência não foi anexada: '+(err.message||'falha no envio.');
@@ -303,7 +336,11 @@
   async function messageOpen() {
     const r=db.get(draft.id); if(r.revision!==revision) throw Error('O orçamento mudou. Feche e abra novamente.');
     const kind=r.post==='problema'?'suporte':r.status==='ganha'?(r.post==='bem'||r.post==='resolvido'?'relacionamento':'pos'):'retorno';
-    const block=C.contactBlock(r,kind,db.all()); if(block) throw Error(block);
+    const block=C.contactBlock(r,kind,db.all());
+    if(block){
+      if(!r.consent)throw Error('Marque "Cliente autorizou contato pelo WhatsApp" e salve antes de preparar a mensagem.');
+      throw Error(block);
+    }
     const task=C.tasks(r).find(t=>t.kind===kind);
     const lastContact=db.all().filter(x=>x.id===r.id||C.sameClient(r,x)).flatMap(x=>x.history||[]).filter(h=>String(h.type||'').startsWith('contato_')).sort((a,b)=>String(b.at).localeCompare(String(a.at)))[0];
     const advisories=[];
@@ -321,6 +358,58 @@
     const updated=C.contact(r,kind,$('fscrm-outcome').value,$('fscrm-contact-note').value,$('fscrm-contact-next')?.value||'',actor(),db.all());
     await save(updated,r.revision,{action:'contact',data:{kind,outcome:$('fscrm-outcome').value,note:$('fscrm-contact-note').value,next:$('fscrm-contact-next')?.value||''}}); modal.close(); notify('Contato registrado. Atualize o status ou o pós-venda conforme a resposta do cliente.');
   }
+  function currentFilteredRows(){
+    const a=actor(),all=available();
+    const sellerChoice=$('fscrm-seller-filter')?.value||'';
+    const from=$('fscrm-from')?.value||'',to=$('fscrm-to')?.value||'';
+    const statuses=selectedStatuses(),search=C.norm($('fscrm-search')?.value||'');
+    return all.filter(r=>{
+      const d=C.day(new Date(r.createdAt));
+      return (!C.leader(a)||!sellerChoice||r.seller===sellerChoice) &&
+        (!from||d>=from) && (!to||d<=to) &&
+        (!statuses.length||statuses.includes(r.status)) &&
+        (!search||C.norm(r.client+' '+r.product).includes(search));
+    });
+  }
+
+  function prepareBatch(){
+    const filtered=currentFilteredRows();
+    const eligible=[],skipped=[];
+    filtered.forEach(r=>{
+      const reason=hardContactBlock(r);
+      if(reason||r.status==='ganha')skipped.push({r,reason:reason||'Venda já concluída.'});
+      else eligible.push(r);
+    });
+    if(!eligible.length)throw Error('Nenhum contato elegível nos filtros atuais. Verifique status, WhatsApp e autorização de contato.');
+    batchQueue=eligible;batchIndex=0;
+    show('Lembretes selecionados',
+      `<div class="fscrm-batch-summary"><strong>${eligible.length} contato(s) preparado(s)</strong><p>${skipped.length?skipped.length+' registro(s) foram ignorados por venda concluída, falta de autorização, telefone inválido ou bloqueio de contato.':'Todos os registros filtrados estão aptos.'}</p></div>
+       <label>Mensagem padrão<textarea id="fscrm-batch-message" rows="6" maxlength="2000">Olá! Aqui é ${esc(actor().name)}, da Zenir. Passando para lembrar da sua consulta conosco. Temos condições que podem ser interessantes neste período. Se quiser, posso conferir as opções atuais para você, sem compromisso.</textarea></label>
+       <div id="fscrm-batch-current"></div>`,
+      `<button type="button" class="fscrm-primary" data-action="batch-open">Abrir WhatsApp atual</button><button type="button" data-action="batch-next">Próximo contato</button>`);
+    renderBatchCurrent();
+  }
+
+  function renderBatchCurrent(){
+    const box=$('fscrm-batch-current');if(!box)return;
+    const r=batchQueue[batchIndex];
+    if(!r){box.innerHTML='<p class="fscrm-empty">Fila concluída.</p>';return;}
+    box.innerHTML=`<div class="fscrm-batch-current"><small>${batchIndex+1} de ${batchQueue.length}</small><strong>${esc(r.client)}</strong><span>${esc(r.product)} · ${esc(r.phone)}</span></div>`;
+  }
+
+  function batchOpen(){
+    const r=batchQueue[batchIndex];if(!r)throw Error('A fila de contatos foi concluída.');
+    const base=String($('fscrm-batch-message')?.value||'').trim();
+    const first=String(r.client||'').trim().split(/\s+/)[0]||'Cliente';
+    const msg=base.replace(/^Olá!/,`Oi, ${first}!`);
+    window.open('https://wa.me/'+C.phone(r.phone)+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
+  }
+
+  function batchNext(){
+    if(batchIndex<batchQueue.length-1){batchIndex++;renderBatchCurrent();}
+    else{batchIndex=batchQueue.length;renderBatchCurrent();notify('Fila de lembretes concluída.');}
+  }
+
   async function stop() {
     const r = db.get(draft.id); if(!C.canRead(r,actor())) throw Error('Sem acesso.');
     const updated=C.edit(r,{consent:false},actor());
@@ -416,6 +505,9 @@
           const legacyId=draft.__backendId;
           const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:C.plus(C.day(),2),consent:true},actor());if(remote?.enabled)cacheRecord(await remote.call('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:true},imported:true}));else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');if(shouldOpen)setTimeout(()=>open(legacyId),0);break;
         }
+        case 'prepare-batch':prepareBatch();break;
+        case 'batch-open':batchOpen();break;
+        case 'batch-next':batchNext();break;
         case 'export':exportBackup();break;
         case 'restore':$('fscrm-file').click();break;
       }
