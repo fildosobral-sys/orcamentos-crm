@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="./manifest.webmanifest?v=1">
-<link rel="stylesheet" href="./crm-gestao-v2.css?v=66">
+<link rel="stylesheet" href="./crm-gestao-v2.css?v=70">
 </head>
 <body>
 <header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
@@ -42,6 +42,12 @@
     <label>Nome do colaborador<input id="access-name" type="text" placeholder="Ex.: Alessandro Silva" autocomplete="off"></label>
     <label>Filial<input id="access-branch" type="text" placeholder="Ex.: Iguatu III" autocomplete="off"></label>
     <label>WhatsApp<input id="access-phone" type="tel" inputmode="numeric" placeholder="Ex.: 88999999999" autocomplete="off"></label>
+    <label class="access-photo-field">Foto do colaborador
+      <div class="access-photo-control">
+        <span id="access-photo-preview" class="access-photo-preview">👤</span>
+        <span><input id="access-photo" type="file" accept="image/jpeg,image/png,image/webp" capture="user"><small>JPG, PNG ou WEBP. A imagem será reduzida automaticamente.</small></span>
+      </div>
+    </label>
     <label>Perfil<select id="access-role"><option value="VENDEDOR">Vendedor</option><option value="GERENTE">Gerente</option></select></label>
     <label class="access-check"><input id="access-manage" type="checkbox"> Pode acompanhar a equipe</label>
   </div>
@@ -105,8 +111,8 @@
 </dialog>
 <dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><h2 id="detail-title"></h2><button id="close-detail" aria-label="Fechar">×</button></div><div id="detail-body"></div></dialog>
 <script src="./crm-config-v2.js?v=71"></script>
-<script src="./crm-api-v2.js?v=91"></script>
+<script src="./crm-api-v2.js?v=95"></script>
 <script src="./crm-bi-v2.js?v=62"></script>
-<script src="./crm-gestao-v2.js?v=66"></script>
+<script src="./crm-gestao-v2.js?v=70"></script>
 <script src="./crm-relatorio-a4.js?v=1"></script>
 </body></html>

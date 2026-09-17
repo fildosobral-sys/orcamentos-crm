@@ -281,3 +281,23 @@ main{padding-bottom:54px}
     min-width:0;
   }
 }
+
+
+/* ===== FOTO DO COLABORADOR ===== */
+.access-photo-field{grid-column:1/-1}
+.access-photo-control{display:flex;align-items:center;gap:12px;margin-top:7px;padding:10px;border:1px solid #e0e2eb;border-radius:14px;background:#fafbfe}
+.access-photo-control>span:last-child{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.access-photo-control input[type=file]{width:100%;font-size:.76rem}
+.access-photo-control small{font-size:.68rem;color:#858b99;line-height:1.3}
+.access-photo-preview,.access-avatar{
+  width:54px;height:54px;min-width:54px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:linear-gradient(135deg,#eef0ff,#e0e5ff);color:#6657b8;font-weight:800;
+}
+.access-photo-preview img,.access-avatar img,.avatar-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.access-user-main{display:flex;align-items:center;gap:10px;min-width:0}
+.avatar-photo{padding:0!important;overflow:hidden!important}
+.seller-card .avatar,.branch-seller-row .avatar{overflow:hidden}
+@media(max-width:560px){
+  .access-photo-preview,.access-avatar{width:48px;height:48px;min-width:48px;border-radius:14px}
+}

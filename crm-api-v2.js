@@ -61,15 +61,57 @@ function storedCredentials(){
 async function call(action,data={}){
   if(!config.apiUrl)throw Error('O banco central ainda não foi conectado.');
   if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(config.apiUrl))throw Error('Configure o endereço /exec do Apps Script.');
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||45000);
-  try{
-    const auth=storedCredentials();
-    const response=await fetch(config.apiUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({version:2,action,auth,data}),redirect:'follow',cache:'no-store',signal:controller.signal});
-    if(!response.ok)throw Error('O banco central não respondeu.');
-    const result=await response.json();
-    if(!result.ok){const e=Error(result.message||'Operação não autorizada.');e.code=result.code;throw e;}
-    return result.data;
-  }catch(e){if(e.name==='AbortError')throw Error('A conexão demorou. Tente novamente.');throw e;}finally{clearTimeout(timer);}
+
+  const auth=storedCredentials();
+  let lastError=null;
+
+  for(let attempt=0;attempt<3;attempt++){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||45000);
+    try{
+      const response=await fetch(config.apiUrl,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({version:2,action,auth,data}),
+        redirect:'follow',
+        cache:'no-store',
+        signal:controller.signal
+      });
+
+      if(!response.ok){
+        const err=Error('O banco central respondeu com erro temporário.');
+        err.code='HTTP_'+response.status;
+        throw err;
+      }
+
+      const result=await response.json();
+      if(!result.ok){
+        const e=Error(result.message||'Operação não autorizada.');
+        e.code=result.code;
+        throw e;
+      }
+      return result.data;
+
+    }catch(e){
+      lastError=e;
+      const transient =
+        e.name==='AbortError' ||
+        e instanceof TypeError ||
+        /^HTTP_(408|429|500|502|503|504)$/.test(String(e.code||''));
+
+      if(!transient)throw e;
+      if(attempt<2)await new Promise(r=>setTimeout(r,700+(attempt*1100)));
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+
+  const friendly=Error(
+    lastError?.name==='AbortError'
+      ? 'A conexão demorou. Toque em Atualizar painel e tente novamente.'
+      : 'Não foi possível conectar ao banco central agora. Verifique a internet e tente novamente.'
+  );
+  friendly.code='NETWORK';
+  throw friendly;
 }
 function clearCredentials(){
   session=null;
@@ -195,7 +237,8 @@ async function verifyStandaloneAccess(){
   }catch(err){
     // Credencial ausente/realmente inválida: pede login. Falha transitória de rede não apaga a sessão salva.
     const cachedName=String(localStorage.getItem('crm_nome')||localStorage.getItem('fs_nome')||localStorage.getItem('vendedorLogado')||'').trim();
-    const hasStoredCredentials=!!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_filial')&&localStorage.getItem('crm_whatsapp'));
+    let hasStoredCredentials=!!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_filial')&&localStorage.getItem('crm_whatsapp'));
+    try{if(!hasStoredCredentials)hasStoredCredentials=!!centralSSOCredentials();}catch(_e){}
     const explicitRevocation=err.code==='UNAUTHORIZED'||err.code==='REVOKED'||err.code==='CRM_ACCESS_REQUIRED'||/revogad|não autorizad|crm ainda não está liberado/i.test(String(err.message||''));
     if(explicitRevocation){
       clearCredentials();

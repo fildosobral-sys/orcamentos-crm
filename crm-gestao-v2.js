@@ -124,8 +124,7 @@ function branchSummaryHtml(name,users,records,p){
  ].map(([k,v])=>'<div><small>'+esc(k)+'</small><strong>'+v+'</strong></div>').join('')+'</div>'+
  '<section class="branch-dialog-section"><h3>Principais motivos de não fechamento</h3>'+(reasonRows.length?reasonRows.map(([k,v])=>'<div class="branch-reason-row"><span>'+esc(k||'Não informado')+'</span><strong>'+v+'</strong></div>').join(''):'<p class="branch-empty">Nenhuma perda registrada no período.</p>')+'</section>'+
  '<section class="branch-dialog-section"><div class="branch-dialog-section-head"><h3>Vendedores</h3><span>'+sellers.length+' colaborador'+(sellers.length===1?'':'es')+'</span></div><div class="branch-seller-list">'+(sellers.length?sellers.map(r=>{
-  const initials=r.user.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('');
-  return '<details class="branch-seller-row"><summary><span class="avatar">'+esc(initials)+'</span><div><strong>'+esc(r.user.name)+'</strong><small>'+esc(prettyBranch(r.user.branch||name))+'</small></div><span class="branch-seller-conv">'+pct(r.conversion)+'</span></summary><div class="branch-seller-detail"><span><b>'+r.total+'</b> orçamentos</span><span><b>'+r.wins+'</b> vendas</span><span><b>'+r.contacts+'</b> contatos</span><span><b>'+r.late+'</b> atrasados</span><span><b>'+money(r.value)+'</b> concluído</span><div class="tags">'+Object.entries(r.status).map(([k,v])=>'<span class="tag '+(k==='ganha'?'won':k==='perdida'?'lost':'')+'">'+esc(labels[k])+': '+v+'</span>').join('')+'</div></div></details>';
+  return '<details class="branch-seller-row"><summary>'+avatarHtml(r.user,'avatar')+'<div><strong>'+esc(r.user.name)+'</strong><small>'+esc(prettyBranch(r.user.branch||name))+'</small></div><span class="branch-seller-conv">'+pct(r.conversion)+'</span></summary><div class="branch-seller-detail"><span><b>'+r.total+'</b> orçamentos</span><span><b>'+r.wins+'</b> vendas</span><span><b>'+r.contacts+'</b> contatos</span><span><b>'+r.late+'</b> atrasados</span><span><b>'+money(r.value)+'</b> concluído</span><div class="tags">'+Object.entries(r.status).map(([k,v])=>'<span class="tag '+(k==='ganha'?'won':k==='perdida'?'lost':'')+'">'+esc(labels[k])+': '+v+'</span>').join('')+'</div></div></details>';
  }).join(''):'<p class="branch-empty">Nenhum vendedor cadastrado.</p>')+'</div></section>';
 }
 function renderBranchOverview(p){
@@ -302,6 +301,37 @@ async function printLossReport(){
 }
 
 
+
+let pendingAccessPhoto='';
+
+function avatarHtml(user, className='avatar'){
+ const photo=String(user?.photo||'').trim();
+ const initials=String(user?.name||'').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+ return photo
+   ? '<span class="'+className+' avatar-photo"><img src="'+esc(photo)+'" alt="Foto de '+esc(user?.name||'colaborador')+'"></span>'
+   : '<span class="'+className+'">'+esc(initials||'👤')+'</span>';
+}
+
+async function prepareAccessPhoto(file){
+ if(!file)return '';
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Use JPG, PNG ou WEBP na foto.');
+ const img=await new Promise((resolve,reject)=>{
+   const url=URL.createObjectURL(file),i=new Image();
+   i.onload=()=>{URL.revokeObjectURL(url);resolve(i)};
+   i.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Não foi possível ler a foto.'))};
+   i.src=url;
+ });
+ const size=180,canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;
+ const ctx=canvas.getContext('2d');
+ const scale=Math.max(size/img.width,size/img.height);
+ const w=img.width*scale,h=img.height*scale,x=(size-w)/2,y=(size-h)/2;
+ ctx.drawImage(img,x,y,w,h);
+ let quality=.78,data=canvas.toDataURL('image/jpeg',quality);
+ while(data.length>42000&&quality>.45){quality-=.08;data=canvas.toDataURL('image/jpeg',quality);}
+ if(data.length>45000)throw Error('A foto ficou grande demais. Escolha outra imagem.');
+ return data;
+}
+
 const clean=s=>String(s||'').trim();
 const digits=s=>String(s||'').replace(/\D/g,'');
 function slugName(name){return clean(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase();}
@@ -311,24 +341,24 @@ function makeToken(name,phone){const d=digits(phone);return tokenPart(name)+'-'+
 function renderAccessUsers(){
  const box=$('access-user-list'); if(!box||!data)return;
  const users=data.users.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
- box.innerHTML=users.map(u=>'<div class="access-user"><div><strong>'+esc(u.name)+'</strong><small>'+esc(u.branch)+' · '+esc(u.role)+(u.isOwner?' · Administrador geral':'')+'</small></div><div><span class="access-status '+(u.active?'on':'off')+'">'+(u.active?'Ativo':'Inativo')+'</span>'+(u.canManage?'<span class="access-manage-badge">Gestão</span>':'')+'</div></div>').join('')||'<p>Nenhum usuário cadastrado.</p>';
+ box.innerHTML=users.map(u=>'<div class="access-user"><div class="access-user-main">'+avatarHtml(u,'access-avatar')+'<div><strong>'+esc(u.name)+'</strong><small>'+esc(u.branch)+' · '+esc(u.role)+(u.isOwner?' · Administrador geral':'')+'</small></div></div><div><span class="access-status '+(u.active?'on':'off')+'">'+(u.active?'Ativo':'Inativo')+'</span>'+(u.canManage?'<span class="access-manage-badge">Gestão</span>':'')+'</div></div>').join('')||'<p>Nenhum usuário cadastrado.</p>';
 }
 function accessMessage(info){return 'Olá, '+info.name+'. Seu acesso ao Sistema de Orçamentos CRM foi liberado.\n\nFilial: '+info.branch+'\nPerfil: '+(info.role==='GERENTE'?'Gerente':'Vendedor')+'\nLink: https://fildosobral-sys.github.io/orcamentos-crm/\nCredencial individual: '+info.token+'\nWhatsApp cadastrado: '+info.phone+'\n\nNão compartilhe sua credencial.';}
 async function createAccess(){
  const st=$('access-state');st.textContent='';
- const name=clean($('access-name').value).toUpperCase(),branch=clean($('access-branch').value).toUpperCase(),phone=digits($('access-phone').value),role=$('access-role').value,canManage=$('access-manage').checked;
+ const name=clean($('access-name').value).toUpperCase(),branch=clean($('access-branch').value).toUpperCase(),phone=digits($('access-phone').value),role=$('access-role').value,canManage=$('access-manage').checked,photo=pendingAccessPhoto;
  if(!name){st.textContent='Informe o nome do colaborador.';return;}
  if(!branch){st.textContent='Informe a filial.';return;}
  if(!/^\d{10,11}$/.test(phone)){st.textContent='Informe o WhatsApp com DDD.';return;}
  const token=makeToken(name,phone),id=(slugName(name)+'_'+phone.slice(-4)).slice(0,80);
  const btn=$('access-create');btn.disabled=true;st.textContent='Criando acesso…';
  try{
-   const res=await R.call('createUser',{id,name,branch,phone,role,canManage,token});
+   const res=await R.call('createUser',{id,name,branch,phone,role,canManage,token,photo});
    lastAccess={...res.user,token,phone,branch,name,role};
    $('access-token').textContent=token;
    $('access-user-summary').textContent=name+' · '+branch+' · '+(role==='GERENTE'?'Gerente':'Vendedor');
    $('access-result').hidden=false;st.textContent='Acesso criado com sucesso.';
-   await refresh();
+   pendingAccessPhoto='';const p=$('access-photo');if(p)p.value='';const pv=$('access-photo-preview');if(pv){pv.innerHTML='👤';pv.classList.remove('has-photo');}await refresh();
  }catch(e){st.textContent=e.message||String(e);}finally{btn.disabled=false;}
 }
 async function copyAccess(){if(!lastAccess)return;const text=accessMessage(lastAccess);try{await navigator.clipboard.writeText(text);$('access-state').textContent='Acesso copiado.';}catch(e){$('access-state').textContent='Não foi possível copiar automaticamente.';}}
@@ -371,8 +401,7 @@ function render(){
  summary.perSeller.sort((a,b)=>sort==='name'?a.user.name.localeCompare(b.user.name,'pt-BR'):(b[sort]??-1)-(a[sort]??-1)||a.user.name.localeCompare(b.user.name,'pt-BR'));
  $('roster-count').textContent=summary.perSeller.length+' colaboradores';
  $('seller-cards').innerHTML=summary.perSeller.map(r=>{
-  const initials=r.user.name.split(/\s+/).slice(0,2).map(s=>s[0]).join('');
-  return '<article class="seller-card"><div class="seller-top"><span class="avatar">'+esc(initials)+'</span><div><h3>'+esc(r.user.name)+'</h3><small>'+esc(prettyBranch(r.user.branch||data.actor.branch))+' · '+(r.user.active?'Cadastrado':'Inativo · histórico preservado')+'</small></div></div><div class="seller-numbers"><div><strong>'+r.total+'</strong><small>Orçamentos</small></div><div><strong>'+r.wins+'</strong><small>Vendas</small></div><div><strong>'+r.contacts+'</strong><small>Contatos</small></div></div><div class="conversion"><div class="conversion-label"><span>Conversão</span><strong>'+pct(r.conversion)+'</strong></div><div class="bar" role="img" aria-label="Conversão '+pct(r.conversion)+'"><i style="width:'+Math.max(0,Math.min(100,r.conversion||0))+'%"></i></div></div><div class="tags">'+Object.entries(r.status).map(([k,v])=>'<span class="tag '+(k==='ganha'?'won':k==='perdida'?'lost':'')+'">'+esc(labels[k])+': '+v+'</span>').join('')+'</div><p class="late">'+r.late+' retorno(s) atrasado(s)</p><p class="updated">'+(r.returns?r.onTime+'/'+r.returns+' retornos realizados no prazo':'Sem retornos confirmados no período')+'</p><button data-seller="'+esc(r.user.id)+'">Ver orçamentos e histórico</button></article>';
+  return '<article class="seller-card"><div class="seller-top">'+avatarHtml(r.user,'avatar')+'<div><h3>'+esc(r.user.name)+'</h3><small>'+esc(prettyBranch(r.user.branch||data.actor.branch))+' · '+(r.user.active?'Cadastrado':'Inativo · histórico preservado')+'</small></div></div><div class="seller-numbers"><div><strong>'+r.total+'</strong><small>Orçamentos</small></div><div><strong>'+r.wins+'</strong><small>Vendas</small></div><div><strong>'+r.contacts+'</strong><small>Contatos</small></div></div><div class="conversion"><div class="conversion-label"><span>Conversão</span><strong>'+pct(r.conversion)+'</strong></div><div class="bar" role="img" aria-label="Conversão '+pct(r.conversion)+'"><i style="width:'+Math.max(0,Math.min(100,r.conversion||0))+'%"></i></div></div><div class="tags">'+Object.entries(r.status).map(([k,v])=>'<span class="tag '+(k==='ganha'?'won':k==='perdida'?'lost':'')+'">'+esc(labels[k])+': '+v+'</span>').join('')+'</div><p class="late">'+r.late+' retorno(s) atrasado(s)</p><p class="updated">'+(r.returns?r.onTime+'/'+r.returns+' retornos realizados no prazo':'Sem retornos confirmados no período')+'</p><button data-seller="'+esc(r.user.id)+'">Ver orçamentos e histórico</button></article>';
  }).join('')||'<p>Nenhum colaborador cadastrado para este filtro.</p>';
  const reasons={};summary.perSeller.forEach(r=>Object.entries(r.reasons).forEach(([k,v])=>reasons[k]=(reasons[k]||0)+v));
  $('reasons').innerHTML=Object.entries(reasons).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<div class="reason"><span>'+esc(k||'Não informado')+'</span><strong>'+v+'</strong></div>').join('')||'<p>Nenhum motivo de perda registrado nos orçamentos deste período.</p>';
@@ -397,6 +426,22 @@ $('close-branch-detail')?.addEventListener('click',()=>$('branch-detail').close(
 $('branch-detail')?.addEventListener('close',()=>lastFocus?.focus());
 $('close-detail').addEventListener('click',()=>$('detail').close());
 $('detail').addEventListener('close',()=>lastFocus?.focus());
+
+$('access-photo')?.addEventListener('change',async e=>{
+ const file=e.target.files?.[0],preview=$('access-photo-preview'),st=$('access-state');
+ if(!file){pendingAccessPhoto='';if(preview){preview.innerHTML='👤';preview.classList.remove('has-photo');}return;}
+ try{
+   if(st)st.textContent='Preparando foto…';
+   pendingAccessPhoto=await prepareAccessPhoto(file);
+   if(preview){preview.innerHTML='<img src="'+pendingAccessPhoto+'" alt="Prévia da foto">';preview.classList.add('has-photo');}
+   if(st)st.textContent='Foto pronta para o cadastro.';
+ }catch(err){
+   pendingAccessPhoto='';e.target.value='';
+   if(preview){preview.innerHTML='👤';preview.classList.remove('has-photo');}
+   if(st)st.textContent=err.message||String(err);
+ }
+});
+
 $('access-create')?.addEventListener('click',createAccess);
 $('access-copy')?.addEventListener('click',copyAccess);
 $('access-whatsapp')?.addEventListener('click',sendAccess);

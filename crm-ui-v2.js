@@ -3,7 +3,7 @@
   const C = window.FSCRMCore;
   const remote=window.FSCRMRemote; let serverRows=[], syncing=null;
   if (!C) return;
-  let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7', batchQueue = [], batchIndex = 0, authReady = !!remote?.session || !!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_nome')&&localStorage.getItem('crm_filial'));
+  let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7', batchQueue = [], batchIndex = 0, authReady = !!remote?.session || !!remote?.hasCredentials?.() || !!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_nome')&&localStorage.getItem('crm_filial'));
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
   const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -48,8 +48,8 @@
     : ({name:localStorage.getItem('crm_nome')||'',branch:localStorage.getItem('crm_filial')||'',role:localStorage.getItem('crm_cargo')||'',canManage:false});
   function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;return r;}
   async function refreshData(){
-    if(remote?.enabled && !authReady && !remote?.session){
-      // Mantém a estrutura do acompanhamento visível com a sessão local já conhecida.
+    if(remote?.enabled && !authReady && !remote?.session && !remote?.hasCredentials?.()){
+      // Sem qualquer credencial válida: mantém somente a estrutura local conhecida.
       render();
       return;
     }
@@ -89,7 +89,7 @@
     try{await syncing;}finally{syncing=null;}
   }
   function capture() {
-    if(remote?.enabled && !remote.session)throw Error('Aguarde a validação do acesso central ou use Atualizar painel.');
+    if(remote?.enabled && !remote.session && !remote?.hasCredentials?.())throw Error('Aguarde a validação do acesso central ou use Atualizar painel.');
     const kind = $('fscrm-kind')?.value;
     if (!kind) throw Error('A área de acompanhamento não está pronta. Recarregue a página antes de salvar.');
     if (kind === 'simulacao') return { kind };

@@ -1617,7 +1617,7 @@
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
- <link rel="stylesheet" href="./crm-v2.css?v=71">
+ <link rel="stylesheet" href="./crm-v2.css?v=95">
 
 <style>
 @media(max-width:600px){
@@ -1646,6 +1646,28 @@
   #historySection .history-details>.detail-item:nth-child(5){grid-column:1/-1!important;}
 }
 </style>
+
+<style id="approval-quick-style">
+.approval-quick-overlay{
+  position:fixed;inset:0;z-index:30000;background:rgba(15,20,40,.52);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;padding:18px;
+}
+.approval-quick-card{
+  width:min(520px,100%);background:#fff;border-radius:22px;padding:18px;
+  box-shadow:0 28px 70px rgba(20,24,50,.35);border:1px solid rgba(91,76,196,.12);
+}
+.approval-quick-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.approval-quick-head small{display:block;color:#7d7d91;font-size:.72rem;font-weight:800;letter-spacing:.08em}
+.approval-quick-head h3{margin:4px 0 0;font-size:1.28rem;color:#2f3650}
+.approval-quick-head button{width:42px;height:42px;border-radius:13px;border:1px solid #d8dae4;background:#fff;font-size:1.45rem;color:#42495d}
+.approval-quick-card label{display:block;font-weight:750;color:#495168;margin:10px 0}
+.approval-quick-card select,.approval-quick-card input{width:100%;margin-top:7px;min-height:50px;border:1px solid #d4d7e2;border-radius:13px;padding:0 14px;font:inherit;background:#fff;color:#30374b}
+.approval-quick-error{min-height:20px;color:#a22b36;font-size:.82rem;margin:8px 0}
+.approval-quick-confirm{width:100%;min-height:48px;border:0;border-radius:13px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:1rem;font-weight:800}
+@media(max-width:520px){.approval-quick-card{border-radius:20px;padding:16px}.approval-quick-overlay{align-items:flex-end;padding:10px}.approval-quick-card{margin-bottom:10px}}
+</style>
+
 </head>
  <body>
   <header class="header">
@@ -1843,12 +1865,15 @@
           <option value="Diretoria">Diretoria</option>
           <option value="Promoção do Mês">Promoção do Mês</option>
           <option value="Produto FL">Produto FL</option>
+          <option value="Oferta Extra">Oferta Extra</option>
+          <option value="Outros">Outros</option>
          </select>
         </div>
         <div class="input-group" style="margin-bottom:0;">
          <label class="input-label" for="nomeAprovador">👤 Nome de quem autorizou:</label>
          <input type="text" id="nomeAprovador" class="input-field" placeholder="EX.: ALLAN, ALEX, COMPRADOR RESPONSÁVEL...">
         </div>
+        <input type="hidden" id="outroAprovacaoDescricao" value="">
        </div>
       </div><!-- Seção: Cálculo Manual -->
       <div class="calculation-section section-manual">
@@ -2600,16 +2625,20 @@ let currentData = [];
             }
 
             statusDiv.classList.add('status-supervisor');
-            textoSpan.innerHTML = '🔐 <strong>APROVAÇÃO SUPERIOR OBRIGATÓRIA</strong><br>Acima de 8%, selecione a autorização aplicável. Para aprovação por pessoa, informe também o nome de quem autorizou.';
-            if (superiorBox) superiorBox.style.display = 'block';
+            textoSpan.innerHTML = '🔐 <strong>APROVAÇÃO SUPERIOR OBRIGATÓRIA</strong><br>Ao salvar, selecione a autorização aplicável.';
+            // Não expande mais o formulário e não desloca a tela. A escolha é feita em pop-up.
+            if (superiorBox) superiorBox.style.display = 'none';
 
             const nivelSelecionado = String(document.getElementById('nivelAprovacaoSuperior')?.value || '').trim();
             const nomeAprovador = String(document.getElementById('nomeAprovador')?.value || '').trim().toUpperCase();
-            const condicaoComercial = ['Promoção do Mês','Produto FL'].includes(nivelSelecionado);
+            const outro = String(document.getElementById('outroAprovacaoDescricao')?.value || '').trim().toUpperCase();
+            const condicaoComercial = ['Promoção do Mês','Produto FL','Oferta Extra'].includes(nivelSelecionado);
+            const outroValido = nivelSelecionado === 'Outros' && !!outro;
+            const pessoaValida = ['Supervisor','Gerente Comprador','Gerente Comercial','Diretoria'].includes(nivelSelecionado) && !!nomeAprovador;
             return {
-                autorizado: !!(nivelSelecionado && (condicaoComercial || nomeAprovador)),
-                nivel: nivelSelecionado || 'Aprovação superior',
-                aprovadoPor: condicaoComercial ? nivelSelecionado.toUpperCase() : nomeAprovador
+                autorizado: !!(nivelSelecionado && (condicaoComercial || outroValido || pessoaValida)),
+                nivel: nivelSelecionado === 'Outros' && outro ? ('OUTROS · ' + outro) : (nivelSelecionado || 'Aprovação superior'),
+                aprovadoPor: condicaoComercial ? nivelSelecionado.toUpperCase() : (nivelSelecionado === 'Outros' ? outro : nomeAprovador)
             };
         }
 
@@ -3296,6 +3325,116 @@ Zenir - O Melhor Está Aqui! 🏆`;
         }
 
         // Função para salvar cálculo
+
+        function fecharPopupAprovacaoSuperior() {
+            const overlay = document.getElementById('approvalQuickOverlay');
+            if (overlay) overlay.remove();
+        }
+
+        function abrirPopupAprovacaoSuperior(onConfirm) {
+            fecharPopupAprovacaoSuperior();
+
+            const atual = String(document.getElementById('nivelAprovacaoSuperior')?.value || '').trim();
+            const nomeAtual = String(document.getElementById('nomeAprovador')?.value || '').trim().toUpperCase();
+            const outroAtual = String(document.getElementById('outroAprovacaoDescricao')?.value || '').trim().toUpperCase();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'approvalQuickOverlay';
+            overlay.className = 'approval-quick-overlay';
+            overlay.innerHTML = `
+              <div class="approval-quick-card" role="dialog" aria-modal="true" aria-labelledby="approvalQuickTitle">
+                <div class="approval-quick-head">
+                  <div><small>APROVAÇÃO DO DESCONTO</small><h3 id="approvalQuickTitle">Selecione a autorização</h3></div>
+                  <button type="button" id="approvalQuickClose" aria-label="Fechar">×</button>
+                </div>
+                <label>Nível / condição
+                  <select id="approvalQuickLevel">
+                    <option value="">Selecione a autorização</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Gerente Comprador">Gerente Comprador</option>
+                    <option value="Gerente Comercial">Gerente Comercial</option>
+                    <option value="Diretoria">Diretoria</option>
+                    <option value="Promoção do Mês">Promoção do Mês</option>
+                    <option value="Produto FL">Produto FL</option>
+                    <option value="Oferta Extra">Oferta Extra</option>
+                    <option value="Outros">Outros</option>
+                  </select>
+                </label>
+                <label id="approvalQuickNameWrap" hidden>Nome de quem autorizou
+                  <input id="approvalQuickName" type="text" placeholder="EX.: ALLAN, ALEX, COMPRADOR...">
+                </label>
+                <label id="approvalQuickOtherWrap" hidden>Qual autorização / oferta?
+                  <input id="approvalQuickOther" type="text" placeholder="DESCREVA A CONDIÇÃO">
+                </label>
+                <p id="approvalQuickError" class="approval-quick-error"></p>
+                <button type="button" id="approvalQuickConfirm" class="approval-quick-confirm">Confirmar</button>
+              </div>`;
+            document.body.appendChild(overlay);
+
+            const level = document.getElementById('approvalQuickLevel');
+            const name = document.getElementById('approvalQuickName');
+            const other = document.getElementById('approvalQuickOther');
+            const nameWrap = document.getElementById('approvalQuickNameWrap');
+            const otherWrap = document.getElementById('approvalQuickOtherWrap');
+            const err = document.getElementById('approvalQuickError');
+            const confirm = document.getElementById('approvalQuickConfirm');
+
+            level.value = atual;
+            name.value = nomeAtual;
+            other.value = outroAtual;
+
+            const personLevels = ['Supervisor','Gerente Comprador','Gerente Comercial','Diretoria'];
+            const instantLevels = ['Promoção do Mês','Produto FL','Oferta Extra'];
+
+            const upper = (el) => {
+                const pos = el.selectionStart;
+                const value = String(el.value || '').toUpperCase();
+                if (el.value !== value) {
+                    el.value = value;
+                    try { el.setSelectionRange(pos, pos); } catch (_e) {}
+                }
+            };
+            name.addEventListener('input', () => upper(name));
+            other.addEventListener('input', () => upper(other));
+
+            function refreshFields() {
+                const v = level.value;
+                nameWrap.hidden = !personLevels.includes(v);
+                otherWrap.hidden = v !== 'Outros';
+                confirm.hidden = instantLevels.includes(v);
+                err.textContent = '';
+            }
+
+            function commit() {
+                const v = level.value;
+                const n = String(name.value || '').trim().toUpperCase();
+                const o = String(other.value || '').trim().toUpperCase();
+
+                if (!v) { err.textContent = 'Selecione uma autorização.'; return false; }
+                if (personLevels.includes(v) && !n) { err.textContent = 'Informe quem autorizou.'; name.focus(); return false; }
+                if (v === 'Outros' && !o) { err.textContent = 'Descreva a autorização ou oferta.'; other.focus(); return false; }
+
+                document.getElementById('nivelAprovacaoSuperior').value = v;
+                document.getElementById('nomeAprovador').value = n;
+                document.getElementById('outroAprovacaoDescricao').value = o;
+                fecharPopupAprovacaoSuperior();
+                if (typeof onConfirm === 'function') setTimeout(onConfirm, 30);
+                return true;
+            }
+
+            level.addEventListener('change', () => {
+                refreshFields();
+                if (instantLevels.includes(level.value)) commit();
+                else if (personLevels.includes(level.value)) setTimeout(() => name.focus(), 20);
+                else if (level.value === 'Outros') setTimeout(() => other.focus(), 20);
+            });
+            confirm.addEventListener('click', commit);
+            document.getElementById('approvalQuickClose').addEventListener('click', fecharPopupAprovacaoSuperior);
+            overlay.addEventListener('click', e => { if (e.target === overlay) fecharPopupAprovacaoSuperior(); });
+            refreshFields();
+            setTimeout(() => level.focus(), 20);
+        }
+
         async function salvarCalculo() {
             vendedorAtual = (localStorage.getItem('fs_nome') || '').trim();
             const codigoProduto = document.getElementById('codigoProduto').value.trim();
@@ -3351,8 +3490,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
             const autorizacao = verificarAutorizacao(descontoPercentual);
 
             if (descontoPercentual > 8 && !autorizacao.autorizado) {
-                showToast("❌ Acima de 8%, selecione a autorização. Se for Supervisor, Gerente Comprador, Gerente Comercial ou Diretoria, informe também o nome de quem autorizou.", "error");
-                document.getElementById('nivelAprovacaoSuperior')?.focus();
+                abrirPopupAprovacaoSuperior(() => salvarCalculo());
                 return;
             }
 
@@ -4620,9 +4758,9 @@ window.FSCRMBridge = {
 };
 </script>
 <script src="./crm-config-v2.js?v=71"></script>
-<script src="./crm-api-v2.js?v=90"></script>
+<script src="./crm-api-v2.js?v=95"></script>
 <script src="./crm-core-v2.js?v=70"></script>
-<script src="./crm-ui-v2.js?v=74"></script>
+<script src="./crm-ui-v2.js?v=95"></script>
 
 <style>
   /* Histórico: ações compactas para reduzir a altura de cada registro */
