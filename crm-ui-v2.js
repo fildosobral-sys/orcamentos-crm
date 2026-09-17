@@ -286,20 +286,81 @@
       osc.frequency.value=740;gain.gain.value=.045;osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.18);osc.onended=()=>ctx.close();
     }catch(_e){}
   }
+
+  const REMINDER_SESSION_PREFIX='fscrm_reminder_session_v1:';
+  function ensureReminderAlertUi(){
+    if(document.getElementById('fscrm-reminder-alert'))return;
+    const style=document.createElement('style');
+    style.textContent=`
+      #fscrm-reminder-alert{width:min(92vw,430px);max-width:430px;border:0;border-radius:24px;padding:0;background:#fff;color:#27324a;box-shadow:0 28px 80px rgba(17,24,39,.40)}
+      #fscrm-reminder-alert::backdrop{background:rgba(15,23,42,.60);backdrop-filter:blur(5px)}
+      .fscrm-reminder-alert-head{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;padding:18px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+      .fscrm-reminder-alert-head h3{margin:0;font-size:1.18rem;color:#fff}.fscrm-reminder-alert-head p{margin:5px 0 0;font-size:.90rem;opacity:.94}
+      .fscrm-reminder-alert-close{width:40px;height:40px;border:1px solid rgba(255,255,255,.45);border-radius:12px;background:rgba(255,255,255,.14);color:#fff;font-size:1.4rem}
+      .fscrm-reminder-alert-body{padding:18px}.fscrm-reminder-customer{font-size:1.12rem;font-weight:800;margin:0 0 4px}
+      .fscrm-reminder-product{font-size:.94rem;color:#5f6978;margin:0 0 14px}.fscrm-reminder-date{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px 12px;border-radius:13px;font-weight:700;margin-bottom:14px}
+      .fscrm-reminder-instruction{padding:12px 13px;border-radius:14px;background:#f8fafc;border:1px solid #e5e7eb;line-height:1.45;font-size:.94rem;margin-bottom:15px}
+      .fscrm-reminder-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.fscrm-reminder-actions button{min-height:48px;border-radius:13px;border:1px solid #d8dee9;background:#fff;color:#344054;font:inherit;font-weight:700;padding:8px 10px}
+      .fscrm-reminder-actions .primary{grid-column:1/-1;background:#16a34a;border-color:#16a34a;color:#fff}.fscrm-reminder-actions .warn{border-color:#f59e0b;color:#92400e;background:#fffbeb}
+      @media(max-width:390px){#fscrm-reminder-alert{width:94vw}.fscrm-reminder-actions{grid-template-columns:1fr}.fscrm-reminder-actions .primary{grid-column:auto}}`;
+    document.head.appendChild(style);
+    const dlg=document.createElement('dialog');
+    dlg.id='fscrm-reminder-alert';
+    dlg.innerHTML=`<div class="fscrm-reminder-alert-head"><div><h3 id="fscrm-reminder-alert-title"></h3><p id="fscrm-reminder-alert-subtitle"></p></div><button type="button" class="fscrm-reminder-alert-close" data-reminder-action="close">×</button></div><div class="fscrm-reminder-alert-body"><p class="fscrm-reminder-customer" id="fscrm-reminder-client"></p><p class="fscrm-reminder-product" id="fscrm-reminder-product"></p><div class="fscrm-reminder-date" id="fscrm-reminder-date"></div><div class="fscrm-reminder-instruction" id="fscrm-reminder-instruction"></div><div class="fscrm-reminder-actions"><button type="button" class="primary" data-reminder-action="whatsapp">✅ Produto chegou — enviar WhatsApp</button><button type="button" class="warn" data-reminder-action="reschedule">📅 Reagendar</button><button type="button" data-reminder-action="open">Abrir negociação</button></div></div>`;
+    document.body.appendChild(dlg);
+    dlg.addEventListener('click',e=>{
+      const b=e.target.closest('[data-reminder-action]');if(!b||!dlg._record)return;
+      const r=dlg._record, stamp=reminderStamp(r), mark=()=>{try{sessionStorage.setItem(REMINDER_SESSION_PREFIX+stamp,'1')}catch(_e){}};
+      if(b.dataset.reminderAction==='close'){mark();dlg.close();setTimeout(()=>checkProductReminders().catch(()=>{}),80);return;}
+      if(b.dataset.reminderAction==='open'){mark();dlg.close();open(r.id);return;}
+      if(b.dataset.reminderAction==='reschedule'){mark();dlg.close();open(r.id);setTimeout(()=>{$('fscrm-edit-next')?.scrollIntoView({behavior:'smooth',block:'center'});$('fscrm-edit-next')?.focus();},180);return;}
+      if(b.dataset.reminderAction==='whatsapp'){
+        if(!C.validPhone(r.phone)){fail(Error('Este cliente não possui um WhatsApp válido cadastrado.'));return;}
+        const first=String(r.client||'cliente').trim().split(/\s+/)[0]||'cliente';
+        const text=`Olá, ${first}! 😊 Passando para avisar que o seu produto ${String(r.product||'').trim()} chegou. Quando puder, pode vir à loja para finalizarmos sua compra. Se precisar, estou à disposição!`;
+        mark();window.open('https://wa.me/'+C.phone(r.phone)+'?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');dlg.close();
+      }
+    });
+  }
+  function showInAppReminder(r){
+    ensureReminderAlertUi();
+    const dlg=$('fscrm-reminder-alert');if(!dlg||dlg.open)return false;
+    const produto=r.status==='aguardando_produto'||r.followupType==='produto';
+    dlg._record=r;
+    $('fscrm-reminder-alert-title').textContent=produto?'📦 Verifique a chegada do produto':'📅 Retorno agendado';
+    $('fscrm-reminder-alert-subtitle').textContent=produto?'A previsão chegou. Confirme com a logística antes de falar com o cliente.':'Chegou a hora combinada para retomar esta negociação.';
+    $('fscrm-reminder-client').textContent=r.client||'Cliente';$('fscrm-reminder-product').textContent=r.product||'Produto não informado';
+    $('fscrm-reminder-date').textContent=`🕒 ${date(r.next)}${r.nextTime?' às '+r.nextTime:''}`;
+    $('fscrm-reminder-instruction').textContent=produto?'Confirme se o produto já chegou. Se chegou, envie a mensagem ao cliente. Se ainda não chegou, use Reagendar e informe a nova previsão.':'Retome o contato com o cliente ou use Reagendar para marcar uma nova data.';
+    dlg.querySelector('[data-reminder-action="whatsapp"]').textContent=produto?'✅ Produto chegou — enviar WhatsApp':'💬 Enviar mensagem ao cliente';
+    dlg.showModal();return true;
+  }
+
   async function checkProductReminders(){
-    const rows=db?.all?.()||[];
+    const rows=(db?.all?.()||[]).filter(dueNow).sort((a,b)=>String(a.next||'').localeCompare(String(b.next||''))||String(a.nextTime||'').localeCompare(String(b.nextTime||'')));
     for(const r of rows){
-      if(!dueNow(r))continue;
-      const key=REMINDER_PREFIX+reminderStamp(r);
-      if(localStorage.getItem(key))continue;
-      localStorage.setItem(key,new Date().toISOString());
       const produto=r.status==='aguardando_produto'||r.followupType==='produto';
       const title=produto?'📦 Produto previsto para hoje':'📅 Retorno agendado';
       const body=`${r.client} · ${r.product}${r.nextTime?' · '+r.nextTime:''}`;
-      notify(produto?`${title}: ${r.client} — confirme com a logística e dê continuidade à negociação.`:`${title}: ${r.client} — hora de retomar esta negociação.`,false);
-      softBeep();
-      if('Notification' in window && Notification.permission==='granted'){
-        try{new Notification(title,{body,tag:'fscrm-'+r.id,renotify:true});}catch(_e){}
+      const nativeKey=REMINDER_PREFIX+reminderStamp(r);
+      if(!localStorage.getItem(nativeKey)){
+        localStorage.setItem(nativeKey,new Date().toISOString());
+        if('Notification' in window&&Notification.permission==='granted'){
+          try{
+            let shown=false;
+            if('serviceWorker' in navigator){
+              const reg=await Promise.race([navigator.serviceWorker.ready,new Promise(resolve=>setTimeout(()=>resolve(null),700))]);
+              if(reg?.showNotification){await reg.showNotification(title,{body,tag:'fscrm-'+r.id,renotify:true,icon:'./favicon.svg'});shown=true;}
+            }
+            if(!shown)new Notification(title,{body,tag:'fscrm-'+r.id,renotify:true});
+          }catch(_e){}
+        }
+      }
+      const sessionKey=REMINDER_SESSION_PREFIX+reminderStamp(r);
+      if(!sessionStorage.getItem(sessionKey)){
+        notify(produto?`${title}: ${r.client} — confirme com a logística e dê continuidade à negociação.`:`${title}: ${r.client} — hora de retomar esta negociação.`,false);
+        softBeep();
+        if(showInAppReminder(r))break;
       }
     }
   }
