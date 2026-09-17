@@ -2358,7 +2358,8 @@ let currentData = [];
 
         // Função para renderizar histórico completo (todos os usuários)
         function renderHistoryComplete(data) {
-            data = data.filter(item => String(item.vendedor || '').trim().toUpperCase() === String(localStorage.getItem('fs_nome') || '').trim().toUpperCase());
+            const vendedorFiltro = resolverVendedorAtual();
+            data = data.filter(item => String(item.vendedor || '').trim().toUpperCase() === String(vendedorFiltro || '').trim().toUpperCase());
             const container = document.getElementById('historyContainer');
             
             if (data.length === 0) {
@@ -3435,8 +3436,18 @@ Zenir - O Melhor Está Aqui! 🏆`;
             setTimeout(() => level.focus(), 20);
         }
 
+        function resolverVendedorAtual() {
+            const remoto = String(window.FSCRMRemote?.session?.actor?.name || '').trim();
+            const crm = String(localStorage.getItem('crm_nome') || '').trim();
+            const central = String(localStorage.getItem('fs_nome') || '').trim();
+            const legado = String(localStorage.getItem('vendedorLogado') || localStorage.getItem('nomeVendedorLogado') || '').trim();
+            const memoria = String(vendedorAtual || '').trim();
+            return remoto || crm || central || legado || memoria;
+        }
+
         async function salvarCalculo() {
-            vendedorAtual = (localStorage.getItem('fs_nome') || '').trim();
+            const vendedorResolvido = resolverVendedorAtual();
+            if (vendedorResolvido) vendedorAtual = vendedorResolvido;
             const codigoProduto = document.getElementById('codigoProduto').value.trim();
             const cliente = document.getElementById('cliente').value.trim();
             const whatsapp = document.getElementById('whatsapp').value.trim();
@@ -3459,9 +3470,17 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 tipoCalculo = 'MANUAL';
             }
 
-            // Validações
-            if (!codigoProduto || !cliente || !vendedorAtual) {
-                showToast("❌ Por favor, preencha código do produto, cliente e faça login!", "error");
+            // Validações independentes. Falha de internet não invalida uma sessão já identificada.
+            if (!codigoProduto) {
+                showToast("❌ Informe o código ou a descrição do produto.", "error");
+                return;
+            }
+            if (!cliente) {
+                showToast("❌ Informe o nome do cliente.", "error");
+                return;
+            }
+            if (!vendedorAtual) {
+                showToast("⚠️ Não consegui identificar o vendedor neste aparelho. Abra novamente pelo seu acesso e tente salvar.", "error");
                 return;
             }
 
@@ -3602,7 +3621,13 @@ Zenir - O Melhor Está Aqui! 🏆`;
                     setTimeout(() => aplicarFiltroData(), 100);
                 }
 
-                showToast("💾 Cálculo salvo! Use os botões no histórico para marcar como realizada.", "success");
+                const pendentes = Number(window.FSCRMRemote?.pendingCountCached?.() || 0);
+                showToast(
+                    pendentes > 0
+                      ? "💾 Salvo neste aparelho. A sincronização com a nuvem será feita automaticamente quando a conexão voltar."
+                      : "💾 Cálculo salvo! Use os botões no histórico para marcar como realizada.",
+                    "success"
+                );
 
             } catch (error) {
                 console.error("💥 Erro no salvamento:", error);
@@ -3614,7 +3639,8 @@ Zenir - O Melhor Está Aqui! 🏆`;
 
         // Função para renderizar histórico
         function renderHistory(data, dataFiltro = null, filtroSucesso = 'todos') {
-            data = data.filter(item => String(item.vendedor || '').trim().toUpperCase() === String(localStorage.getItem('fs_nome') || '').trim().toUpperCase());
+            const vendedorFiltro = resolverVendedorAtual();
+            data = data.filter(item => String(item.vendedor || '').trim().toUpperCase() === String(vendedorFiltro || '').trim().toUpperCase());
             const container = document.getElementById('historyContainer');
             
             if (data.length === 0) {
@@ -4758,9 +4784,9 @@ window.FSCRMBridge = {
 };
 </script>
 <script src="./crm-config-v2.js?v=71"></script>
-<script src="./crm-api-v2.js?v=95"></script>
+<script src="./crm-api-v2.js?v=110"></script>
 <script src="./crm-core-v2.js?v=70"></script>
-<script src="./crm-ui-v2.js?v=95"></script>
+<script src="./crm-ui-v2.js?v=110"></script>
 
 <style>
   /* Histórico: ações compactas para reduzir a altura de cada registro */

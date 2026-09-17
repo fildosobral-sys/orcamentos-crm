@@ -4,6 +4,65 @@ const config=window.FSCRMConfig||{};let session=null;
 const digits=s=>String(s||'').replace(/\D/g,'').replace(/^55(?=\d{10,11}$)/,'');
 const SESSION_OK_KEY='crm_session_ok_v1';
 
+const OFFLINE_DB='fscrm_offline_v1';
+const OFFLINE_STORE='pending_ops';
+const PENDING_CACHE_KEY='fscrm_pending_count_v1';
+
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window)){reject(Error('IndexedDB indisponível.'));return;}
+    const req=indexedDB.open(OFFLINE_DB,1);
+    req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(OFFLINE_STORE))db.createObjectStore(OFFLINE_STORE,{keyPath:'id'});};
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||Error('Falha ao abrir armazenamento offline.'));
+  });
+}
+async function pendingAll(){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(OFFLINE_STORE,'readonly');
+    const req=tx.objectStore(OFFLINE_STORE).getAll();
+    req.onsuccess=()=>{db.close();resolve((req.result||[]).sort((a,b)=>a.createdAt-b.createdAt));};
+    req.onerror=()=>{db.close();reject(req.error);};
+  });
+}
+async function pendingPut(op){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(OFFLINE_STORE,'readwrite');
+    tx.objectStore(OFFLINE_STORE).put(op);
+    tx.oncomplete=()=>{db.close();resolve(op);};
+    tx.onerror=()=>{db.close();reject(tx.error);};
+  });
+}
+async function pendingDelete(id){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(OFFLINE_STORE,'readwrite');
+    tx.objectStore(OFFLINE_STORE).delete(id);
+    tx.oncomplete=()=>{db.close();resolve();};
+    tx.onerror=()=>{db.close();reject(tx.error);};
+  });
+}
+function setPendingCount(n){try{localStorage.setItem(PENDING_CACHE_KEY,String(Math.max(0,Number(n)||0)));}catch(_e){}}
+function pendingCountCached(){return Number(localStorage.getItem(PENDING_CACHE_KEY)||0)||0;}
+async function enqueue(action,data){
+  const op={
+    id:(crypto.randomUUID?crypto.randomUUID():('op_'+Date.now()+'_'+Math.random().toString(36).slice(2))),
+    action:String(action||''),
+    data:JSON.parse(JSON.stringify(data||{})),
+    createdAt:Date.now(),
+    attempts:0
+  };
+  await pendingPut(op);
+  const all=await pendingAll();setPendingCount(all.length);
+  try{window.dispatchEvent(new CustomEvent('fscrm:sync-state',{detail:{pending:all.length,offline:true}}));}catch(_e){}
+  return op;
+}
+function isNetworkError(e){
+  return e?.code==='NETWORK'||e?.name==='AbortError'||e instanceof TypeError||/^HTTP_(408|429|500|502|503|504)$/.test(String(e?.code||''));
+}
+
 
 function readCentralTicket(){
   try{
@@ -58,7 +117,7 @@ function storedCredentials(){
   if(!/^\d{10,11}$/.test(phone)){const e=Error('Informe um WhatsApp válido com DDD.');e.code='LOGIN_REQUIRED';throw e;}
   return {token,branch,phone,deviceId:localStorage.getItem('fs_device_id')||''};
 }
-async function call(action,data={}){
+async function networkCall(action,data={}){
   if(!config.apiUrl)throw Error('O banco central ainda não foi conectado.');
   if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(config.apiUrl))throw Error('Configure o endereço /exec do Apps Script.');
 
@@ -113,6 +172,46 @@ async function call(action,data={}){
   friendly.code='NETWORK';
   throw friendly;
 }
+
+async function call(action,data={}){
+  return networkCall(action,data);
+}
+
+let flushing=false;
+async function flushQueue(){
+  if(flushing)return {pending:pendingCountCached(),busy:true};
+  flushing=true;
+  try{
+    if(navigator.onLine===false)return {pending:pendingCountCached(),offline:true};
+    const all=await pendingAll();
+    let done=0;
+    for(const op of all){
+      try{
+        await networkCall(op.action,op.data);
+        await pendingDelete(op.id);
+        done++;
+      }catch(e){
+        if(isNetworkError(e))break;
+        // Erro de regra/autorização não deve ser repetido infinitamente.
+        op.attempts=(op.attempts||0)+1;
+        op.lastError=String(e.message||e);
+        if(op.attempts>=3 || ['UNAUTHORIZED','REVOKED','CRM_ACCESS_REQUIRED','VALIDATION','CONFLICT'].includes(String(e.code||''))){
+          await pendingDelete(op.id);
+          try{window.dispatchEvent(new CustomEvent('fscrm:sync-error',{detail:{action:op.action,message:op.lastError}}));}catch(_e){}
+        }else{
+          await pendingPut(op);
+        }
+        if(['UNAUTHORIZED','REVOKED','CRM_ACCESS_REQUIRED'].includes(String(e.code||'')))break;
+      }
+    }
+    const left=await pendingAll();setPendingCount(left.length);
+    try{window.dispatchEvent(new CustomEvent('fscrm:sync-state',{detail:{pending:left.length,synced:done}}));}catch(_e){}
+    return {pending:left.length,synced:done};
+  }finally{
+    flushing=false;
+  }
+}
+
 function clearCredentials(){
   session=null;
   ['crm_access_token','crm_filial','crm_whatsapp','crm_nome','crm_cargo'].forEach(k=>localStorage.removeItem(k));
@@ -163,6 +262,10 @@ window.FSCRMRemote={
   enabled:!!config.apiUrl,
   call,
   connect,
+  enqueue,
+  flushQueue,
+  isNetworkError,
+  pendingCountCached,
   get session(){return session;},
   clearCredentials,
   hasCredentials(){
@@ -275,5 +378,17 @@ function installStandaloneGate(){
   const boot=()=>{try{storedCredentials();verifyStandaloneAccess();}catch(_e){buildLoginCard('');}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 }
+
+window.addEventListener('online',()=>{
+  flushQueue().catch(()=>{});
+  try{window.FSCRM?.refresh?.();}catch(_e){}
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&navigator.onLine!==false&&pendingCountCached()>0)flushQueue().catch(()=>{});
+});
+setInterval(()=>{
+  if(navigator.onLine!==false&&pendingCountCached()>0)flushQueue().catch(()=>{});
+},30000);
+
 installStandaloneGate();
 })();

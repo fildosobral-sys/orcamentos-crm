@@ -4,6 +4,7 @@
   const remote=window.FSCRMRemote; let serverRows=[], syncing=null;
   if (!C) return;
   let db, panel, modal, draft, messageDraft, revision, lastFocus, activityPeriod = '7', batchQueue = [], batchIndex = 0, authReady = !!remote?.session || !!remote?.hasCredentials?.() || !!(localStorage.getItem('crm_access_token')&&localStorage.getItem('crm_nome')&&localStorage.getItem('crm_filial'));
+  const RECORD_CACHE_KEY='fscrm_records_cache_v2';
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
   const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -46,7 +47,24 @@
   const actor = () => remote?.session
     ? {...remote.session.actor,canManage:false}
     : ({name:localStorage.getItem('crm_nome')||'',branch:localStorage.getItem('crm_filial')||'',role:localStorage.getItem('crm_cargo')||'',canManage:false});
-  function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;return r;}
+  function persistServerRows(){try{localStorage.setItem(RECORD_CACHE_KEY,JSON.stringify(serverRows.slice(-1200)));}catch(_e){}}
+  function readServerCache(){try{const rows=JSON.parse(localStorage.getItem(RECORD_CACHE_KEY)||'[]');return Array.isArray(rows)?rows:[];}catch(_e){return [];}}
+  function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;persistServerRows();return r;}
+  function removeCachedRecord(id){serverRows=serverRows.filter(x=>x.id!==id);persistServerRows();}
+  async function queueWrite(action,data,optimistic){
+    if(!remote?.enqueue)throw Error('Armazenamento offline indisponível.');
+    await remote.enqueue(action,data);
+    if(optimistic)cacheRecord(optimistic);
+    notify('Salvo neste aparelho. Sincronização com a nuvem pendente.',false);
+    return optimistic;
+  }
+  async function remoteWrite(action,data,optimistic){
+    try{return await remote.call(action,data);}
+    catch(e){
+      if(remote?.isNetworkError?.(e)||navigator.onLine===false)return queueWrite(action,data,optimistic);
+      throw e;
+    }
+  }
   async function refreshData(){
     if(remote?.enabled && !authReady && !remote?.session && !remote?.hasCredentials?.()){
       // Sem qualquer credencial válida: mantém somente a estrutura local conhecida.
@@ -54,13 +72,24 @@
       return;
     }
     if(remote?.enabled){
-      await remote.connect();
-      authReady=!!remote.session;
-      serverRows=(await remote.call('listMine')).records;
-      for(const record of serverRows)window.FSCRMBridge?.setSale(record.id,record.status==='ganha');
-      window.dispatchEvent(new CustomEvent('fscrm:records',{detail:{records:serverRows}}));
+      try{
+        await remote.flushQueue?.();
+        await remote.connect();
+        authReady=!!remote.session;
+        serverRows=(await remote.call('listMine')).records;
+        persistServerRows();
+        for(const record of serverRows)window.FSCRMBridge?.setSale(record.id,record.status==='ganha');
+        window.dispatchEvent(new CustomEvent('fscrm:records',{detail:{records:serverRows}}));
+      }catch(e){
+        if(remote?.isNetworkError?.(e)||navigator.onLine===false){
+          if(!serverRows.length)serverRows=readServerCache();
+          notify('Modo offline: mostrando os dados salvos neste aparelho. A nuvem será atualizada automaticamente quando a conexão voltar.',false);
+        }else throw e;
+      }
     }
-    await reconcile();render();
+    await reconcile().catch(e=>{
+      if(!(remote?.isNetworkError?.(e)||navigator.onLine===false))throw e;
+    });render();
     const link=$('fscrm-team-link');if(link)link.hidden=remote?.enabled?!remote.session?.actor.canManage:!['DESENVOLVEDOR_MASTER','DESENVOLVER_MASTER'].includes(C.norm(actor().role));
   }
   function scheduleWarmRefresh(){
@@ -81,7 +110,12 @@
     if (C.norm(meta.branch) !== C.norm(actor().branch)) return;
     if (!C.leader(actor()) && C.norm(row.vendedor) !== C.norm(actor().name)) return;
     const record = C.create(row, meta, actor());
-    if(record){if(remote?.enabled)cacheRecord(await remote.call('create',{legacy:row,meta}));else db.put(record);}
+    if(record){
+      if(remote?.enabled){
+        const saved=await remoteWrite('create',{legacy:row,meta},record);
+        cacheRecord(saved||record);
+      }else db.put(record);
+    }
   }
   async function reconcile() {
     if(syncing)return syncing;
@@ -104,7 +138,10 @@
     if(remote?.enabled){
       const keys=['status','reason','lossNote','lossCompetitor','lossCompetitorPrice','note','phone','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer'];
       const patch={};keys.forEach(k=>patch[k]=r[k]);
-      r=cacheRecord(await remote.call(command?.action||'update',{id:r.id,expectedRevision:oldRevision,requestId:crypto.randomUUID(),patch,...(command?.data||{})}));
+      const action=command?.action||'update';
+      const payload={id:r.id,expectedRevision:oldRevision,requestId:(crypto.randomUUID?crypto.randomUUID():('req_'+Date.now())),patch,...(command?.data||{})};
+      const saved=await remoteWrite(action,payload,r);
+      r=cacheRecord(saved||r);
     }else db.put(r,oldRevision);
     try { window.FSCRMBridge?.setSale(r.id, r.status === 'ganha'); }
     catch(e) { notify('Acompanhamento salvo. O histórico antigo não foi atualizado: ' + e.message, true); }
@@ -131,6 +168,7 @@
     summary.appendChild(title);summary.appendChild(hint);details.appendChild(summary);details.appendChild(filter);
   }
   function mount() {
+    if(remote?.enabled)serverRows=readServerCache();
     db=remote?.enabled?{all:()=>serverRows,get:id=>serverRows.find(r=>r.id===id)||null}:C.store(localStorage);
     setupHistoryFilterCollapse();
     const metadata = document.createElement('div');
@@ -307,7 +345,9 @@
       try{
         if(!remote?.enabled)throw Error('Anexos exigem o banco central conectado.');
         const prepared=await prepareEvidence(file);
-        r=cacheRecord(await remote.call('addEvidence',{id:r.id,expectedRevision:r.revision,file:prepared}));
+        const evidencePayload={id:r.id,expectedRevision:r.revision,file:prepared};
+        const evidenceSaved=await remoteWrite('addEvidence',evidencePayload,r);
+        r=cacheRecord(evidenceSaved||r);
         draft=r;revision=r.revision;
         const list=$('fscrm-evidence-list');
         if(list){
@@ -532,8 +572,15 @@
     const ok=window.confirm('Excluir este orçamento? Use esta opção apenas para lançamento feito por engano. Esta ação remove o registro do acompanhamento e dos indicadores.');
     if(!ok)return;
     if(remote?.enabled){
-      await remote.call('delete',{id,expectedRevision:Number(expectedRevision)});
-      serverRows=serverRows.filter(x=>x.id!==id);
+      try{
+        await remote.call('delete',{id,expectedRevision:Number(expectedRevision)});
+      }catch(e){
+        if(remote?.isNetworkError?.(e)||navigator.onLine===false){
+          await remote.enqueue('delete',{id,expectedRevision:Number(expectedRevision)});
+          notify('Exclusão salva neste aparelho. Será concluída na nuvem quando a conexão voltar.',false);
+        }else throw e;
+      }
+      removeCachedRecord(id);
     }else{
       localStorage.removeItem(C.PREFIX+id);
     }
@@ -543,8 +590,8 @@
     }catch(_e){}
     window.dispatchEvent(new CustomEvent('fscrm:records',{detail:{records:serverRows}}));
     render();
-    if(remote?.enabled)await refreshData();
-    notify('Orçamento excluído de todo o sistema.');
+    if(remote?.enabled && navigator.onLine!==false)await refreshData().catch(()=>{});
+    notify(navigator.onLine===false?'Exclusão registrada. A nuvem será atualizada quando a conexão voltar.':'Orçamento excluído de todo o sistema.');
   }
 
   async function viewEvidence(fileId){
@@ -610,7 +657,7 @@
         case 'enroll-confirm-open':{
           const shouldOpen=b.dataset.action==='enroll-confirm-open';
           const legacyId=draft.__backendId;
-          const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:C.plus(C.day(),2),consent:true},actor());if(remote?.enabled)cacheRecord(await remote.call('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:true},imported:true}));else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');if(shouldOpen)setTimeout(()=>open(legacyId),0);break;
+          const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:C.plus(C.day(),2),consent:true},actor());if(remote?.enabled){const saved=await remoteWrite('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:true},imported:true},r);cacheRecord(saved||r);}else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');if(shouldOpen)setTimeout(()=>open(legacyId),0);break;
         }
         case 'prepare-batch':prepareBatch();break;
         case 'batch-open':batchOpen();break;
@@ -645,8 +692,23 @@
       const r=db?.get(id);if(!r)throw Error('Registro não encontrado.');
       return deleteRecord(id,r.revision);
     },
-    async saved(row){try{await ingest(row);render();}catch(e){fail(Error('Cálculo salvo no histórico. Não foi possível atualizar o acompanhamento: '+e.message));}},
+    async saved(row){
+      try{await ingest(row);render();}
+      catch(e){
+        if(remote?.isNetworkError?.(e)||navigator.onLine===false){
+          notify('Cálculo salvo neste aparelho. O acompanhamento será sincronizado automaticamente quando a conexão voltar.',false);
+        }else fail(Error('Cálculo salvo no histórico. Não foi possível atualizar o acompanhamento: '+e.message));
+      }
+    },
     async refresh(){try{await refreshData(); scheduleWarmRefresh();}catch(e){fail(e);}}
   };
+
+  window.addEventListener('fscrm:sync-state',e=>{
+    const pending=Number(e.detail?.pending||0);
+    if(pending>0)notify(`${pending} alteração(ões) salva(s) neste aparelho aguardando sincronização.`,false);
+    else if(Number(e.detail?.synced||0)>0)notify('Sincronização com a nuvem concluída.',false);
+  });
+  window.addEventListener('online',()=>{refreshData().catch(()=>{});});
+
   document.addEventListener('DOMContentLoaded',()=>{try{mount();}catch(e){console.error('Acompanhamento comercial:',e);if(typeof showToast==='function')showToast('Não foi possível carregar o acompanhamento. Os cálculos originais continuam disponíveis.','error');}});
 })();
