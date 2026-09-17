@@ -6,7 +6,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
   const PREFIX = 'fs_crm_v1:record:';
-  const STATUS = { negociacao: 'Em negociação', aguardando: 'Aguardando resposta', agendado: 'Retorno agendado', ganha: 'Venda concluída', perdida: 'Não concluído', outro: 'Outro' };
+  const STATUS = { negociacao: 'Em negociação', aguardando: 'Aguardando resposta', agendado: 'Retorno agendado', aguardando_produto: 'Aguardando produto', ganha: 'Venda concluída', perdida: 'Não concluído', outro: 'Outro' };
   const REASONS = ['Preço da concorrência', 'Condição de pagamento', 'Falta de estoque', 'Prazo de entrega', 'Cliente sem crédito', 'Comprou em outro lugar', 'Preferiu outra marca/modelo', 'Adiou a compra', 'Desistiu', 'Sem resposta', 'Outro', 'Preço'];
   const norm = s => String(s || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ');
   const phone = s => { const n = String(s || '').replace(/\D/g, ''); return n.length === 10 || n.length === 11 ? '55' + n : n; };
@@ -28,16 +28,16 @@
     const id = String(legacy.__backendId);
     const date = Number.isFinite(Date.parse(legacy.data_calculo)) ? legacy.data_calculo : now.toISOString();
     const r = { schema: 1, id, revision: 1, branch: actor.branch, seller, client: String(legacy.cliente), phone: String(legacy.whatsapp || ''), product: String(legacy.codigo_produto), amount: Number(legacy.preco_promocional) || 0,
-      createdAt: date, updatedAt: now.toISOString(), channel: meta.channel, buyer: meta.buyer, consent: meta.consent === true, status: legacy.venda_bem_sucedida === true ? 'ganha' : 'negociacao', customStatus: '', reason: '', customReason: '', lossNote: '', lossCompetitor: '', lossCompetitorPrice: 0, evidence: [], next: meta.next || plus(day(now), 2), note: String(legacy.anotacoes || ''), delivered: '', post: 'pendente', issue: '', issueOwner: '', issueDue: '', relation: '', history: [] };
+      createdAt: date, updatedAt: now.toISOString(), channel: meta.channel, buyer: meta.buyer, consent: meta.consent === true, status: legacy.venda_bem_sucedida === true ? 'ganha' : 'negociacao', customStatus: '', reason: '', customReason: '', lossNote: '', lossCompetitor: '', lossCompetitorPrice: 0, evidence: [], next: meta.next || plus(day(now), 2), nextTime: '', followupType: 'cliente', note: String(legacy.anotacoes || ''), delivered: '', post: 'pendente', issue: '', issueOwner: '', issueDue: '', relation: '', history: [] };
     if (!validDate(r.next)) throw Error('Informe uma data válida para o retorno.');
-    if (closed(r)) r.next = '';
+    if (closed(r)) { r.next = ''; r.nextTime = ''; r.followupType = 'cliente'; }
     event(r, actor, 'cadastro', 'Pesquisa de cliente incluída no acompanhamento.', now);
     return r;
   }
   function edit(record, patch, actor, now = new Date()) {
     assertAccess(record, actor);
     const r = JSON.parse(JSON.stringify(record));
-    const allowed = ['status', 'customStatus', 'reason', 'customReason', 'lossNote', 'lossCompetitor', 'lossCompetitorPrice', 'next', 'note', 'phone', 'consent', 'delivered', 'post', 'issue', 'issueOwner', 'issueDue', 'relation', 'channel', 'buyer'];
+    const allowed = ['status', 'customStatus', 'reason', 'customReason', 'lossNote', 'lossCompetitor', 'lossCompetitorPrice', 'next', 'nextTime', 'followupType', 'note', 'phone', 'consent', 'delivered', 'post', 'issue', 'issueOwner', 'issueDue', 'relation', 'channel', 'buyer'];
     allowed.forEach(k => { if (Object.prototype.hasOwnProperty.call(patch, k)) r[k] = patch[k]; });
     if (!Object.prototype.hasOwnProperty.call(STATUS, r.status)) throw Error('Status inválido.');
     r.customStatus = String(r.customStatus || '').trim().toUpperCase();
@@ -48,6 +48,12 @@
     if (typeof r.consent !== 'boolean') throw Error('Preferência de contato inválida.');
     if (r.phone && !validPhone(r.phone)) throw Error('Informe um WhatsApp brasileiro com DDD válido.');
     for (const k of ['next', 'delivered', 'issueDue', 'relation']) if (r[k] && !validDate(r[k])) throw Error('Data inválida.');
+    r.nextTime = String(r.nextTime || '').trim();
+    if (r.nextTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(r.nextTime)) throw Error('Horário do lembrete inválido.');
+    r.followupType = String(r.followupType || 'cliente').trim();
+    if (!['cliente','produto'].includes(r.followupType)) throw Error('Finalidade do retorno inválida.');
+    if (r.status === 'aguardando_produto') r.followupType = 'produto';
+    if (r.status === 'agendado' && !r.followupType) r.followupType = 'cliente';
     if (r.status === 'perdida' && !REASONS.includes(r.reason)) throw Error('Selecione o motivo de não fechamento.');
     if (r.status === 'perdida' && r.reason === 'Outro' && !String(r.customReason || r.lossNote || r.note).trim()) throw Error('Informe qual é o outro motivo da perda.');
     if (r.reason !== 'Outro') r.customReason = '';
@@ -56,7 +62,7 @@
     r.lossCompetitorPrice = Number(r.lossCompetitorPrice || 0);
     if (!Number.isFinite(r.lossCompetitorPrice) || r.lossCompetitorPrice < 0) throw Error('Valor da concorrência inválido.');
     if (!closed(r) && !r.next) throw Error('Defina a próxima data de retorno.');
-    if (closed(r)) r.next = '';
+    if (closed(r)) { r.next = ''; r.nextTime = ''; r.followupType = 'cliente'; }
     if (r.status !== 'perdida') { r.reason = ''; r.customReason = ''; r.lossNote = ''; r.lossCompetitor = ''; r.lossCompetitorPrice = 0; }
     if (r.delivered && r.delivered > day(now)) throw Error('Confirme apenas entregas já realizadas.');
     if (!['pendente', 'bem', 'problema', 'sem_resposta', 'resolvido'].includes(r.post)) throw Error('Resultado de pós-venda inválido.');
@@ -77,7 +83,10 @@
     return r;
   }
   function tasks(r) {
-    if (!closed(r)) return [{ kind: 'retorno', date: r.next, title: 'Retomar negociação' }];
+    if (!closed(r)) {
+      const produto = r.status === 'aguardando_produto' || r.followupType === 'produto';
+      return [{ kind: produto ? 'produto' : 'retorno', date: r.next, time: r.nextTime || '', title: produto ? 'Confirmar chegada do produto' : 'Retomar negociação' }];
+    }
     if (r.status !== 'ganha') return [];
     if (r.post === 'problema') return [{ kind: 'suporte', date: r.issueDue, title: 'Resolver atendimento' }];
     const result = [];

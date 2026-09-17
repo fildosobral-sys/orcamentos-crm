@@ -263,6 +263,46 @@
       scheduleWarmRefresh();
     }
   }
+
+  const REMINDER_PREFIX='fscrm_reminder_seen_v1:';
+  function reminderStamp(r){return `${r.id}|${r.next||''}|${r.nextTime||'09:00'}|${r.status||''}`;}
+  function dueNow(r){
+    if(!(r.status==='aguardando_produto'||r.followupType==='produto')||!r.next)return false;
+    const now=new Date();
+    const today=C.day(now);
+    if(r.next<today)return true;
+    if(r.next>today)return false;
+    const hhmm=r.nextTime||'09:00';
+    const [h,m]=hhmm.split(':').map(Number);
+    const localMinutes=Number(new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).format(now).replace(':',''));
+    const target=Number(String(h).padStart(2,'0')+String(m).padStart(2,'0'));
+    return localMinutes>=target;
+  }
+  function softBeep(){
+    if(document.visibilityState!=='visible')return;
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+      const ctx=new AC(),osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.frequency.value=740;gain.gain.value=.045;osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.18);osc.onended=()=>ctx.close();
+    }catch(_e){}
+  }
+  async function checkProductReminders(){
+    const rows=db?.all?.()||[];
+    for(const r of rows){
+      if(!dueNow(r))continue;
+      const key=REMINDER_PREFIX+reminderStamp(r);
+      if(localStorage.getItem(key))continue;
+      localStorage.setItem(key,new Date().toISOString());
+      const title='📦 Produto previsto para hoje';
+      const body=`${r.client} · ${r.product}${r.nextTime?' · '+r.nextTime:''}`;
+      notify(`${title}: ${r.client} — confirme com a logística e dê continuidade à negociação.`,false);
+      softBeep();
+      if('Notification' in window && Notification.permission==='granted'){
+        try{new Notification(title,{body,tag:'fscrm-'+r.id,renotify:true});}catch(_e){}
+      }
+    }
+  }
+
   function render() {
     const a = actor();
     panel.hidden = (remote?.enabled && !authReady && !remote?.session) || !a.name || !a.branch || document.documentElement.classList.contains('fs-module-auth-lock');
@@ -274,7 +314,7 @@
     let rows = all.filter(r => !C.leader(a) || !sellerChoice || r.seller === sellerChoice);
     const agenda = rows.flatMap(r => C.tasks(r).filter(t => t.date && t.date <= today).map(t => ({r,t}))).sort((a,b) => a.t.date.localeCompare(b.t.date));
     $('fscrm-count').textContent = `${all.length} registros · ${agenda.length} ações para hoje ou atrasadas`;
-    $('fscrm-agenda').innerHTML = agenda.length ? agenda.map(({r,t}) => `<button class="fscrm-agenda-row" data-action="open" data-id="${esc(r.id)}"><span><strong>${esc(t.title)} · ${esc(r.client)}</strong><small>${esc(r.seller)} · ${esc(r.product)}</small></span><span class="${t.date < today ? 'fscrm-overdue' : ''}">${date(t.date)}${t.date < today ? ' · Atrasado' : ' · Hoje'}</span></button>`).join('') : '<p class="fscrm-empty">Nenhuma ação vencendo hoje. Os retornos futuros aparecem nos respectivos orçamentos.</p>';
+    $('fscrm-agenda').innerHTML = agenda.length ? agenda.map(({r,t}) => `<button class="fscrm-agenda-row" data-action="open" data-id="${esc(r.id)}"><span><strong>${esc(t.title)} · ${esc(r.client)}</strong><small>${esc(r.seller)} · ${esc(r.product)}</small></span><span class="${t.date < today ? 'fscrm-overdue' : ''}">${date(t.date)}${t.time ? ' · '+esc(t.time) : ''}${t.date < today ? ' · Atrasado' : ' · Hoje'}</span></button>`).join('') : '<p class="fscrm-empty">Nenhuma ação vencendo hoje. Os retornos futuros aparecem nos respectivos orçamentos.</p>';
     const from = $('fscrm-from').value, to = $('fscrm-to').value, statuses = selectedStatuses(), search = C.norm($('fscrm-search').value);
     if (from && to && from > to) { notify('A data inicial deve ser anterior à data final.',true); return; }
     rows = rows.filter(r => {
@@ -287,7 +327,8 @@
     rows.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const wins = rows.filter(r => r.status === 'ganha');
     $('fscrm-stats').innerHTML = [['Orçamentos',rows.length],['Em negociação',rows.filter(r=>!C.closed(r)).length],['Vendas concluídas',wins.length],['Conversão',rows.length ? (100*wins.length/rows.length).toFixed(1)+'%' : '—'],['Valor concluído',money(wins.reduce((s,r)=>s+r.amount,0))]].map(([k,v])=>`<div><small>${k}</small><strong>${v}</strong></div>`).join('');
-    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-deal-row" data-action="open" data-id="${esc(r.id)}" tabindex="0" role="button" aria-label="Acompanhar negociação de ${esc(r.client)}"><i class="fscrm-status-dot" data-status="${r.status}" aria-hidden="true"></i><div class="fscrm-deal-main"><div class="fscrm-deal-top"><strong>${esc(r.client)}</strong><span class="fscrm-badge" data-status="${r.status}">${r.status==='outro'?(r.customStatus||'Outro'):C.STATUS[r.status]}</span></div><div class="fscrm-deal-product">${esc(r.product)}</div><div class="fscrm-deal-foot"><span>${money(r.amount)}</span><span>${r.next ? 'Retorno '+date(r.next) : r.reason ? esc(r.reason==='Outro'&&r.customReason?r.customReason:r.reason) : date(r.createdAt)}</span></div></div><button type="button" class="fscrm-deal-delete" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}" aria-label="Excluir orçamento" title="Excluir">×</button><span class="fscrm-deal-chevron" aria-hidden="true">›</span></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
+    $('fscrm-records').innerHTML = rows.length ? rows.map(r => `<article class="fscrm-deal-row" data-action="open" data-id="${esc(r.id)}" tabindex="0" role="button" aria-label="Acompanhar negociação de ${esc(r.client)}"><i class="fscrm-status-dot" data-status="${r.status}" aria-hidden="true"></i><div class="fscrm-deal-main"><div class="fscrm-deal-top"><strong>${esc(r.client)}</strong><span class="fscrm-badge" data-status="${r.status}">${r.status==='outro'?(r.customStatus||'Outro'):C.STATUS[r.status]}</span></div><div class="fscrm-deal-product">${esc(r.product)}</div><div class="fscrm-deal-foot"><span>${money(r.amount)}</span><span>${r.next ? ((r.status==='aguardando_produto'||r.followupType==='produto'?'Produto previsto ':'Retorno ')+date(r.next)+(r.nextTime?' · '+esc(r.nextTime):'')) : r.reason ? esc(r.reason==='Outro'&&r.customReason?r.customReason:r.reason) : date(r.createdAt)}</span></div></div><button type="button" class="fscrm-deal-delete" data-action="delete-record" data-id="${esc(r.id)}" data-revision="${r.revision}" aria-label="Excluir orçamento" title="Excluir">×</button><span class="fscrm-deal-chevron" aria-hidden="true">›</span></article>`).join('') : '<p class="fscrm-empty">Nenhum orçamento corresponde aos filtros.</p>';
+    setTimeout(()=>checkProductReminders().catch(()=>{}),0);
     
     const old = source().filter(r => r.fs_crm_v1?.kind!=='simulacao' && !db.get(r.__backendId) && r.__backendId && (C.leader(a) || C.norm(r.vendedor) === C.norm(a.name)));
     $('fscrm-old-list').innerHTML = old.length ? old.map(r => `<div class="fscrm-old-row"><span>${esc(r.cliente)} · ${esc(r.codigo_produto)} · ${esc(r.vendedor)}</span><button type="button" data-action="enroll" data-id="${esc(r.__backendId)}">Classificar</button></div>`).join('') : '<p>Nenhum registro anterior aguardando classificação.</p>';
@@ -331,6 +372,20 @@
         $('fscrm-edit-customStatus').value=''; $('fscrm-custom-status-view').textContent='';
       }
     }
+    if(el?.id==='fscrm-edit-status'){
+      const box=$('fscrm-return-schedule');
+      if(box) box.hidden=!['agendado','aguardando_produto'].includes(el.value);
+      const purpose=$('fscrm-edit-followupType');
+      if(purpose && el.value==='aguardando_produto') purpose.value='produto';
+      if(purpose && el.value==='agendado' && purpose.value==='produto') purpose.value='cliente';
+    }
+    if(el?.id==='fscrm-edit-followupType'){
+      const status=$('fscrm-edit-status');
+      if(status){
+        if(el.value==='produto') status.value='aguardando_produto';
+        else if(status.value==='aguardando_produto') status.value='agendado';
+      }
+    }
     if(el?.id==='fscrm-edit-reason'){
       if(el.value==='Outro'){
         const hidden=$('fscrm-edit-customReason');
@@ -349,6 +404,15 @@
     show('Acompanhar negociação', `<p><strong>${esc(r.client)}</strong> · ${esc(r.product)}<br>${esc(r.seller)} · ${money(r.amount)}</p><div class="fscrm-grid">
       ${select('Status','fscrm-edit-status',Object.entries(C.STATUS),r.status)}
       <input id="fscrm-edit-customStatus" type="hidden" value="${esc(r.customStatus||'')}"><p id="fscrm-custom-status-view" class="fscrm-custom-choice">${r.status==='outro'&&r.customStatus?'STATUS: '+esc(r.customStatus):''}</p>
+      <section id="fscrm-return-schedule" class="fscrm-return-schedule" ${['agendado','aguardando_produto'].includes(r.status)?'':'hidden'}>
+        <h3>📅 Agendar retorno</h3>
+        <p class="fscrm-hint">Use para combinar um novo contato ou lembrar a previsão de chegada de um produto.</p>
+        <div class="fscrm-grid">
+          ${select('Finalidade','fscrm-edit-followupType',[['cliente','Retorno com o cliente'],['produto','Aguardando produto']],r.status==='aguardando_produto'?'produto':(r.followupType||'cliente'))}
+          ${field(r.status==='aguardando_produto'?'Previsão de chegada':'Data do retorno','fscrm-edit-next',r.next||C.plus(C.day(),2),'date',`min="${C.day()}"`)}
+          ${field('Horário do lembrete','fscrm-edit-nextTime',r.nextTime||'09:00','time')}
+        </div>
+      </section>
       ${select('Motivo da perda','fscrm-edit-reason',[['','Selecione'],...C.REASONS.filter(x=>x!=='Preço').map(x=>[x,x])],r.reason==='Preço'?'Preço da concorrência':r.reason)}
       <input id="fscrm-edit-customReason" type="hidden" value="${esc(r.customReason||'')}"><p id="fscrm-custom-reason-view" class="fscrm-custom-choice">${r.reason==='Outro'&&r.customReason?'MOTIVO: '+esc(r.customReason):''}</p>
       ${field('WhatsApp com DDD','fscrm-edit-phone',r.phone,'tel')}
@@ -384,12 +448,20 @@
     if(modalError){modalError.textContent='';delete modalError.dataset.error;}
     const patch = {};
     ['status','reason','phone','note','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer','lossNote','lossCompetitor'].forEach(k=>patch[k]=$('fscrm-edit-'+k).value.trim());
+    patch.next=String($('fscrm-edit-next')?.value||draft.next||'').trim();
+    patch.nextTime=String($('fscrm-edit-nextTime')?.value||draft.nextTime||'').trim();
+    patch.followupType=String($('fscrm-edit-followupType')?.value||draft.followupType||'cliente').trim();
+    if(patch.followupType==='produto') patch.status='aguardando_produto';
+    else if(patch.status==='aguardando_produto') patch.status='agendado';
     patch.customStatus=String($('fscrm-edit-customStatus')?.value||'').trim().toUpperCase();
     patch.customReason=String($('fscrm-edit-customReason')?.value||'').trim().toUpperCase();
     ['note','issue','issueOwner','relation','lossNote','lossCompetitor'].forEach(k=>{ if(patch[k]) patch[k]=patch[k].toUpperCase(); });
     patch.lossCompetitorPrice=Number($('fscrm-edit-lossCompetitorPrice').value||0);
     patch.consent=!!$('fscrm-edit-consent')?.checked;
     let r = C.edit(draft,patch,actor()); await save(r,revision);
+    if((r.status==='aguardando_produto'||r.followupType==='produto') && 'Notification' in window && Notification.permission==='default'){
+      try{await Notification.requestPermission();}catch(_e){}
+    }
     draft=db.get(r.id)||r;
     revision=draft.revision;
     const file=$('fscrm-evidence-file')?.files?.[0];
@@ -762,5 +834,7 @@
   });
   window.addEventListener('online',()=>{refreshData().catch(()=>{});});
 
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkProductReminders().catch(()=>{});});
+  setInterval(()=>checkProductReminders().catch(()=>{}),60000);
   document.addEventListener('DOMContentLoaded',()=>{try{mount();}catch(e){console.error('Acompanhamento comercial:',e);if(typeof showToast==='function')showToast('Não foi possível carregar o acompanhamento. Os cálculos originais continuam disponíveis.','error');}});
 })();

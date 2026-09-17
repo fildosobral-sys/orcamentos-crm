@@ -1674,6 +1674,16 @@
 @media(max-width:768px){.menu-dropdown{max-width:calc(100vw - 28px)!important;min-width:0!important}.menu-current-user{padding:.7rem .8rem}.menu-actions{padding:.35rem 0}.menu-item{padding:.72rem .9rem}.fscrm-custom-prompt-backdrop{align-items:flex-end;padding:10px}.fscrm-custom-prompt-card{border-radius:20px;margin-bottom:8px}}
 </style>
 
+
+<style id="fscrm-product-reminder-style">
+.fscrm-return-schedule{grid-column:1/-1;background:rgba(94,76,190,.06);border:1px solid rgba(94,76,190,.18);border-radius:16px;padding:14px;margin:2px 0 8px}
+.fscrm-return-schedule[hidden]{display:none!important}
+.fscrm-return-schedule h3{margin:0 0 4px;color:#40356f;font-size:1rem}
+.fscrm-return-schedule .fscrm-hint{margin:0 0 10px}
+.fscrm-badge[data-status="aguardando_produto"]{background:#fff1cf;color:#8a5b00;border-color:#f1cf7e}
+.fscrm-status-dot[data-status="aguardando_produto"]{background:#e5a82c!important}
+</style>
+
 </head>
  <body>
   <header class="header">
@@ -2006,8 +2016,23 @@ let currentData = [];
                 aprovado_por:String(r?.quote?.approvedBy||''),
                 anotacoes:String(r.note||r.lossNote||''),
                 data_calculo:String(r.createdAt||new Date().toISOString()),
-                venda_bem_sucedida:r.status==='ganha'
+                venda_bem_sucedida:r.status==='ganha',
+                crm_status:String(r.status||''),
+                crm_followupType:String(r.followupType||''),
+                crm_next:String(r.next||''),
+                crm_nextTime:String(r.nextTime||'')
             };
+        }
+
+
+        function textoStatusHistorico(item){
+            if(item?.venda_bem_sucedida===true) return '✅ Bem-Sucedida';
+            if(item?.crm_status==='aguardando_produto' || item?.crm_followupType==='produto'){
+                const d=item.crm_next ? item.crm_next.split('-').reverse().join('/') : '';
+                const h=item.crm_nextTime ? ' · '+item.crm_nextTime : '';
+                return '📦 Aguardando produto'+(d?' · '+d+h:'');
+            }
+            return '⏳ Pendente';
         }
 
         function combinarHistoricoComCRM(base){
@@ -2015,7 +2040,13 @@ let currentData = [];
             (Array.isArray(base)?base:[]).forEach(x=>{if(x&&x.__backendId)map.set(String(x.__backendId),x);});
             crmHistoryShadow.forEach(x=>{
                 const id=String(x.__backendId);
-                if(map.has(id)) map.get(id).venda_bem_sucedida=x.venda_bem_sucedida;
+                if(map.has(id)) {
+                    map.get(id).venda_bem_sucedida=x.venda_bem_sucedida;
+                    map.get(id).crm_status=x.crm_status;
+                    map.get(id).crm_followupType=x.crm_followupType;
+                    map.get(id).crm_next=x.crm_next;
+                    map.get(id).crm_nextTime=x.crm_nextTime;
+                }
                 else map.set(id,x);
             });
             return [...map.values()];
@@ -2532,7 +2563,7 @@ let currentData = [];
                             ${item.venda_bem_sucedida ? '⏳ <span>Pendente</span>' : '✅ <span>Realizada</span>'}
                         </button>
                         <div class="history-state-meta">
-                            <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">${item.venda_bem_sucedida ? '✅ Bem-Sucedida' : '⏳ Pendente'}</span>
+                            <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">${textoStatusHistorico(item)}</span>
                             <span class="history-date"><span class="history-date-day">${new Date(item.data_calculo).toLocaleDateString('pt-BR')}</span><span class="history-date-time">${new Date(item.data_calculo).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span></span>
                         </div>
                     </div>
@@ -3838,7 +3869,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
                             ${item.venda_bem_sucedida ? '⏳ <span>Pendente</span>' : '✅ <span>Realizada</span>'}
                         </button>
                         <div class="history-state-meta">
-                            <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">${item.venda_bem_sucedida ? '✅ Bem-Sucedida' : '⏳ Pendente'}</span>
+                            <span class="success-status ${item.venda_bem_sucedida ? 'success' : 'pending'}">${textoStatusHistorico(item)}</span>
                             <span class="history-date"><span class="history-date-day">${new Date(item.data_calculo).toLocaleDateString('pt-BR')}</span><span class="history-date-time">${new Date(item.data_calculo).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span></span>
                         </div>
                     </div>
@@ -4828,8 +4859,8 @@ window.FSCRMBridge = {
 </script>
 <script src="./crm-config-v2.js?v=71"></script>
 <script src="./crm-api-v2.js?v=110"></script>
-<script src="./crm-core-v2.js?v=130"></script>
-<script src="./crm-ui-v2.js?v=130"></script>
+<script src="./crm-core-v2.js?v=140"></script>
+<script src="./crm-ui-v2.js?v=140"></script>
 
 <style>
   /* Histórico: ações compactas para reduzir a altura de cada registro */
