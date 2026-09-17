@@ -532,3 +532,34 @@ html body .fs-back-home:hover {
     min-width:0;
   }
 }
+
+
+/* ===== SEQUÊNCIA DE CONTATOS HUMANOS ===== */
+.fscrm-human-note{
+  margin:.55rem 0 0;
+  padding:.55rem .65rem;
+  border-radius:10px;
+  background:#eef7ff;
+  color:#355a7d;
+  font-size:.72rem;
+  line-height:1.35;
+}
+.fscrm-batch-current em{
+  margin-top:3px;
+  font-size:.66rem;
+  color:#8a91a0;
+  font-style:normal;
+}
+#fscrm-batch-message{
+  line-height:1.45;
+  min-height:148px;
+  resize:vertical;
+}
+@media(max-width:520px){
+  .fscrm-modal footer [data-action="batch-open"],
+  .fscrm-modal footer [data-action="batch-change-message"],
+  .fscrm-modal footer [data-action="batch-confirm-next"]{
+    width:100%;
+    min-height:48px;
+  }
+}

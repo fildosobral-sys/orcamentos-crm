@@ -163,8 +163,8 @@
       ${field('Buscar cliente ou produto', 'fscrm-search', '', 'search')}
       </div>
       <div class="fscrm-batch-bar">
-        <div><strong>Lembrete em lote</strong><small>Usa os filtros acima e inclui somente contatos com WhatsApp e autorização registrada.</small></div>
-        <button type="button" data-action="prepare-batch">Preparar mensagens</button>
+        <div><strong>Sequência de contatos</strong><small>Organiza os retornos individualmente e prepara uma mensagem diferente para cada cliente.</small></div>
+        <button type="button" data-action="prepare-batch">Iniciar contatos</button>
       </div>
       <div id="fscrm-stats" class="fscrm-stats"></div><div id="fscrm-records"></div>
       
@@ -358,6 +358,54 @@
     const updated=C.contact(r,kind,$('fscrm-outcome').value,$('fscrm-contact-note').value,$('fscrm-contact-next')?.value||'',actor(),db.all());
     await save(updated,r.revision,{action:'contact',data:{kind,outcome:$('fscrm-outcome').value,note:$('fscrm-contact-note').value,next:$('fscrm-contact-next')?.value||''}}); modal.close(); notify('Contato registrado. Atualize o status ou o pós-venda conforme a resposta do cliente.');
   }
+  const CONTACT_TEMPLATES = [
+    ({first,product,seller}) => `Oi, ${first}! Tudo bem? Aqui é ${seller}, da Zenir. Lembrei do ${product} que você viu com a gente. Quer que eu confira as condições de hoje pra você? 😊`,
+    ({first,product,seller}) => `Olá, ${first}! Aqui é ${seller}, da Zenir. Você ainda está olhando o ${product}? Se quiser, posso verificar como estão as condições hoje.`,
+    ({first,product,seller}) => `Oi, ${first}! Passando rapidinho sobre o ${product} que você pesquisou com a gente. Se ainda tiver interesse, posso dar uma olhada nas melhores condições pra você.`,
+    ({first,product,seller}) => `Oi, ${first}! Tudo certo? Só queria saber se você conseguiu resolver aquela compra do ${product} ou se ainda posso te ajudar. 🙂`,
+    ({first,product,seller}) => `Olá, ${first}! Lembrei da sua consulta do ${product}. Apareceram algumas condições interessantes por aqui. Quer que eu confira pra você?`,
+    ({first,product,seller}) => `Oi, ${first}! Aqui é ${seller}, da Zenir. Sobre o ${product} que conversamos: ainda posso te ajudar com ele ou você já resolveu sua compra?`,
+    ({first,product,seller}) => `Oi, ${first}! Tudo bem? Vi aqui sua pesquisa do ${product}. Se você ainda estiver avaliando, posso conferir uma condição atualizada pra você, sem compromisso.`,
+    ({first,product,seller}) => `Olá, ${first}! Passando só pra não deixar sua consulta do ${product} esquecida. Se quiser, vejo as opções de hoje e te passo por aqui. 😉`,
+    ({first,product,seller}) => `Oi, ${first}! Como você está? Sobre aquele ${product}: se ainda fizer sentido pra você, posso verificar se temos alguma oportunidade melhor hoje.`,
+    ({first,product,seller}) => `Oi, ${first}! Só passando mais uma vez sobre o ${product} que você consultou. Se ainda quiser ajuda, me chama que eu verifico as condições pra você. 😊`
+  ];
+
+  function contactHistoryForClient(r){
+    return db.all()
+      .filter(x=>x.id===r.id||C.sameClient(r,x))
+      .flatMap(x=>x.history||[])
+      .filter(h=>String(h.type||'').startsWith('contato_'))
+      .sort((a,b)=>String(a.at||'').localeCompare(String(b.at||'')));
+  }
+
+  function usedTemplateIndexes(r){
+    return contactHistoryForClient(r)
+      .map(h=>{
+        const m=String(h.detail||'').match(/Modelo\s+(\d{1,2})/i);
+        return m ? Number(m[1])-1 : null;
+      })
+      .filter(n=>Number.isInteger(n)&&n>=0&&n<CONTACT_TEMPLATES.length);
+  }
+
+  function nextTemplateIndex(r, offset=0){
+    const used=usedTemplateIndexes(r);
+    const recent=new Set(used.slice(-CONTACT_TEMPLATES.length));
+    let start=(contactHistoryForClient(r).length+offset)%CONTACT_TEMPLATES.length;
+    for(let i=0;i<CONTACT_TEMPLATES.length;i++){
+      const idx=(start+i)%CONTACT_TEMPLATES.length;
+      if(!recent.has(idx))return idx;
+    }
+    return start;
+  }
+
+  function buildContactMessage(r, idx){
+    const first=String(r.client||'').trim().split(/\s+/)[0]||'Cliente';
+    const product=String(r.product||'produto').trim();
+    const seller=String(actor().name||r.seller||'seu vendedor').trim();
+    return CONTACT_TEMPLATES[idx]({first,product,seller});
+  }
+
   function currentFilteredRows(){
     const a=actor(),all=available();
     const sellerChoice=$('fscrm-seller-filter')?.value||'';
@@ -382,32 +430,91 @@
     });
     if(!eligible.length)throw Error('Nenhum contato elegível nos filtros atuais. Verifique status, WhatsApp e autorização de contato.');
     batchQueue=eligible;batchIndex=0;
-    show('Lembretes selecionados',
-      `<div class="fscrm-batch-summary"><strong>${eligible.length} contato(s) preparado(s)</strong><p>${skipped.length?skipped.length+' registro(s) foram ignorados por venda concluída, falta de autorização, telefone inválido ou bloqueio de contato.':'Todos os registros filtrados estão aptos.'}</p></div>
-       <label>Mensagem padrão<textarea id="fscrm-batch-message" rows="6" maxlength="2000">Olá! Aqui é ${esc(actor().name)}, da Zenir. Passando para lembrar da sua consulta conosco. Temos condições que podem ser interessantes neste período. Se quiser, posso conferir as opções atuais para você, sem compromisso.</textarea></label>
-       <div id="fscrm-batch-current"></div>`,
-      `<button type="button" class="fscrm-primary" data-action="batch-open">Abrir WhatsApp atual</button><button type="button" data-action="batch-next">Próximo contato</button>`);
+    show('Sequência de contatos',
+      `<div class="fscrm-batch-summary"><strong>${eligible.length} contato(s) para realizar</strong><p>${skipped.length?skipped.length+' registro(s) foram ignorados por venda concluída, falta de autorização, telefone inválido ou bloqueio de contato.':'Os contatos selecionados estão aptos.'}</p><p class="fscrm-human-note">💬 Cada conversa é individual. O sistema alterna entre 10 mensagens para não ficar repetitivo.</p></div>
+       <div id="fscrm-batch-current"></div>
+       <label>Mensagem para revisar<textarea id="fscrm-batch-message" rows="6" maxlength="2000"></textarea></label>`,
+      `<button type="button" class="fscrm-primary" data-action="batch-open">Abrir WhatsApp</button><button type="button" data-action="batch-change-message">Trocar mensagem</button><button type="button" data-action="batch-confirm-next">Confirmar enviado e próximo</button>`);
     renderBatchCurrent();
   }
 
-  function renderBatchCurrent(){
-    const box=$('fscrm-batch-current');if(!box)return;
+  function renderBatchCurrent(forceOffset=0){
+    const box=$('fscrm-batch-current');
+    const area=$('fscrm-batch-message');
+    if(!box)return;
     const r=batchQueue[batchIndex];
-    if(!r){box.innerHTML='<p class="fscrm-empty">Fila concluída.</p>';return;}
-    box.innerHTML=`<div class="fscrm-batch-current"><small>${batchIndex+1} de ${batchQueue.length}</small><strong>${esc(r.client)}</strong><span>${esc(r.product)} · ${esc(r.phone)}</span></div>`;
+    if(!r){
+      box.innerHTML='<p class="fscrm-empty">Sequência concluída. ✅</p>';
+      if(area)area.value='';
+      return;
+    }
+    const idx=nextTemplateIndex(r,forceOffset);
+    r.__templateIndex=idx;
+    box.innerHTML=`<div class="fscrm-batch-current"><small>${batchIndex+1} de ${batchQueue.length} · Modelo ${idx+1} de ${CONTACT_TEMPLATES.length}</small><strong>${esc(r.client)}</strong><span>${esc(r.product)} · ${esc(r.phone)}</span><em>Mensagem escolhida automaticamente pelo histórico deste cliente.</em></div>`;
+    if(area)area.value=buildContactMessage(r,idx);
   }
 
   function batchOpen(){
-    const r=batchQueue[batchIndex];if(!r)throw Error('A fila de contatos foi concluída.');
-    const base=String($('fscrm-batch-message')?.value||'').trim();
-    const first=String(r.client||'').trim().split(/\s+/)[0]||'Cliente';
-    const msg=base.replace(/^Olá!/,`Oi, ${first}!`);
+    const r=batchQueue[batchIndex];
+    if(!r)throw Error('A sequência de contatos foi concluída.');
+    const msg=String($('fscrm-batch-message')?.value||'').trim();
+    if(!msg)throw Error('A mensagem está vazia.');
     window.open('https://wa.me/'+C.phone(r.phone)+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
   }
 
-  function batchNext(){
-    if(batchIndex<batchQueue.length-1){batchIndex++;renderBatchCurrent();}
-    else{batchIndex=batchQueue.length;renderBatchCurrent();notify('Fila de lembretes concluída.');}
+  function batchChangeMessage(){
+    const r=batchQueue[batchIndex];
+    if(!r)return;
+    const current=Number.isInteger(r.__templateIndex)?r.__templateIndex:nextTemplateIndex(r);
+    const used=usedTemplateIndexes(r);
+    const recent=new Set(used.slice(-CONTACT_TEMPLATES.length));
+    let next=(current+1)%CONTACT_TEMPLATES.length;
+    for(let i=0;i<CONTACT_TEMPLATES.length;i++){
+      if(!recent.has(next))break;
+      next=(next+1)%CONTACT_TEMPLATES.length;
+    }
+    r.__templateIndex=next;
+    const area=$('fscrm-batch-message');
+    if(area)area.value=buildContactMessage(r,next);
+    const box=$('fscrm-batch-current');
+    if(box){
+      box.querySelector('small').textContent=`${batchIndex+1} de ${batchQueue.length} · Modelo ${next+1} de ${CONTACT_TEMPLATES.length}`;
+    }
+  }
+
+  async function batchConfirmNext(){
+    const r=batchQueue[batchIndex];
+    if(!r)throw Error('A sequência de contatos foi concluída.');
+    const idx=Number.isInteger(r.__templateIndex)?r.__templateIndex:nextTemplateIndex(r);
+    const msg=String($('fscrm-batch-message')?.value||'').trim();
+    const current=db.get(r.id)||r;
+    const updated=C.contact(
+      current,
+      'retorno',
+      'Mensagem enviada',
+      `Sequência individual · Modelo ${idx+1}`,
+      '',
+      actor(),
+      db.all()
+    );
+    const saved=await save(updated,current.revision,{
+      action:'contact',
+      data:{
+        kind:'retorno',
+        outcome:'Mensagem enviada',
+        note:`Sequência individual · Modelo ${idx+1}`,
+        next:''
+      }
+    });
+    batchQueue[batchIndex]=saved||updated;
+    notify('Contato registrado no histórico.');
+    if(batchIndex<batchQueue.length-1){
+      batchIndex++;
+      renderBatchCurrent();
+    }else{
+      batchIndex=batchQueue.length;
+      renderBatchCurrent();
+    }
   }
 
   async function stop() {
@@ -507,7 +614,8 @@
         }
         case 'prepare-batch':prepareBatch();break;
         case 'batch-open':batchOpen();break;
-        case 'batch-next':batchNext();break;
+        case 'batch-change-message':batchChangeMessage();break;
+        case 'batch-confirm-next':await batchConfirmNext();break;
         case 'export':exportBackup();break;
         case 'restore':$('fscrm-file').click();break;
       }
