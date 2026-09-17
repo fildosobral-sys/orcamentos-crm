@@ -98,6 +98,7 @@
   const opt = (v, label, selected) => `<option value="${esc(v)}" ${v === selected ? 'selected' : ''}>${esc(label)}</option>`;
   const field = (label, id, value, type = 'text', extra = '') => `<label>${label}<input id="${id}" type="${type}" value="${esc(value)}" ${extra}></label>`;
   const select = (label, id, entries, val) => `<label>${label}<select id="${id}">${entries.map(([k,v]) => opt(k,v,val)).join('')}</select></label>`;
+  const compactTime = (label,id,value='09:00') => { const safe=/^([01]\d|2[0-3]):[0-5]\d$/.test(String(value||''))?String(value):'09:00'; return `<label class="fscrm-compact-time">${label}<input id="${id}" type="text" inputmode="numeric" maxlength="5" placeholder="09:00" value="${esc(safe)}" autocomplete="off"></label>`; };
   function notify(message, error = false) { const box = $('fscrm-notice'); if (box) { box.textContent = message; box.dataset.error = String(error); } if (error && typeof showToast === 'function') showToast(message, 'error'); }
   function fail(e) { notify(e.message || String(e), true); const box = $('fscrm-modal-error'); if (box) box.textContent = e.message || String(e); }
   function source() { const data = JSON.parse(localStorage.getItem('calculosDesconto') || '[]'); if (!Array.isArray(data)) throw Error('O histórico original não está em um formato válido.'); return data.filter(r=>C.norm(r.vendedor)===C.norm(actor().name)); }
@@ -131,12 +132,12 @@
     if (!a.name || !a.branch) throw Error('Entre pela página inicial para identificar vendedor e filial.');
     const number = $('whatsapp').value.trim();
     if (number && !C.validPhone(number)) throw Error('Informe o WhatsApp do cliente com DDD.');
-    return { kind, ownerId:a.id||null, version:2,storage:remote?.enabled?'central':'local', branch: a.branch, channel: $('fscrm-channel').value, buyer: $('fscrm-buyer').value, next: C.plus(C.day(),2), consent: true };
+    return { kind, ownerId:a.id||null, version:2,storage:remote?.enabled?'central':'local', branch: a.branch, channel: $('fscrm-channel').value, buyer: $('fscrm-buyer').value, next: C.plus(C.day(),1), consent: true, nextManual:false };
   }
   function captureSafe() { try { return capture(); } catch(e) { fail(e); return false; } }
   async function save(r, oldRevision, command) {
     if(remote?.enabled){
-      const keys=['status','reason','lossNote','lossCompetitor','lossCompetitorPrice','note','phone','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer'];
+      const keys=['status','customStatus','reason','customReason','lossNote','lossCompetitor','lossCompetitorPrice','note','phone','consent','next','nextTime','followupType','nextManual','delivered','post','issue','issueOwner','issueDue','relation','channel','buyer'];
       const patch={};keys.forEach(k=>patch[k]=r[k]);
       const action=command?.action||'update';
       const payload={id:r.id,expectedRevision:oldRevision,requestId:(crypto.randomUUID?crypto.randomUUID():('req_'+Date.now())),patch,...(command?.data||{})};
@@ -150,9 +151,9 @@
   async function setLegacyStatus(id, sold) {
     try {
       const r = db.get(id); if (!r) return false;
-      const updated = C.edit(r, { status: sold ? 'ganha' : 'negociacao', next: C.plus(C.day(), 2) }, actor());
+      const updated = C.edit(r, { status: sold ? 'ganha' : 'negociacao', next: C.plus(C.day(), 1), nextManual:false }, actor());
       await save(updated, r.revision);
-      notify(sold ? 'Venda concluída. Registre a entrega para agendar o pós-venda.' : 'Negociação reaberta. Retorno agendado em dois dias.');
+      notify(sold ? 'Venda concluída. Registre a entrega para agendar o pós-venda.' : 'Negociação reaberta. Ela voltará para a agenda após 24 horas se não houver novo agendamento.');
     } catch(e) { fail(e); }
     return true;
   }
@@ -267,16 +268,15 @@
   const REMINDER_PREFIX='fscrm_reminder_seen_v1:';
   function reminderStamp(r){return `${r.id}|${r.next||''}|${r.nextTime||'09:00'}|${r.status||''}`;}
   function dueNow(r){
-    if(!(r.status==='aguardando_produto'||r.followupType==='produto')||!r.next)return false;
-    const now=new Date();
-    const today=C.day(now);
+    if(!['agendado','aguardando_produto'].includes(r.status)||!r.next)return false;
+    const now=new Date(), today=C.day(now);
     if(r.next<today)return true;
     if(r.next>today)return false;
     const hhmm=r.nextTime||'09:00';
     const [h,m]=hhmm.split(':').map(Number);
-    const localMinutes=Number(new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).format(now).replace(':',''));
-    const target=Number(String(h).padStart(2,'0')+String(m).padStart(2,'0'));
-    return localMinutes>=target;
+    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(now);
+    const ph=Number(parts.find(x=>x.type==='hour')?.value||0), pm=Number(parts.find(x=>x.type==='minute')?.value||0);
+    return ph*60+pm >= h*60+m;
   }
   function softBeep(){
     if(document.visibilityState!=='visible')return;
@@ -293,9 +293,10 @@
       const key=REMINDER_PREFIX+reminderStamp(r);
       if(localStorage.getItem(key))continue;
       localStorage.setItem(key,new Date().toISOString());
-      const title='📦 Produto previsto para hoje';
+      const produto=r.status==='aguardando_produto'||r.followupType==='produto';
+      const title=produto?'📦 Produto previsto para hoje':'📅 Retorno agendado';
       const body=`${r.client} · ${r.product}${r.nextTime?' · '+r.nextTime:''}`;
-      notify(`${title}: ${r.client} — confirme com a logística e dê continuidade à negociação.`,false);
+      notify(produto?`${title}: ${r.client} — confirme com a logística e dê continuidade à negociação.`:`${title}: ${r.client} — hora de retomar esta negociação.`,false);
       softBeep();
       if('Notification' in window && Notification.permission==='granted'){
         try{new Notification(title,{body,tag:'fscrm-'+r.id,renotify:true});}catch(_e){}
@@ -378,12 +379,14 @@
       const purpose=$('fscrm-edit-followupType');
       if(purpose && el.value==='aguardando_produto') purpose.value='produto';
       if(purpose && el.value==='agendado' && purpose.value==='produto') purpose.value='cliente';
+      syncScheduledMode();
     }
     if(el?.id==='fscrm-edit-followupType'){
       const status=$('fscrm-edit-status');
       if(status){
         if(el.value==='produto') status.value='aguardando_produto';
         else if(status.value==='aguardando_produto') status.value='agendado';
+        syncScheduledMode();
       }
     }
     if(el?.id==='fscrm-edit-reason'){
@@ -398,6 +401,14 @@
     }
   }
 
+  function isScheduledStatus(v){return ['agendado','aguardando_produto'].includes(v);}
+  function syncScheduledMode(){
+    const scheduled=isScheduledStatus($('fscrm-edit-status')?.value||'');
+    for(const id of ['fscrm-loss-reason-wrap','fscrm-loss-box','fscrm-standard-fields','fscrm-postsale-details','fscrm-history-details']){const el=$(id);if(el)el.hidden=scheduled;}
+    const msg=$('fscrm-message-action'), stop=$('fscrm-stop-action'), saveBtn=$('fscrm-save-action');
+    if(msg)msg.hidden=scheduled;if(stop)stop.hidden=scheduled;if(saveBtn)saveBtn.textContent=scheduled?'Confirmar agendamento':'Salvar alterações';
+  }
+
   function open(id) {
     draft = db.get(id); if (!draft || !C.canRead(draft,actor())) throw Error('Orçamento não disponível para este usuário.');
     const r = draft; revision=r.revision;
@@ -409,18 +420,18 @@
         <p class="fscrm-hint">Use para combinar um novo contato ou lembrar a previsão de chegada de um produto.</p>
         <div class="fscrm-grid">
           ${select('Finalidade','fscrm-edit-followupType',[['cliente','Retorno com o cliente'],['produto','Aguardando produto']],r.status==='aguardando_produto'?'produto':(r.followupType||'cliente'))}
-          ${field(r.status==='aguardando_produto'?'Previsão de chegada':'Data do retorno','fscrm-edit-next',r.next||C.plus(C.day(),2),'date',`min="${C.day()}"`)}
-          ${field('Horário do lembrete','fscrm-edit-nextTime',r.nextTime||'09:00','time')}
+          ${field(r.status==='aguardando_produto'?'Previsão de chegada':'Data do retorno','fscrm-edit-next',r.next||C.plus(C.day(),1),'date',`min="${C.day()}"`)}
+          ${compactTime('Horário do lembrete','fscrm-edit-nextTime',r.nextTime||'09:00')}
         </div>
       </section>
-      ${select('Motivo da perda','fscrm-edit-reason',[['','Selecione'],...C.REASONS.filter(x=>x!=='Preço').map(x=>[x,x])],r.reason==='Preço'?'Preço da concorrência':r.reason)}
-      <input id="fscrm-edit-customReason" type="hidden" value="${esc(r.customReason||'')}"><p id="fscrm-custom-reason-view" class="fscrm-custom-choice">${r.reason==='Outro'&&r.customReason?'MOTIVO: '+esc(r.customReason):''}</p>
-      ${field('WhatsApp com DDD','fscrm-edit-phone',r.phone,'tel')}
+      <div id="fscrm-loss-reason-wrap">${select('Motivo da perda','fscrm-edit-reason',[['','Selecione'],...C.REASONS.filter(x=>x!=='Preço').map(x=>[x,x])],r.reason==='Preço'?'Preço da concorrência':r.reason)}
+      <input id="fscrm-edit-customReason" type="hidden" value="${esc(r.customReason||'')}"><p id="fscrm-custom-reason-view" class="fscrm-custom-choice">${r.reason==='Outro'&&r.customReason?'MOTIVO: '+esc(r.customReason):''}</p></div>
+      <div id="fscrm-standard-fields">${field('WhatsApp com DDD','fscrm-edit-phone',r.phone,'tel')}
       <label class="fscrm-consent-check"><input id="fscrm-edit-consent" type="checkbox" ${r.consent?'checked':''}> Cliente autorizou contato pelo WhatsApp</label>
       ${select('Atendimento','fscrm-edit-channel',[['presencial','Presencial'],['online','Online']],r.channel)}
-      ${select('Compra para','fscrm-edit-buyer',[['proprio','O próprio cliente'],['terceiro','Terceiro']],r.buyer)}
+      ${select('Compra para','fscrm-edit-buyer',[['proprio','O próprio cliente'],['terceiro','Terceiro']],r.buyer)}</div>
       </div>
-      <label>Observações gerais<textarea id="fscrm-edit-note" rows="3" maxlength="2000">${esc(r.note)}</textarea></label>
+      <label id="fscrm-note-wrap">Observações gerais<textarea id="fscrm-edit-note" rows="3" maxlength="2000">${esc(r.note)}</textarea></label>
       <section id="fscrm-loss-box" class="fscrm-loss-box">
         <h3>Registro da perda / negativa</h3>
         <p>Preencha quando o cliente não fechar a compra. Esses dados alimentam os rankings e relatórios da gestão.</p>
@@ -435,13 +446,14 @@
         <p class="fscrm-hint">A imagem é comprimida antes do envio. Limite: 5 anexos por negociação.</p>
         <div id="fscrm-evidence-list" class="fscrm-evidence-list">${(Array.isArray(r.evidence)?r.evidence:[]).map(x=>`<button type="button" data-action="view-evidence" data-file-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')||'<span>Nenhum anexo.</span>'}</div>
       </section>
-      <details ${r.status==='ganha'?'open':''}><summary>Entrega e pós-venda</summary><p>O lembrete aparece três dias após a entrega ou retirada confirmada.</p><div class="fscrm-grid">
+      <details id="fscrm-postsale-details" ${r.status==='ganha'?'open':''}><summary>Entrega e pós-venda</summary><p>O lembrete aparece três dias após a entrega ou retirada confirmada.</p><div class="fscrm-grid">
       ${field('Entrega / retirada confirmada','fscrm-edit-delivered',r.delivered,'date',`max="${C.day()}"`)}
       ${select('Resultado do pós-venda','fscrm-edit-post',[['pendente','Aguardando contato'],['bem','Está tudo certo'],['sem_resposta','Aguardando resposta'],['problema','Precisa de atendimento'],['resolvido','Problema resolvido']],r.post)}
       ${field('Problema relatado','fscrm-edit-issue',r.issue)}${field('Responsável pela solução','fscrm-edit-issueOwner',r.issueOwner)}${field('Prazo de solução','fscrm-edit-issueDue',r.issueDue,'date')}${field('Próximo relacionamento (opcional)','fscrm-edit-relation',r.relation,'date')}
-      </div></details><details><summary>Histórico de acompanhamento (${r.history.length})</summary><ol class="fscrm-history">${r.history.slice().reverse().map(h=>`<li><strong>${esc(h.actor)} · ${new Date(h.at).toLocaleString('pt-BR')}</strong><p>${esc(h.detail)}</p></li>`).join('')}</ol></details>
+      </div></details><details id="fscrm-history-details"><summary>Histórico de acompanhamento (${r.history.length})</summary><ol class="fscrm-history">${r.history.slice().reverse().map(h=>`<li><strong>${esc(h.actor)} · ${new Date(h.at).toLocaleString('pt-BR')}</strong><p>${esc(h.detail)}</p></li>`).join('')}</ol></details>
       <p class="fscrm-hint">Salve as alterações antes de preparar uma mensagem.</p>`,
-      `<button type="button" class="fscrm-primary" data-action="save">Salvar alterações</button><button type="button" data-action="message">Preparar contato</button><button type="button" class="fscrm-danger" data-action="stop">Não contatar este cliente</button>`);
+      `<button type="button" id="fscrm-save-action" class="fscrm-primary" data-action="save">Salvar alterações</button><button type="button" id="fscrm-message-action" data-action="message">Preparar contato</button><button type="button" id="fscrm-stop-action" class="fscrm-danger" data-action="stop">Não contatar este cliente</button>`);
+    syncScheduledMode();
   }
   async function editSave() {
     const modalError=$('fscrm-modal-error');
@@ -451,15 +463,20 @@
     patch.next=String($('fscrm-edit-next')?.value||draft.next||'').trim();
     patch.nextTime=String($('fscrm-edit-nextTime')?.value||draft.nextTime||'').trim();
     patch.followupType=String($('fscrm-edit-followupType')?.value||draft.followupType||'cliente').trim();
+    patch.nextTime=patch.nextTime.replace(/[^0-9:]/g,'');
+    if(/^\d{1,2}:\d{1,2}$/.test(patch.nextTime)){const [h,m]=patch.nextTime.split(':').map(Number);patch.nextTime=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
+    if(patch.nextTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(patch.nextTime)) throw Error('Informe o horário no formato HH:MM.');
     if(patch.followupType==='produto') patch.status='aguardando_produto';
     else if(patch.status==='aguardando_produto') patch.status='agendado';
+    patch.nextManual=['agendado','aguardando_produto'].includes(patch.status);
+    if(patch.nextManual){patch.reason='';patch.customReason='';patch.lossNote='';patch.lossCompetitor='';patch.lossCompetitorPrice=0;}
     patch.customStatus=String($('fscrm-edit-customStatus')?.value||'').trim().toUpperCase();
     patch.customReason=String($('fscrm-edit-customReason')?.value||'').trim().toUpperCase();
     ['note','issue','issueOwner','relation','lossNote','lossCompetitor'].forEach(k=>{ if(patch[k]) patch[k]=patch[k].toUpperCase(); });
     patch.lossCompetitorPrice=Number($('fscrm-edit-lossCompetitorPrice').value||0);
     patch.consent=!!$('fscrm-edit-consent')?.checked;
     let r = C.edit(draft,patch,actor()); await save(r,revision);
-    if((r.status==='aguardando_produto'||r.followupType==='produto') && 'Notification' in window && Notification.permission==='default'){
+    if(['agendado','aguardando_produto'].includes(r.status) && 'Notification' in window && Notification.permission==='default'){
       try{await Notification.requestPermission();}catch(_e){}
     }
     draft=db.get(r.id)||r;
@@ -781,7 +798,7 @@
         case 'enroll-confirm-open':{
           const shouldOpen=b.dataset.action==='enroll-confirm-open';
           const legacyId=draft.__backendId;
-          const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:C.plus(C.day(),2),consent:true},actor());if(remote?.enabled){const saved=await remoteWrite('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),2),consent:true},imported:true},r);cacheRecord(saved||r);}else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');if(shouldOpen)setTimeout(()=>open(legacyId),0);break;
+          const r=C.create(draft,{kind:'cliente',channel:$('fscrm-enroll-channel').value,buyer:$('fscrm-enroll-buyer').value,next:C.plus(C.day(),1),consent:true,nextManual:false},actor());if(remote?.enabled){const saved=await remoteWrite('create',{legacy:draft,meta:{kind:'cliente',channel:r.channel,buyer:r.buyer,next:r.next||C.plus(C.day(),1),consent:true},imported:true},r);cacheRecord(saved||r);}else db.put(r);modal.close();render();notify('Pesquisa incluída. O cálculo original foi preservado.');if(shouldOpen)setTimeout(()=>open(legacyId),0);break;
         }
         case 'prepare-batch':prepareBatch();break;
         case 'batch-open':batchOpen();break;
@@ -834,7 +851,14 @@
   });
   window.addEventListener('online',()=>{refreshData().catch(()=>{});});
 
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkProductReminders().catch(()=>{});});
+    document.addEventListener('input',e=>{
+    if(e.target?.id!=='fscrm-edit-nextTime')return;
+    let v=String(e.target.value||'').replace(/\D/g,'').slice(0,4);
+    if(v.length>2)v=v.slice(0,2)+':'+v.slice(2);
+    e.target.value=v;
+  });
+
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkProductReminders().catch(()=>{});});
   setInterval(()=>checkProductReminders().catch(()=>{}),60000);
   document.addEventListener('DOMContentLoaded',()=>{try{mount();}catch(e){console.error('Acompanhamento comercial:',e);if(typeof showToast==='function')showToast('Não foi possível carregar o acompanhamento. Os cálculos originais continuam disponíveis.','error');}});
 })();

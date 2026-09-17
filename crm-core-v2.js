@@ -28,16 +28,16 @@
     const id = String(legacy.__backendId);
     const date = Number.isFinite(Date.parse(legacy.data_calculo)) ? legacy.data_calculo : now.toISOString();
     const r = { schema: 1, id, revision: 1, branch: actor.branch, seller, client: String(legacy.cliente), phone: String(legacy.whatsapp || ''), product: String(legacy.codigo_produto), amount: Number(legacy.preco_promocional) || 0,
-      createdAt: date, updatedAt: now.toISOString(), channel: meta.channel, buyer: meta.buyer, consent: meta.consent === true, status: legacy.venda_bem_sucedida === true ? 'ganha' : 'negociacao', customStatus: '', reason: '', customReason: '', lossNote: '', lossCompetitor: '', lossCompetitorPrice: 0, evidence: [], next: meta.next || plus(day(now), 2), nextTime: '', followupType: 'cliente', note: String(legacy.anotacoes || ''), delivered: '', post: 'pendente', issue: '', issueOwner: '', issueDue: '', relation: '', history: [] };
+      createdAt: date, updatedAt: now.toISOString(), channel: meta.channel, buyer: meta.buyer, consent: meta.consent === true, status: legacy.venda_bem_sucedida === true ? 'ganha' : 'negociacao', customStatus: '', reason: '', customReason: '', lossNote: '', lossCompetitor: '', lossCompetitorPrice: 0, evidence: [], next: meta.next || plus(day(now), 1), nextTime: '', followupType: 'cliente', nextManual: false, note: String(legacy.anotacoes || ''), delivered: '', post: 'pendente', issue: '', issueOwner: '', issueDue: '', relation: '', history: [] };
     if (!validDate(r.next)) throw Error('Informe uma data válida para o retorno.');
-    if (closed(r)) { r.next = ''; r.nextTime = ''; r.followupType = 'cliente'; }
+    if (closed(r)) { r.next = ''; r.nextTime = ''; r.followupType = 'cliente'; r.nextManual = false; }
     event(r, actor, 'cadastro', 'Pesquisa de cliente incluída no acompanhamento.', now);
     return r;
   }
   function edit(record, patch, actor, now = new Date()) {
     assertAccess(record, actor);
     const r = JSON.parse(JSON.stringify(record));
-    const allowed = ['status', 'customStatus', 'reason', 'customReason', 'lossNote', 'lossCompetitor', 'lossCompetitorPrice', 'next', 'nextTime', 'followupType', 'note', 'phone', 'consent', 'delivered', 'post', 'issue', 'issueOwner', 'issueDue', 'relation', 'channel', 'buyer'];
+    const allowed = ['status', 'customStatus', 'reason', 'customReason', 'lossNote', 'lossCompetitor', 'lossCompetitorPrice', 'next', 'nextTime', 'followupType', 'nextManual', 'note', 'phone', 'consent', 'delivered', 'post', 'issue', 'issueOwner', 'issueDue', 'relation', 'channel', 'buyer'];
     allowed.forEach(k => { if (Object.prototype.hasOwnProperty.call(patch, k)) r[k] = patch[k]; });
     if (!Object.prototype.hasOwnProperty.call(STATUS, r.status)) throw Error('Status inválido.');
     r.customStatus = String(r.customStatus || '').trim().toUpperCase();
@@ -54,6 +54,8 @@
     if (!['cliente','produto'].includes(r.followupType)) throw Error('Finalidade do retorno inválida.');
     if (r.status === 'aguardando_produto') r.followupType = 'produto';
     if (r.status === 'agendado' && !r.followupType) r.followupType = 'cliente';
+    if (['agendado','aguardando_produto'].includes(r.status)) r.nextManual = true;
+    else if (!Object.prototype.hasOwnProperty.call(r, 'nextManual')) r.nextManual = false;
     if (r.status === 'perdida' && !REASONS.includes(r.reason)) throw Error('Selecione o motivo de não fechamento.');
     if (r.status === 'perdida' && r.reason === 'Outro' && !String(r.customReason || r.lossNote || r.note).trim()) throw Error('Informe qual é o outro motivo da perda.');
     if (r.reason !== 'Outro') r.customReason = '';
@@ -62,7 +64,7 @@
     r.lossCompetitorPrice = Number(r.lossCompetitorPrice || 0);
     if (!Number.isFinite(r.lossCompetitorPrice) || r.lossCompetitorPrice < 0) throw Error('Valor da concorrência inválido.');
     if (!closed(r) && !r.next) throw Error('Defina a próxima data de retorno.');
-    if (closed(r)) { r.next = ''; r.nextTime = ''; r.followupType = 'cliente'; }
+    if (closed(r)) { r.next = ''; r.nextTime = ''; r.followupType = 'cliente'; r.nextManual = false; }
     if (r.status !== 'perdida') { r.reason = ''; r.customReason = ''; r.lossNote = ''; r.lossCompetitor = ''; r.lossCompetitorPrice = 0; }
     if (r.delivered && r.delivered > day(now)) throw Error('Confirme apenas entregas já realizadas.');
     if (!['pendente', 'bem', 'problema', 'sem_resposta', 'resolvido'].includes(r.post)) throw Error('Resultado de pós-venda inválido.');
@@ -85,7 +87,11 @@
   function tasks(r) {
     if (!closed(r)) {
       const produto = r.status === 'aguardando_produto' || r.followupType === 'produto';
-      return [{ kind: produto ? 'produto' : 'retorno', date: r.next, time: r.nextTime || '', title: produto ? 'Confirmar chegada do produto' : 'Retomar negociação' }];
+      const scheduled = ['agendado','aguardando_produto'].includes(r.status) || r.nextManual === true || r.history.some(h => h.type === 'contato_retorno');
+      const automatic24h = plus(day(new Date(r.createdAt)), 1);
+      const taskDate = scheduled && r.next ? r.next : automatic24h;
+      const taskTime = scheduled ? (r.nextTime || '') : '';
+      return [{ kind: produto ? 'produto' : 'retorno', date: taskDate, time: taskTime, title: produto ? 'Confirmar chegada do produto' : (scheduled ? 'Retomar negociação' : 'Retomar negociação após 24 h') }];
     }
     if (r.status !== 'ganha') return [];
     if (r.post === 'problema') return [{ kind: 'suporte', date: r.issueDue, title: 'Resolver atendimento' }];
@@ -125,7 +131,7 @@
       r.history.at(-1).scheduledFor = record.next;
       r.history.at(-1).onTime = !!record.next && day(now) <= record.next;
     }
-    if (kind === 'retorno') { r.status = outcome === 'Cliente respondeu' ? 'agendado' : 'aguardando'; r.next = next; }
+    if (kind === 'retorno') { r.status = outcome === 'Cliente respondeu' ? 'agendado' : 'aguardando'; r.next = next; r.nextManual = true; }
     if (kind === 'pos') r.post = 'sem_resposta';
     if (kind === 'relacionamento') r.relation = next;
     r.revision++; r.updatedAt = now.toISOString(); return r;
