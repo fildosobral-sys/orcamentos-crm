@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="./crm-gestao-v2.css?v=70">
 <link rel="stylesheet" href="./crm-gestao-polish-v8.css?v=1">
 <link rel="stylesheet" href="./crm-gestao-bi-v12.css?v=1">
+<link rel="stylesheet" href="./crm-gestao-final-v13.css?v=1">
 </head>
 <body>
 <header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
@@ -24,15 +25,11 @@
       <span class="live-chip"><i></i> BI atualizado</span>
       <label id="hero-team-wrap" class="hero-team-wrap">
         <span>Equipe</span>
-        <select id="hero-branch" aria-label="Selecionar equipe ou filial">
-          <option value="">Todas as filiais</option>
-        </select>
+        <select id="hero-branch" aria-label="Selecionar equipe ou filial"><option value="">Todas as filiais</option></select>
       </label>
     </div>
   </div>
-  <div class="hero-mark" aria-hidden="true">
-    <span>FS</span><small>BI</small>
-  </div>
+  <div class="hero-mark" aria-hidden="true"><span>FS</span><small>BI</small></div>
 </section>
 <div id="state" role="status" aria-live="polite">Verificando sua autorização…</div>
 <div id="content" hidden>
@@ -40,57 +37,35 @@
   <details class="access-create-wrap">
    <summary><div><p class="eyebrow">ACESSOS DA EQUIPE</p><h2>Criar acesso de colaborador</h2><p>Toque para abrir e cadastrar uma nova credencial.</p></div></summary>
    <div class="access-create-body">
-  <div class="access-grid">
-    <label>Nome do colaborador<input id="access-name" type="text" placeholder="Ex.: Francifildo Pereira Sobral" autocomplete="off"></label>
-    <label>Filial<input id="access-branch" type="text" placeholder="Ex.: Iguatu III" autocomplete="off"></label>
-    <label>WhatsApp<input id="access-phone" type="tel" inputmode="numeric" placeholder="Ex.: 88999999999" autocomplete="off"></label>
-    <label class="access-photo-field">Foto do colaborador
-      <div class="access-photo-control">
-        <span id="access-photo-preview" class="access-photo-preview">👤</span>
-        <span><input id="access-photo" type="file" accept="image/jpeg,image/png,image/webp" capture="user"><small>JPG, PNG ou WEBP. A imagem será reduzida automaticamente.</small></span>
-      </div>
-    </label>
-    <label>Perfil<select id="access-role"><option value="VENDEDOR">Vendedor</option><option value="GERENTE">Gerente</option></select></label>
-    <label class="access-check"><input id="access-manage" type="checkbox"> Pode acompanhar a equipe</label>
-  </div>
-  <div class="access-actions"><button type="button" id="access-create">Criar acesso</button><span id="access-state" role="status"></span></div>
-  <div id="access-result" class="access-result" hidden>
-    <div><small>Credencial gerada</small><strong id="access-token"></strong><span id="access-user-summary"></span></div>
-    <div class="access-result-actions"><button type="button" id="access-copy">Copiar acesso</button><button type="button" id="access-whatsapp">Enviar no WhatsApp</button></div>
-  </div>
+    <div class="access-grid">
+      <label>Nome do colaborador<input id="access-name" type="text" placeholder="Ex.: Francifildo Pereira Sobral" autocomplete="off"></label>
+      <label>Filial<input id="access-branch" type="text" placeholder="Ex.: Iguatu III" autocomplete="off"></label>
+      <label>WhatsApp<input id="access-phone" type="tel" inputmode="numeric" placeholder="Ex.: 88999999999" autocomplete="off"></label>
+      <label class="access-photo-field">Foto do colaborador<div class="access-photo-control"><span id="access-photo-preview" class="access-photo-preview">👤</span><span><input id="access-photo" type="file" accept="image/jpeg,image/png,image/webp" capture="user"><small>JPG, PNG ou WEBP. A imagem será reduzida automaticamente.</small></span></div></label>
+      <label>Perfil<select id="access-role"><option value="VENDEDOR">Vendedor</option><option value="GERENTE">Gerente</option></select></label>
+      <label class="access-check"><input id="access-manage" type="checkbox"> Pode acompanhar a equipe</label>
+    </div>
+    <div class="access-actions"><button type="button" id="access-create">Criar acesso</button><span id="access-state" role="status"></span></div>
+    <div id="access-result" class="access-result" hidden><div><small>Credencial gerada</small><strong id="access-token"></strong><span id="access-user-summary"></span></div><div class="access-result-actions"><button type="button" id="access-copy">Copiar acesso</button><button type="button" id="access-whatsapp">Enviar no WhatsApp</button></div></div>
    </div>
   </details>
   <details class="access-list-wrap" open><summary>Usuários cadastrados</summary><div id="access-user-list"></div></details>
 </section>
-
 <div class="section-kicker"><span>Visão executiva</span><strong>Escolha o período e refine a análise</strong></div>
-<div class="manager-readonly">
-  <strong>Visão de gestão · somente consulta</strong>
-  <span>Os motivos, observações, concorrentes e evidências são registrados pelo vendedor responsável. A liderança acompanha e analisa sem alterar o registro original.</span>
-</div>
-
-<section id="branch-overview" class="branch-overview" hidden>
-  <div class="section-heading branch-heading"><div><h2>Filiais</h2><span>Toque em uma filial para abrir o painel consolidado.</span></div><span id="branch-count"></span></div>
-  <div id="branch-list" class="branch-list"></div>
-</section>
-
+<div class="manager-readonly"><strong>Visão de gestão · somente consulta</strong><span>Os motivos, observações, concorrentes e evidências são registrados pelo vendedor responsável. A liderança acompanha e analisa sem alterar o registro original.</span></div>
+<section id="branch-overview" class="branch-overview" hidden><div class="section-heading branch-heading"><div><h2>Filiais</h2><span>Toque em uma filial para abrir o painel consolidado.</span></div><span id="branch-count"></span></div><div id="branch-list" class="branch-list"></div></section>
 <details class="executive-filter-wrap" open>
  <summary><span>Filtros da visão executiva</span><small>Período, vendedor e ordenação</small></summary>
  <section class="filters" aria-label="Filtros de acompanhamento">
- <div class="periods" role="group" aria-label="Período"><button data-period="dia">Dia</button><button data-period="semana">Semana</button><button data-period="quinzena">Quinzena</button><button data-period="mes" aria-pressed="true">Mês</button></div>
- <div class="filter-fields"><label id="branch-filter-label" hidden>Filial<select id="branch"><option value="">Todas as filiais</option></select></label><label>Data de referência<input type="date" id="anchor"></label><label>Vendedor<select id="seller"><option value="">Toda a equipe</option></select></label><label>Ordenar por<select id="sort"><option value="name">Nome</option><option value="total">Mais orçamentos</option><option value="contacts">Mais contatos</option><option value="conversion">Maior conversão</option><option value="late">Mais retornos atrasados</option></select></label></div>
- <div class="filter-footer"><strong id="period-label"></strong><button id="refresh">Atualizar</button></div>
+  <div class="periods" role="group" aria-label="Período"><button data-period="dia">Dia</button><button data-period="semana">Semana</button><button data-period="quinzena">Quinzena</button><button data-period="mes" aria-pressed="true">Mês</button></div>
+  <div class="filter-fields"><label id="branch-filter-label" hidden>Filial<select id="branch"><option value="">Todas as filiais</option></select></label><label>Data de referência<input type="date" id="anchor"></label><label>Vendedor<select id="seller"><option value="">Toda a equipe</option></select></label><label>Ordenar por<select id="sort"><option value="name">Nome</option><option value="total">Mais orçamentos</option><option value="contacts">Mais contatos</option><option value="conversion">Maior conversão</option><option value="late">Mais retornos atrasados</option></select></label></div>
+  <div class="filter-footer"><strong id="period-label"></strong><button id="refresh">Atualizar</button></div>
  </section>
 </details>
 <section id="metrics" class="metrics" aria-label="Resumo do período"></section>
-
 <section id="fs-team-intelligence" class="fs-team-intelligence" aria-label="Desempenho comercial"></section>
-
 <section class="loss-intel" id="loss-intel">
-  <div class="loss-intel-head">
-    <div><p class="eyebrow-dark">INTELIGÊNCIA COMERCIAL</p><h2>Análise de perdas</h2><p>Ranking dos motivos, impacto financeiro, concorrentes e evidências registradas pelos vendedores.</p></div>
-    <button id="print-loss-report" type="button">Imprimir relatório</button>
-  </div>
+  <div class="loss-intel-head"><div><p class="eyebrow-dark">INTELIGÊNCIA COMERCIAL</p><h2>Análise de perdas</h2><p>Ranking dos motivos, impacto financeiro, concorrentes e evidências registradas pelos vendedores.</p></div><button id="print-loss-report" type="button">Imprimir relatório</button></div>
   <div id="loss-kpis" class="loss-kpis"></div>
   <div class="loss-grid-3">
     <section class="loss-panel"><div class="panel-title"><span class="panel-icon">01</span><div><small>CAUSA</small><h3>Ranking dos motivos</h3></div></div><div id="loss-ranking"></div></section>
@@ -100,7 +75,6 @@
   <section class="loss-panel loss-trend-panel"><div class="panel-title"><span class="panel-icon">04</span><div><small>TENDÊNCIA</small><h3>Evolução das perdas no período</h3></div></div><div id="loss-trend" class="loss-trend"></div></section>
   <section class="loss-panel"><div class="loss-case-head"><h3>Casos de perda</h3><span id="loss-case-count"></span></div><div id="loss-cases"></div></section>
 </section>
-
 <details class="explanation"><summary>Como ler os números</summary><p>Pesquisas consideram os registros criados no período. Vendas concluídas e perdas consideram a data efetiva de conclusão/perda dentro do período. Em aberto representa a posição atual da carteira.</p><p>Conversão geral = vendas concluídas ÷ pesquisas criadas no período. Conversão sobre finalizadas = vendas concluídas ÷ (vendas concluídas + perdas finalizadas).</p><p>Contatos consideram ações registradas no período. Agendamentos mostram a posição atual das oportunidades com retorno ou produto agendado.</p></details>
 <div class="section-heading" id="equipe"><h2>Vendedores</h2><span id="roster-count"></span></div>
 <section id="seller-cards" class="seller-cards"></section>
@@ -109,10 +83,7 @@
 <p id="updated" class="updated"></p>
 </div>
 </main>
-<dialog id="branch-detail" class="branch-detail" aria-labelledby="branch-detail-title">
-  <div class="dialog-head"><div><p class="eyebrow-dark">PAINEL DA FILIAL</p><h2 id="branch-detail-title"></h2><small id="branch-detail-period"></small></div><button id="close-branch-detail" aria-label="Fechar">×</button></div>
-  <div id="branch-detail-body"></div>
-</dialog>
+<dialog id="branch-detail" class="branch-detail" aria-labelledby="branch-detail-title"><div class="dialog-head"><div><p class="eyebrow-dark">PAINEL DA FILIAL</p><h2 id="branch-detail-title"></h2><small id="branch-detail-period"></small></div><button id="close-branch-detail" aria-label="Fechar">×</button></div><div id="branch-detail-body"></div></dialog>
 <dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><h2 id="detail-title"></h2><button id="close-detail" aria-label="Fechar">×</button></div><div id="detail-body"></div></dialog>
 <script src="./crm-config-v2.js?v=71"></script>
 <script src="./crm-api-v2.js?v=95"></script>
@@ -121,4 +92,5 @@
 <script src="./crm-relatorio-a4.js?v=1"></script>
 <script src="./crm-gestao-polish-v8.js?v=1"></script>
 <script src="./crm-gestao-bi-v12.js?v=1"></script>
+<script src="./crm-gestao-final-v13.js?v=1"></script>
 </body></html>

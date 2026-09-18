@@ -1,0 +1,47 @@
+/* FS CRM — acabamento final v13 */
+body.fs-bi-v12 .fs-v13-hidden-source{display:none!important}
+.fs-bi-topbar{height:auto!important;min-height:68px!important;gap:18px!important;padding-top:9px!important;padding-bottom:9px!important}
+.fs-v13-toolbar{display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex:1}
+.fs-v13-control{display:grid;gap:3px;min-width:125px}
+.fs-v13-control.branch{min-width:190px}.fs-v13-control.seller{min-width:155px}.fs-v13-control.anchor{min-width:145px}.fs-v13-control.sort{min-width:130px}.fs-v13-control.period{min-width:105px}
+.fs-v13-control>span{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#7b8798;font-weight:900;padding-left:5px}
+.fs-v13-control select,.fs-v13-control input{height:34px;border:1px solid #dfe5ef;border-radius:999px;background:#fff;padding:0 12px;font-size:10px;font-weight:800;color:#34435d;min-width:0;width:100%}
+.fs-v13-apply{height:34px!important;padding:0 15px!important;border:0!important;border-radius:999px!important;background:linear-gradient(135deg,#376fe8,#6551d6)!important;color:#fff!important;font-size:10px!important;font-weight:900!important;white-space:nowrap}
+.fs-v13-range{align-self:center;font-size:9px;color:#68758a;font-weight:800;white-space:nowrap}
+body.fs-bi-v12 .section-kicker{margin-top:12px!important}
+body.fs-bi-v12 .access-admin{margin-top:12px!important}
+body.fs-bi-v12 .access-create-wrap.fs-v13-access-moved{border:0!important;box-shadow:none!important;margin:0!important;background:transparent!important}
+body.fs-bi-v12 .access-create-wrap.fs-v13-access-moved>summary{display:none!important}
+.fs-v13-access-dialog{width:min(820px,92vw);max-height:88vh;border:0;border-radius:18px;padding:0;box-shadow:0 30px 80px rgba(15,23,42,.25)}
+.fs-v13-access-dialog::backdrop{background:rgba(17,24,39,.48);backdrop-filter:blur(3px)}
+.fs-v13-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #e7ebf2;background:#fff}
+.fs-v13-dialog-head small{color:#6b58ce;font-size:9px;font-weight:900;letter-spacing:.1em}.fs-v13-dialog-head h2{margin:3px 0 0;font-size:20px}.fs-v13-dialog-head button{width:38px;height:38px;border:1px solid #dfe5ef;border-radius:11px;background:#fff;font-size:22px}
+#fs-v13-access-body{padding:16px 20px 20px;background:#fff}
+.fs-v13-back{display:flex;align-items:center;gap:7px;margin-top:auto!important;text-decoration:none;color:#53617a;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:800;background:#f7f9fc;border:1px solid #e2e8f2}
+.fs-bi-sidebar{overflow:auto}.fs-bi-support{margin-top:8px!important}
+#access-admin>.access-list-wrap{margin-top:0!important}
+
+/* força 8 cards estáveis */
+body.fs-bi-v12 #metrics{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.fs-v12-metric{min-height:128px!important}
+.fs-v12-metric strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Perdas consolidadas */
+#loss-kpis>div{position:relative}#loss-kpis>div>i{position:absolute;right:12px;top:10px;color:#c4cad4;font-style:normal;font-size:10px;font-weight:900}
+.loss-rank-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;margin:10px 0}
+.loss-rank-row>span{width:30px;height:30px;border-radius:9px;background:#f0edff;color:#6250c2;display:grid;place-items:center;font-weight:900;font-size:11px}
+.loss-rank-row>div{position:relative;min-width:0}.loss-rank-row strong{display:block;font-size:12px;padding-right:65px}.loss-rank-row em{position:absolute;right:0;top:0;font-style:normal;color:#788497;font-size:10px}.loss-rank-row b{display:block;height:6px;background:#edf0f6;border-radius:99px;overflow:hidden;margin-top:6px}.loss-rank-row b i{display:block;height:100%;background:linear-gradient(90deg,#5a58dc,#7b64da);border-radius:99px}
+.loss-donut-wrap{display:grid;grid-template-columns:180px 1fr;gap:18px;align-items:center}.loss-donut-chart{width:160px;height:160px;border-radius:50%;display:grid;place-items:center;position:relative}.loss-donut-chart:after{content:"";position:absolute;width:102px;height:102px;border-radius:50%;background:white}.loss-donut-chart span{position:relative;z-index:2;text-align:center}.loss-donut-chart strong{display:block;font-size:30px}.loss-donut-chart small{color:#8a93a3;font-size:9px}.loss-donut-legend>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #edf0f5;font-size:10px}.loss-donut-legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}.loss-donut-legend small{color:#8993a3}
+.loss-trend{min-height:155px!important;display:flex!important;align-items:flex-end!important;gap:16px!important;padding:16px!important}.loss-trend-bar{height:130px;min-width:44px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}.loss-trend-bar>span{width:28px;border-radius:8px 8px 2px 2px;background:linear-gradient(180deg,#7b65db,#397de8)}.loss-trend-bar small{font-size:9px;color:#7c8798}.loss-trend-bar b{font-size:10px}
+#loss-cases .loss-case{border:1px solid #e3e8f1;border-radius:13px;padding:14px;background:#fff;box-shadow:0 6px 16px rgba(29,45,78,.04)}
+#loss-cases .loss-case h4{font-size:14px;margin:7px 0}#loss-cases .loss-case p{font-size:10px;color:#6f7a8c;margin:6px 0}.loss-badge{display:inline-flex;padding:4px 7px;border-radius:999px;background:#fff0f2;color:#b33b50;font-size:9px;font-weight:900}
+.fs-v13-team-badge{background:#eef8ff!important;border-color:#cde5ff!important;color:#2d609d!important}
+
+@media(max-width:1180px){.fs-v13-control.sort{display:none}.fs-v13-toolbar{justify-content:flex-start}.fs-bi-topbar{align-items:flex-start!important;flex-direction:column!important}}
+@media(max-width:900px){
+  .fs-bi-topbar{position:sticky!important;display:block!important;padding:10px 12px!important}.fs-bi-topbar>strong{display:block;margin-bottom:8px}.fs-v13-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:7px}.fs-v13-control{min-width:0!important}.fs-v13-control.branch{grid-column:1/-1}.fs-v13-apply{width:100%;grid-column:1/-1}.fs-v13-range{grid-column:1/-1;text-align:center;white-space:normal}
+  body.fs-bi-v12 #metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}.fs-v12-metric{min-height:112px!important}
+  .fs-v13-back{position:fixed;left:10px;bottom:10px;z-index:1000;width:44px;height:44px;padding:0;display:grid;place-items:center;border-radius:50%;font-size:0}.fs-v13-back:before{content:'←';font-size:22px}
+  .loss-donut-wrap{grid-template-columns:1fr}.loss-donut-chart{margin:auto}
+}
+@media(max-width:560px){.fs-v13-toolbar{grid-template-columns:1fr 1fr}.fs-v13-control.seller,.fs-v13-control.anchor{grid-column:auto}.fs-v13-control.period{grid-column:auto}.fs-v13-control.sort{display:none}.fs-v12-metric strong{font-size:18px!important}.fs-v13-access-dialog{width:96vw}}
