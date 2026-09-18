@@ -34,6 +34,23 @@ function style(){
     .fs-v16-menu-head{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 10px}.fs-v16-menu-head strong{font-size:18px;color:#1c1c1e}
     .fs-v16-menu-grid{display:grid;gap:6px}.fs-v16-menu-grid button,.fs-v16-menu-grid a{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:10px 12px;border:0;border-radius:14px;background:transparent;color:#1c1c1e;text-decoration:none;font:inherit;font-weight:700;text-align:left;cursor:pointer;white-space:nowrap}.fs-v16-menu-grid button:hover,.fs-v16-menu-grid a:hover{background:rgba(10,132,255,.08)}.fs-v16-menu-grid .ico{width:28px;text-align:center;font-size:19px;flex:0 0 auto}.fs-v16-menu-sep{height:1px;background:rgba(60,60,67,.12);margin:6px 4px}
 
+
+    /* Popup dedicado dos filtros da análise */
+    #fs-v17-filter-dialog{width:min(560px,calc(100vw - 24px));max-height:86vh;border:0!important;border-radius:24px!important;padding:0!important;overflow:hidden;background:#fff;color:#1c1c1e;box-shadow:0 30px 90px rgba(0,0,0,.26)!important}
+    #fs-v17-filter-dialog::backdrop{background:rgba(20,20,24,.34)!important;backdrop-filter:blur(9px)}
+    .fs-v17-filter-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:17px 18px;border-bottom:1px solid rgba(60,60,67,.12);background:#fafafd}
+    .fs-v17-filter-head small{display:block;color:#6e6e73;font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+    .fs-v17-filter-head h2{margin:0;font-size:20px;line-height:1.15;color:#1c1c1e}
+    .fs-v17-filter-close{width:40px;height:40px;border:0;border-radius:12px;background:#eef0f5;color:#4b5565;font-size:23px;font-weight:800;cursor:pointer;flex:0 0 auto}
+    .fs-v17-filter-body{padding:16px;overflow:auto;max-height:calc(86vh - 74px)}
+    #fs-v17-filter-dialog .fs-v13-toolbar{display:grid!important;position:static!important;inset:auto!important;width:100%!important;max-width:none!important;max-height:none!important;overflow:visible!important;grid-template-columns:1fr 1fr!important;gap:10px!important;padding:0!important;margin:0!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;transform:none!important;opacity:1!important;pointer-events:auto!important}
+    #fs-v17-filter-dialog .fs-v13-control{min-width:0!important;width:100%!important}
+    #fs-v17-filter-dialog .fs-v13-control.branch,#fs-v17-filter-dialog .fs-v13-control.seller{grid-column:1/-1!important}
+    #fs-v17-filter-dialog .fs-v13-control>span{font-size:10px!important;padding-left:3px!important;color:#657185!important}
+    #fs-v17-filter-dialog .fs-v13-control select,#fs-v17-filter-dialog .fs-v13-control input{height:48px!important;border-radius:14px!important;font-size:15px!important;padding:0 13px!important;border:1px solid #dce2ec!important;background:#fff!important}
+    #fs-v17-filter-dialog .fs-v13-apply{grid-column:1/-1!important;width:100%!important;height:50px!important;border-radius:14px!important;font-size:14px!important;margin-top:2px!important}
+    #fs-v17-filter-dialog .fs-v13-range{grid-column:1/-1!important;text-align:center!important;white-space:normal!important;font-size:11px!important;padding-top:2px!important}
+
     @media(max-width:900px){
       .fs-bi-sidebar{display:none!important}
       body.fs-bi-v12 main{padding-bottom:28px!important}
@@ -104,10 +121,22 @@ function openPermissions(){
   if(src){src.open=true;body.replaceChildren(src)}else body.innerHTML='<p>As autorizações ainda não foram carregadas.</p>';
   if(!d.open)d.showModal();
 }
-function openData(){
-  const src=$('data-admin-addon'),d=dialog('fs-v16-data-dialog','ADMINISTRAÇÃO','Gerenciar dados do período'),body=d.querySelector('.fs-v16-dialog-body');
-  if(src){src.open=true;body.replaceChildren(src)}else body.innerHTML='<p>O gerenciamento de dados ainda está sendo carregado. Aguarde alguns segundos e tente novamente.</p>';
+async function openData(){
+  const d=dialog('fs-v16-data-dialog','ADMINISTRAÇÃO','Gerenciar dados do período'),body=d.querySelector('.fs-v16-dialog-body');
   if(!d.open)d.showModal();
+  body.innerHTML='<p>Carregando gerenciamento do período…</p>';
+  let src=$('data-admin-addon');
+  for(let i=0;!src&&i<20;i++){
+    await new Promise(r=>setTimeout(r,100));
+    src=$('data-admin-addon');
+  }
+  if(src){
+    src.open=true;
+    src.style.display='block';
+    body.replaceChildren(src);
+  }else{
+    body.innerHTML='<p>O gerenciamento do período não ficou disponível nesta sessão. Feche esta janela e atualize a página.</p>';
+  }
 }
 function navItem(label,icon,id,fn){
   const a=document.createElement('a');a.href='#';a.id=id;a.className='fs-v16-special-link';a.innerHTML=`<span>${icon}</span> ${esc(label)}`;a.addEventListener('click',e=>{e.preventDefault();fn()});return a;
@@ -153,46 +182,48 @@ function mobileMenu(){
   d.querySelector('[data-action="data"]')?.addEventListener('click',()=>{d.close();setTimeout(openData,50)});
   d.querySelector('[data-action="config"]')?.addEventListener('click',()=>{d.close();setTimeout(openPermissions,50)});
 }
+function filterDialog(){
+  let d=$('fs-v17-filter-dialog');
+  if(d)return d;
+  d=document.createElement('dialog');
+  d.id='fs-v17-filter-dialog';
+  d.innerHTML='<div class="fs-v17-filter-head"><div><small>GESTÃO DA EQUIPE</small><h2>Filtros da análise</h2></div><button type="button" class="fs-v17-filter-close" aria-label="Fechar">×</button></div><div class="fs-v17-filter-body"></div>';
+  document.body.appendChild(d);
+  d.querySelector('.fs-v17-filter-close').addEventListener('click',()=>d.close());
+  d.addEventListener('click',e=>{if(e.target===d)d.close()});
+  return d;
+}
+function syncFilterToolbarLocation(){
+  const toolbar=$('fs-v13-toolbar'),top=document.querySelector('.fs-bi-topbar');
+  if(!toolbar||!top)return;
+  const d=filterDialog(),body=d.querySelector('.fs-v17-filter-body');
+  if(window.innerWidth<=900){
+    if(toolbar.parentElement!==body)body.appendChild(toolbar);
+  }else{
+    if(d.open)d.close();
+    if(toolbar.parentElement!==top)top.appendChild(toolbar);
+  }
+}
 function stableHeader(){
   const summary=$('fs-v13-mobile-summary');if(!summary)return;
-
-  const clearLegacyState=()=>{
-    if(document.body.classList.contains('fs-mobile-header-collapsed'))
-      document.body.classList.remove('fs-mobile-header-collapsed');
+  syncFilterToolbarLocation();
+  if(summary.dataset.fsV17==='1')return;
+  summary.dataset.fsV17='1';
+  summary.setAttribute('role','button');
+  summary.setAttribute('tabindex','0');
+  summary.setAttribute('aria-expanded','false');
+  const openFilters=()=>{
+    if(window.innerWidth>900)return;
+    syncFilterToolbarLocation();
+    const d=filterDialog();
+    if(!d.open)d.showModal();
+    summary.setAttribute('aria-expanded','true');
   };
-  const setOpen=(open)=>{
-    clearLegacyState();
-    document.body.classList.toggle('fs-v16-filters-open',!!open);
-    summary.setAttribute('aria-expanded',String(!!open));
-  };
-  clearLegacyState();
-
-  if(!document.body.dataset.fsV16HeaderWatch){
-    document.body.dataset.fsV16HeaderWatch='1';
-    const bodyObserver=new MutationObserver(clearLegacyState);
-    bodyObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
-    document.addEventListener('click',e=>{
-      if(window.innerWidth>900) return;
-      if(!document.body.classList.contains('fs-v16-filters-open')) return;
-      const toolbar=document.getElementById('fs-v13-toolbar');
-      if(toolbar && toolbar.contains(e.target)) return;
-      if(summary.contains(e.target)) return;
-      const menuBtn=document.getElementById('fs-v16-menu-btn');
-      if(menuBtn && menuBtn.contains(e.target)) return;
-      setOpen(false);
-    });
-    window.addEventListener('resize',()=>{if(window.innerWidth>900)setOpen(false)});
-    document.getElementById('refresh')?.addEventListener('click',()=>setOpen(false));
-  }
-
-  if(summary.dataset.fsV16==='1')return;
-  summary.dataset.fsV16='1';summary.setAttribute('role','button');summary.setAttribute('tabindex','0');summary.setAttribute('aria-expanded','false');
-  const toggle=()=>{
-    if(window.innerWidth>900) return;
-    setOpen(!document.body.classList.contains('fs-v16-filters-open'));
-  };
-  summary.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggle()});
-  summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
+  summary.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openFilters()});
+  summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openFilters()}});
+  filterDialog().addEventListener('close',()=>summary.setAttribute('aria-expanded','false'));
+  $('refresh')?.addEventListener('click',()=>{const d=$('fs-v17-filter-dialog');if(d?.open)d.close()});
+  window.addEventListener('resize',syncFilterToolbarLocation);
 }
 function cleanupBottom(){
   document.body.classList.add('fs-v16-ready');
