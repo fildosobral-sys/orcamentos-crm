@@ -80,6 +80,21 @@ function style(){
     #access-user-list .access-branch-group-addon{border:0!important;background:transparent!important;margin:0!important;overflow:visible!important}
     #access-user-list .access-branch-users-addon{padding:0!important}
 
+
+    /* 18/09/2026 12:31 — cartão de sincronização/reflexão */
+    .fs-v19-loading-card{display:none;margin:18px auto 0;width:min(680px,calc(100% - 32px));padding:18px 20px;border:1px solid #e0e5ee;border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 12px 34px rgba(39,52,83,.07);text-align:center}
+    .fs-v19-loading-card.is-visible{display:block}\n    body.fs-v19-loading #state{display:none!important}
+    .fs-v19-loading-top{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;color:#45536b;font-size:12px;font-weight:850;text-transform:uppercase;letter-spacing:.07em}
+    .fs-v19-loading-dot{width:9px;height:9px;border-radius:50%;background:#5f63d9;box-shadow:0 0 0 5px rgba(95,99,217,.10);animation:fsV19Pulse 1.2s ease-in-out infinite}
+    .fs-v19-loading-quote{margin:0;color:#25324a;font-size:15px;line-height:1.55;font-weight:650}
+    .fs-v19-loading-author{display:block;margin-top:7px;color:#8490a3;font-size:11px;font-weight:750}
+    @keyframes fsV19Pulse{0%,100%{transform:scale(.82);opacity:.55}50%{transform:scale(1.12);opacity:1}}
+    @media(prefers-reduced-motion:reduce){.fs-v19-loading-dot{animation:none}}
+
+    /* Alternância segura entre visual mobile e visual desktop */
+    .fs-v19-desktop-return{display:flex!important;align-items:center;gap:7px;margin-top:8px!important;text-decoration:none;color:#53617a;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:800;background:#f7f9fc;border:1px solid #e2e8f2;cursor:pointer}
+    html.fs-force-desktop body{min-width:1180px}
+
     @media(max-width:900px){
       .fs-bi-sidebar{display:none!important}
       body.fs-bi-v12 main{padding-bottom:28px!important}
@@ -195,6 +210,7 @@ function mobileMenu(){
       <button type="button" data-go="#loss-intel"><span class="ico">📉</span><span>Perdas</span></button>
       <button type="button" data-go="#fs-team-intelligence"><span class="ico">📑</span><span>Relatórios</span></button>
       <button type="button" data-action="config"><span class="ico">⚙️</span><span>Configurações</span></button>
+      <button type="button" data-action="desktop"><span class="ico">🖥️</span><span>Modo desktop</span></button>
       <div class="fs-v16-menu-sep"></div>
       <button type="button" data-action="access"><span class="ico">➕</span><span>Criar acesso</span></button>
       <button type="button" data-action="permissions"><span class="ico">🔐</span><span>Autorizações</span></button>
@@ -210,7 +226,91 @@ function mobileMenu(){
   d.querySelector('[data-action="permissions"]')?.addEventListener('click',()=>{d.close();setTimeout(openPermissions,50)});
   d.querySelector('[data-action="data"]')?.addEventListener('click',()=>{d.close();setTimeout(openData,50)});
   d.querySelector('[data-action="config"]')?.addEventListener('click',()=>{d.close();setTimeout(openPermissions,50)});
+  d.querySelector('[data-action="desktop"]')?.addEventListener('click',()=>{d.close();setViewMode(true)});
 }
+function setViewMode(desktopMode){
+  try{
+    if(desktopMode)localStorage.setItem('fs_gestao_desktop','1');
+    else localStorage.removeItem('fs_gestao_desktop');
+  }catch(_e){}
+  location.reload();
+}
+function desktopReturnControl(){
+  const forced=document.documentElement.classList.contains('fs-force-desktop');
+  const nav=document.querySelector('.fs-bi-nav');
+  let b=$('fs-v19-desktop-return');
+  if(!forced){b?.remove();return;}
+  if(!nav||b)return;
+  b=document.createElement('button');
+  b.type='button';b.id='fs-v19-desktop-return';b.className='fs-v19-desktop-return';
+  b.innerHTML='<span>📱</span><span>Voltar ao modo mobile</span>';
+  b.addEventListener('click',()=>setViewMode(false));
+  nav.appendChild(b);
+}
+
+const FS_V19_REFLECTIONS=[
+  ['Conhecer a si mesmo é o começo de toda mudança.','Reflexão inspirada em Sócrates'],
+  ['Não controlamos tudo o que acontece; controlamos como respondemos.','Reflexão inspirada em Epicteto'],
+  ['A excelência nasce de hábitos praticados todos os dias.','Reflexão inspirada em Aristóteles'],
+  ['O obstáculo também pode se tornar parte do caminho.','Reflexão inspirada em Marco Aurélio'],
+  ['Use bem o tempo que está diante de você.','Reflexão inspirada em Sêneca'],
+  ['Grandes resultados começam com pequenas ações consistentes.','Reflexão de liderança'],
+  ['Aprender, ajustar e continuar também é progresso.','Reflexão de desenvolvimento'],
+  ['Clareza na decisão transforma esforço em direção.','Reflexão de gestão']
+];
+let fsV19QuoteIndex=0,fsV19QuoteTimer=0;
+function loadingCard(){
+  let c=$('fs-v19-loading-card');if(c)return c;
+  c=document.createElement('section');c.id='fs-v19-loading-card';c.className='fs-v19-loading-card';c.setAttribute('aria-live','polite');
+  c.innerHTML='<div class="fs-v19-loading-top"><i class="fs-v19-loading-dot"></i><span id="fs-v19-loading-status">Atualizando sua gestão…</span></div><p class="fs-v19-loading-quote" id="fs-v19-loading-quote"></p><small class="fs-v19-loading-author" id="fs-v19-loading-author"></small>';
+  const main=document.querySelector('main');
+  const state=$('state');
+  if(state&&state.parentElement)state.insertAdjacentElement('afterend',c);else main?.prepend(c);
+  paintReflection();
+  return c;
+}
+function paintReflection(){
+  const q=FS_V19_REFLECTIONS[fsV19QuoteIndex%FS_V19_REFLECTIONS.length];
+  const qe=$('fs-v19-loading-quote'),ae=$('fs-v19-loading-author');
+  if(qe)qe.textContent='“'+q[0]+'”';if(ae)ae.textContent=q[1];
+}
+function setLoadingReflection(show,statusText){
+  const c=loadingCard();
+  c.classList.toggle('is-visible',!!show);
+  document.body.classList.toggle('fs-v19-loading',!!show);
+  const s=$('fs-v19-loading-status');if(s&&statusText)s.textContent=statusText;
+  clearInterval(fsV19QuoteTimer);fsV19QuoteTimer=0;
+  if(show){
+    paintReflection();
+    fsV19QuoteTimer=setInterval(()=>{fsV19QuoteIndex=(fsV19QuoteIndex+1)%FS_V19_REFLECTIONS.length;paintReflection()},4500);
+  }
+}
+function syncLoadingReflection(){
+  const stateEl=$('state'),content=$('content');
+  if(!stateEl)return;
+  const txt=String(stateEl.textContent||'').trim();
+  const isError=stateEl.dataset.error==='true';
+  const awaiting=document.body.classList.contains('fs-v17-awaiting-apply');
+  const loadingText=/verificando|carregando|atualizando|sincronizando|aguarde/i.test(txt);
+  const shouldShow=!isError&&(loadingText||((content&&content.hidden)&&!awaiting));
+  let label='Atualizando sua gestão…';
+  if(/autoriza/i.test(txt))label='Verificando sua autorização…';
+  else if(/sincron/i.test(txt))label='Sincronizando com a nuvem…';
+  else if(/carreg|atualiz/i.test(txt))label='Atualizando dados…';
+  setLoadingReflection(shouldShow,label);
+}
+function watchLoadingReflection(){
+  const stateEl=$('state'),content=$('content');if(!stateEl||!content)return;
+  if(document.body.dataset.fsV19LoadingWatch==='1'){syncLoadingReflection();return;}
+  document.body.dataset.fsV19LoadingWatch='1';
+  const obs=new MutationObserver(()=>setTimeout(syncLoadingReflection,0));
+  obs.observe(stateEl,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-error']});
+  obs.observe(content,{attributes:true,attributeFilter:['hidden']});
+  window.addEventListener('pageshow',()=>setTimeout(syncLoadingReflection,40));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(syncLoadingReflection,60)});
+  syncLoadingReflection();
+}
+
 function filterDialog(){
   let d=$('fs-v17-filter-dialog');
   if(d)return d;
@@ -313,7 +413,7 @@ function cleanupBottom(){
   const p=$('permissions');if(p&&!p.closest('#fs-v16-permissions-dialog'))p.style.display='none';
   const d=$('data-admin-addon');if(d&&!d.closest('#fs-v16-data-dialog'))d.style.display='none';
 }
-function enhance(){style();desktop();mobileMenu();stableHeader();cleanupBottom();watchAccessRoster();stabilizeAccessRoster()}
+function enhance(){style();desktop();mobileMenu();stableHeader();cleanupBottom();watchAccessRoster();stabilizeAccessRoster();desktopReturnControl();watchLoadingReflection()}
 function boot(){
   document.body.classList.add('fs-v17-awaiting-apply');
   document.body.classList.remove('fs-v17-analysis-applied');
