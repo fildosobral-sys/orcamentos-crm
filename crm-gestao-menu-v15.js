@@ -72,25 +72,27 @@ function style(){
     /* Removido definitivamente: texto explicativo solicitado para sair. */
     .fs-v12-funnel-note{display:none!important}
 
-    /* 18/09/2026 12:38 — usuários cadastrados compactos e estáveis */
-    .access-list-wrap>summary{position:relative!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;text-align:center!important;padding-right:44px!important;padding-left:44px!important;min-height:74px!important}
-    .fs-v18-access-title{font-weight:850!important;text-align:center!important}
-    .fs-v18-access-meta{margin:0!important;color:#7b8495!important;font-size:11px!important;font-weight:800!important;text-align:center!important;white-space:normal!important}
-    .fs-v18-access-arrow{position:absolute!important;right:18px!important;top:50%!important;transform:translateY(-50%) rotate(0deg)!important;color:#7b8495!important;font-size:18px!important;font-weight:900!important;transition:transform .18s ease!important}
-    .access-list-wrap[open]>summary .fs-v18-access-arrow{transform:translateY(-50%) rotate(180deg)!important}
+    /* 18/09/2026 12:46 — usuários cadastrados em faixa compacta */
+    .access-list-wrap>summary{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto 22px!important;align-items:center!important;gap:10px!important;text-align:left!important;padding:14px 16px!important;min-height:54px!important}
+    .fs-v18-access-title{font-weight:850!important;text-align:left!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+    .fs-v18-access-meta{margin:0!important;color:#7b8495!important;font-size:10px!important;font-weight:800!important;text-align:right!important;white-space:nowrap!important}
+    .fs-v18-access-arrow{position:static!important;display:grid!important;place-items:center!important;width:22px!important;height:22px!important;transform:rotate(0deg)!important;color:#7b8495!important;font-size:16px!important;font-weight:900!important;transition:transform .18s ease!important}
+    .access-list-wrap[open]>summary .fs-v18-access-arrow{transform:rotate(180deg)!important}
+    @media(max-width:560px){.access-list-wrap>summary{grid-template-columns:minmax(0,1fr) auto 18px!important;gap:7px!important;padding:12px 14px!important;min-height:50px!important}.fs-v18-access-title{font-size:14px!important}.fs-v18-access-meta{font-size:9px!important}.fs-v18-access-arrow{font-size:15px!important}}
     #access-user-list .access-branch-group-addon>summary{display:none!important}
     #access-user-list .access-branch-group-addon{border:0!important;background:transparent!important;margin:0!important;overflow:visible!important}
     #access-user-list .access-branch-users-addon{padding:0!important}
 
-    /* 18/09/2026 12:38 — reflexão com progresso mínimo de 7 segundos */
-    .fs-v19-loading-card{position:relative;display:none;margin:18px auto 0;width:min(680px,calc(100% - 32px));padding:24px 22px 25px;border:1px solid #e0e5ee;border-radius:20px;background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(39,52,83,.07);text-align:center;overflow:hidden}
+    /* 18/09/2026 12:46 — popup motivacional sobre a estrutura, com progresso na borda */
+    body.fs-v19-loading:before{content:"";position:fixed;inset:0;z-index:1440;background:rgba(28,35,48,.20);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);pointer-events:none}
+    .fs-v19-loading-card{--fs-progress:0;position:fixed;display:none;z-index:1450;left:50%;top:50%;transform:translate(-50%,-50%);width:min(600px,calc(100% - 38px));padding:24px 24px 22px;border:3px solid transparent;border-radius:24px;background:linear-gradient(rgba(255,255,255,.98),rgba(255,255,255,.98)) padding-box,conic-gradient(from -90deg,#4f8df7 0%,#6551d6 calc(var(--fs-progress)*1%),#e4e8f0 calc(var(--fs-progress)*1%),#e4e8f0 100%) border-box;box-shadow:0 24px 70px rgba(29,40,67,.22);text-align:center;overflow:hidden;pointer-events:none}
     .fs-v19-loading-card.is-visible{display:block}
-    body.fs-v19-loading #state{display:none!important}
-    .fs-v19-loading-quote{margin:0;color:#25324a;font-size:15px;line-height:1.55;font-weight:650}
-    .fs-v19-loading-author{display:block;margin-top:8px;color:#8490a3;font-size:11px;font-weight:750}
-    .fs-v19-loading-progress{position:absolute;left:0;right:0;bottom:0;height:5px;background:#eef1f6;overflow:hidden}
-    .fs-v19-loading-progress>i{display:block;width:0;height:100%;background:linear-gradient(90deg,#4f8df7,#6551d6);border-radius:0 999px 999px 0;transition:width .16s linear}
-    .fs-v19-loading-percent{display:block;margin-top:10px;color:#9aa4b3;font-size:10px;font-weight:800;letter-spacing:.04em}
+    body.fs-v19-loading #state{visibility:hidden!important}
+    .fs-v19-loading-quote{margin:0;color:#25324a;font-size:15px;line-height:1.55;font-weight:700}
+    .fs-v19-loading-author{display:block;margin-top:8px;color:#8490a3;font-size:10px;font-weight:750}
+    .fs-v19-loading-progress{display:none!important}
+    .fs-v19-loading-percent{display:block;margin-top:10px;color:#8995a8;font-size:10px;font-weight:850;letter-spacing:.04em}
+    @media(max-width:900px){.fs-v19-loading-card{top:50%;width:min(600px,calc(100% - 28px));padding:22px 20px 20px;border-radius:22px;transform:translate(-50%,-50%)}.fs-v19-loading-quote{font-size:14px}}
 
     /* Alternância segura entre visual mobile e visual desktop */
     .fs-v19-desktop-return{display:flex!important;align-items:center;gap:7px;margin-top:8px!important;text-decoration:none;color:#53617a;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:800;background:#f7f9fc;border:1px solid #e2e8f2;cursor:pointer}
@@ -283,6 +285,7 @@ function paintLoadingProgress(forceComplete=false){
   if(forceComplete)pct=100;
   const bar=$('fs-v19-loading-bar'),label=$('fs-v19-loading-percent');
   if(bar)bar.style.width=pct+'%';
+  const card=$('fs-v19-loading-card');if(card)card.style.setProperty('--fs-progress',String(pct));
   if(label)label.textContent=pct+'%';
 }
 function finishLoadingReflection(){
@@ -306,6 +309,7 @@ function setLoadingReflection(show){
       fsV19QuoteIndex=(fsV19QuoteIndex+1)%FS_V19_REFLECTIONS.length;
       paintReflection();
       const bar=$('fs-v19-loading-bar');if(bar)bar.style.width='0%';
+      c.style.setProperty('--fs-progress','0');
       const label=$('fs-v19-loading-percent');if(label)label.textContent='0%';
     }
     c.classList.add('is-visible');
@@ -401,8 +405,8 @@ function stabilizeAccessRoster(){
   const list=$('access-user-list');
   if(!wrap||!list)return;
 
-  // O agrupador antigo recria o bloco a cada atualização. Mantemos qualquer
-  // grupo interno aberto e escondemos o cabeçalho redundante da filial.
+  // O agrupador interno permanece aberto apenas para que a lista seja exibida
+  // quando o bloco principal for aberto. O bloco principal nunca é aberto aqui.
   list.querySelectorAll('.access-branch-group-addon').forEach(g=>{g.open=true});
 
   const rows=[...list.querySelectorAll('.access-user')];
@@ -427,11 +431,27 @@ function stabilizeAccessRoster(){
     summary.innerHTML='<span class="fs-v18-access-title">Usuários cadastrados</span><span class="fs-v18-access-meta">'+esc(branchLabel)+' · '+rows.length+' colaborador'+(rows.length===1?'':'es')+'</span><span class="fs-v18-access-arrow" aria-hidden="true">⌄</span>';
   }
 }
+function protectAccessRosterToggle(){
+  const wrap=document.querySelector('.access-list-wrap');
+  if(!wrap||wrap.dataset.fsV21Toggle==='1')return;
+  wrap.dataset.fsV21Toggle='1';
+  wrap.open=false;
+  let userIntentUntil=0;
+  const markIntent=()=>{userIntentUntil=Date.now()+700};
+  const summary=wrap.querySelector(':scope > summary');
+  summary?.addEventListener('pointerdown',markIntent,{passive:true});
+  summary?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')markIntent()});
+  new MutationObserver(()=>{
+    if(wrap.open&&Date.now()>userIntentUntil){wrap.open=false;}
+  }).observe(wrap,{attributes:true,attributeFilter:['open']});
+}
 function watchAccessRoster(){
-  const list=$('access-user-list');if(!list||list.dataset.fsV18Watch==='1')return;
+  const list=$('access-user-list');if(!list)return;
+  protectAccessRosterToggle();
+  if(list.dataset.fsV18Watch==='1'){stabilizeAccessRoster();return;}
   list.dataset.fsV18Watch='1';
   let timer=0;
-  const schedule=()=>{clearTimeout(timer);timer=setTimeout(stabilizeAccessRoster,60)};
+  const schedule=()=>{clearTimeout(timer);timer=setTimeout(()=>{stabilizeAccessRoster();protectAccessRosterToggle()},60)};
   new MutationObserver(schedule).observe(list,{childList:true,subtree:true});
   schedule();
 }
@@ -442,7 +462,7 @@ function cleanupBottom(){
   const p=$('permissions');if(p&&!p.closest('#fs-v16-permissions-dialog'))p.style.display='none';
   const d=$('data-admin-addon');if(d&&!d.closest('#fs-v16-data-dialog'))d.style.display='none';
 }
-function enhance(){style();desktop();mobileMenu();stableHeader();cleanupBottom();watchAccessRoster();stabilizeAccessRoster();desktopReturnControl();watchLoadingReflection()}
+function enhance(){style();desktop();mobileMenu();stableHeader();cleanupBottom();watchAccessRoster();stabilizeAccessRoster();protectAccessRosterToggle();desktopReturnControl();watchLoadingReflection()}
 function boot(){
   document.body.classList.add('fs-v17-awaiting-apply');
   document.body.classList.remove('fs-v17-analysis-applied');
