@@ -38,20 +38,52 @@ function style(){
       .fs-bi-sidebar{display:none!important}
       body.fs-bi-v12 main{padding-bottom:28px!important}
 
-      /* Cabeçalho estável: sem abrir/fechar por scroll. Evita a tremedeira. */
-      .fs-bi-topbar{position:sticky!important;top:0!important;z-index:1400!important;grid-template-columns:minmax(0,1fr) auto minmax(0,46vw)!important;grid-template-areas:'title menu summary' 'toolbar toolbar toolbar'!important;max-height:none!important;overflow:visible!important;transition:none!important;padding:10px 14px!important}
-      .fs-v13-topbar-title{grid-area:title!important;align-self:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+      /* Cabeçalho mobile fixo em UMA altura. Nada muda de tamanho durante o scroll. */
+      .fs-bi-topbar{
+        position:sticky!important;top:0!important;z-index:1400!important;
+        display:grid!important;
+        grid-template-columns:minmax(0,1fr) 44px minmax(150px,46vw)!important;
+        grid-template-areas:'title menu summary'!important;
+        align-items:center!important;gap:8px!important;
+        height:72px!important;min-height:72px!important;max-height:72px!important;
+        overflow:visible!important;padding:10px 14px!important;
+        transition:none!important;animation:none!important;
+        box-shadow:0 5px 24px rgba(28,28,30,.06)!important;
+        background:rgba(255,255,255,.96)!important;
+        backdrop-filter:blur(22px) saturate(180%)!important;
+        -webkit-backdrop-filter:blur(22px) saturate(180%)!important;
+      }
+      .fs-v13-topbar-title{grid-area:title!important;align-self:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;min-width:0!important}
       #fs-v16-menu-btn{display:flex!important;grid-area:menu!important;align-self:center!important}
       #fs-v15-menu-btn{display:none!important}
       #fs-v13-mobile-summary{display:flex!important;grid-area:summary!important;max-width:46vw!important;min-width:0!important;align-self:center!important;cursor:pointer!important}
 
-      /* Por padrão os filtros ficam recolhidos. Só abrem ao tocar em “Filtros da análise”. */
-      .fs-v13-toolbar{display:none!important;grid-area:toolbar!important;max-height:none!important;opacity:1!important;transform:none!important;pointer-events:auto!important;overflow:visible!important;transition:none!important}
+      /* Os filtros NÃO aumentam a altura do cabeçalho. Abrem como painel flutuante. */
+      .fs-v13-toolbar{
+        display:none!important;position:fixed!important;
+        top:78px!important;left:12px!important;right:12px!important;
+        width:auto!important;max-width:none!important;
+        max-height:calc(100dvh - 94px)!important;overflow:auto!important;
+        grid-area:auto!important;opacity:1!important;transform:none!important;
+        pointer-events:auto!important;transition:none!important;animation:none!important;
+        z-index:1395!important;padding:14px!important;border-radius:22px!important;
+        background:rgba(255,255,255,.98)!important;
+        box-shadow:0 24px 70px rgba(28,28,30,.18)!important;
+        backdrop-filter:blur(24px) saturate(180%)!important;
+        -webkit-backdrop-filter:blur(24px) saturate(180%)!important;
+      }
       body.fs-v16-filters-open .fs-v13-toolbar{display:grid!important}
 
-      /* Neutraliza a classe antiga que era alternada a cada movimento da página. */
-      body.fs-mobile-header-collapsed .fs-bi-topbar{max-height:none!important;padding:10px 14px!important;box-shadow:0 5px 24px rgba(28,28,30,.05)!important}
-      body.fs-mobile-header-collapsed .fs-v13-toolbar{display:none!important;max-height:none!important;opacity:1!important;transform:none!important;pointer-events:auto!important;overflow:visible!important}
+      /* Neutraliza totalmente o comportamento legado que encolhia/expandia no scroll. */
+      body.fs-mobile-header-collapsed .fs-bi-topbar,
+      body:not(.fs-mobile-header-collapsed) .fs-bi-topbar{
+        height:72px!important;min-height:72px!important;max-height:72px!important;
+        padding:10px 14px!important;transform:none!important;opacity:1!important;
+      }
+      body.fs-mobile-header-collapsed .fs-v13-topbar-title,
+      body.fs-mobile-header-collapsed #fs-v13-mobile-summary,
+      body.fs-mobile-header-collapsed #fs-v16-menu-btn{transform:none!important;opacity:1!important}
+      body.fs-mobile-header-collapsed .fs-v13-toolbar{display:none!important}
       body.fs-mobile-header-collapsed.fs-v16-filters-open .fs-v13-toolbar{display:grid!important}
     }
   `;document.head.appendChild(s);
@@ -122,12 +154,31 @@ function mobileMenu(){
   d.querySelector('[data-action="config"]')?.addEventListener('click',()=>{d.close();setTimeout(openPermissions,50)});
 }
 function stableHeader(){
-  const summary=$('fs-v13-mobile-summary');if(!summary||summary.dataset.fsV16==='1')return;
+  const summary=$('fs-v13-mobile-summary');if(!summary)return;
+
+  // Mantém o cabeçalho em um único estado visual. O legado pode tentar recolher
+  // durante o scroll, mas esta rotina neutraliza a classe sem alterar a página.
+  const clearLegacyState=()=>{
+    if(document.body.classList.contains('fs-mobile-header-collapsed'))
+      document.body.classList.remove('fs-mobile-header-collapsed');
+  };
+  clearLegacyState();
+
+  if(!document.body.dataset.fsV16HeaderWatch){
+    document.body.dataset.fsV16HeaderWatch='1';
+    const bodyObserver=new MutationObserver(clearLegacyState);
+    bodyObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
+  }
+
+  if(summary.dataset.fsV16==='1')return;
   summary.dataset.fsV16='1';summary.setAttribute('role','button');summary.setAttribute('tabindex','0');summary.setAttribute('aria-expanded','false');
-  const toggle=()=>{const open=document.body.classList.toggle('fs-v16-filters-open');summary.setAttribute('aria-expanded',String(open));};
-  summary.addEventListener('click',toggle);summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
-  // Remove o estado visual legado; o novo CSS não depende mais do scroll.
-  document.body.classList.remove('fs-mobile-header-collapsed');
+  const toggle=()=>{
+    clearLegacyState();
+    const open=document.body.classList.toggle('fs-v16-filters-open');
+    summary.setAttribute('aria-expanded',String(open));
+  };
+  summary.addEventListener('click',toggle);
+  summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
 }
 function cleanupBottom(){
   document.body.classList.add('fs-v16-ready');
