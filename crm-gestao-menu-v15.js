@@ -51,6 +51,23 @@ function style(){
     #fs-v17-filter-dialog .fs-v13-apply{grid-column:1/-1!important;width:100%!important;height:50px!important;border-radius:14px!important;font-size:14px!important;margin-top:2px!important}
     #fs-v17-filter-dialog .fs-v13-range{grid-column:1/-1!important;text-align:center!important;white-space:normal!important;font-size:11px!important;padding-top:2px!important}
 
+
+
+    /* 18/09/2026D — nenhum dado analítico antes de Aplicar análise */
+    body.fs-v17-awaiting-apply .section-kicker,
+    body.fs-v17-awaiting-apply .manager-readonly,
+    body.fs-v17-awaiting-apply #branch-overview,
+    body.fs-v17-awaiting-apply #metrics,
+    body.fs-v17-awaiting-apply #fs-team-intelligence,
+    body.fs-v17-awaiting-apply #loss-intel,
+    body.fs-v17-awaiting-apply #equipe,
+    body.fs-v17-awaiting-apply #seller-cards,
+    body.fs-v17-awaiting-apply #relatorios,
+    body.fs-v17-awaiting-apply .explanation,
+    body.fs-v17-awaiting-apply #updated{display:none!important}
+    body.fs-v17-awaiting-apply #access-admin{margin-bottom:12px!important}
+    body.fs-v17-awaiting-apply #state:empty::before{content:'Selecione os filtros da análise e toque em Aplicar análise.';display:block;color:#667085}
+
     @media(max-width:900px){
       .fs-bi-sidebar{display:none!important}
       body.fs-bi-v12 main{padding-bottom:28px!important}
@@ -222,7 +239,12 @@ function stableHeader(){
   summary.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openFilters()});
   summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openFilters()}});
   filterDialog().addEventListener('close',()=>summary.setAttribute('aria-expanded','false'));
-  $('refresh')?.addEventListener('click',()=>{const d=$('fs-v17-filter-dialog');if(d?.open)d.close()});
+  $('refresh')?.addEventListener('click',()=>{
+    document.body.classList.remove('fs-v17-awaiting-apply');
+    document.body.classList.add('fs-v17-analysis-applied');
+    const d=$('fs-v17-filter-dialog');if(d?.open)d.close();
+    setTimeout(()=>document.getElementById('metrics')?.scrollIntoView({behavior:'smooth',block:'start'}),180);
+  });
   window.addEventListener('resize',syncFilterToolbarLocation);
 }
 function cleanupBottom(){
@@ -232,6 +254,13 @@ function cleanupBottom(){
   const d=$('data-admin-addon');if(d&&!d.closest('#fs-v16-data-dialog'))d.style.display='none';
 }
 function enhance(){style();desktop();mobileMenu();stableHeader();cleanupBottom()}
-function boot(){enhance();let n=0;const t=setInterval(()=>{enhance();if(++n>40)clearInterval(t)},250);new MutationObserver(()=>requestAnimationFrame(enhance)).observe(document.documentElement,{childList:true,subtree:true})}
+function boot(){
+  document.body.classList.add('fs-v17-awaiting-apply');
+  document.body.classList.remove('fs-v17-analysis-applied');
+  const accessList=document.querySelector('.access-list-wrap');if(accessList)accessList.open=false;
+  enhance();
+  let n=0;const t=setInterval(()=>{enhance();const a=document.querySelector('.access-list-wrap');if(a&&!document.body.classList.contains('fs-v17-analysis-applied'))a.open=false;if(++n>40)clearInterval(t)},250);
+  new MutationObserver(()=>requestAnimationFrame(enhance)).observe(document.documentElement,{childList:true,subtree:true})
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
