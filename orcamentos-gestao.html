@@ -207,6 +207,14 @@
   }
 </style>
 
+
+<style id="fs-entry-loading-only-lock">
+  /* Após o loading de entrada terminar, nenhuma sincronização interna pode reabrir o popup. */
+  html.fs-entry-loading-complete #fs-v19-loading-card{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+  html.fs-entry-loading-complete body::before{display:none!important;content:none!important}
+  html.fs-entry-loading-complete body{overflow:auto!important}
+  html.fs-entry-loading-complete body #state{visibility:visible!important}
+</style>
 </head>
 <body class="fs-v19-loading">
 
@@ -284,6 +292,7 @@
   window.__fsImmediateProgressTimer=setInterval(tick,72);
 })();
 </script>
+\n<script id="fs-entry-loading-only-guard">\n(function(){\n  var root=document.documentElement;\n  var body=document.body;\n  var card=document.getElementById('fs-v19-loading-card');\n  if(!body||!card)return;\n\n  var completed=false;\n  var initialSeen=card.classList.contains('is-visible') || body.classList.contains('fs-v19-loading');\n\n  function hardHide(){\n    if(!completed)return;\n    root.classList.add('fs-entry-loading-complete');\n    root.classList.remove('fs-boot-lock');\n    body.classList.remove('fs-v19-loading');\n    card.classList.remove('is-visible');\n    card.setAttribute('aria-hidden','true');\n    if(window.__fsImmediateProgressTimer){\n      clearInterval(window.__fsImmediateProgressTimer);\n      window.__fsImmediateProgressTimer=null;\n    }\n  }\n\n  function markCompleted(){\n    if(completed)return;\n    completed=true;\n    window.__fsEntryLoadingCompleted=true;\n    hardHide();\n  }\n\n  /* O primeiro fechamento feito pela lógica normal encerra definitivamente o loading desta página. */\n  var observer=new MutationObserver(function(){\n    if(completed){hardHide();return;}\n    if(!initialSeen){\n      initialSeen=card.classList.contains('is-visible') || body.classList.contains('fs-v19-loading');\n      return;\n    }\n    var visible=card.classList.contains('is-visible') && body.classList.contains('fs-v19-loading');\n    if(!visible) markCompleted();\n  });\n  observer.observe(card,{attributes:true,attributeFilter:['class','style']});\n  observer.observe(body,{attributes:true,attributeFilter:['class']});\n\n  /* Segurança: se o carregamento inicial já liberou a interface mas algum script não retirou todas as classes,\n     não deixa o popup ficar preso indefinidamente. */\n  var started=Number(window.__fsGestaoLoadingStarted||Date.now());\n  var safety=setInterval(function(){\n    if(completed){clearInterval(safety);return;}\n    var content=document.getElementById('content');\n    var state=document.getElementById('state');\n    var elapsed=Date.now()-started;\n    var interfaceReady=(content && !content.hidden) || (state && /selecione os filtros/i.test(state.textContent||''));\n    if(interfaceReady && elapsed>=7000){\n      markCompleted();\n      clearInterval(safety);\n    }\n  },250);\n})();\n</script>\n
 <header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
 <main>
 <section class="hero" id="visao-executiva">
@@ -364,5 +373,5 @@
 <script src="./crm-gestao-polish-v8.js?v=18091150"></script>
 <script src="./crm-gestao-bi-v12.js?v=18091235"></script>
 <script src="./crm-gestao-final-v13.js?v=18091150"></script>
-<script src="./crm-gestao-menu-v15.js?v=20260918-1305"></script>
+<script src="./crm-gestao-menu-v15.js?v=20260918-1403"></script>
 </body></html>
