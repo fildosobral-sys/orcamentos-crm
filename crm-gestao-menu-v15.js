@@ -72,6 +72,14 @@ function style(){
     /* Removido definitivamente: texto explicativo solicitado para sair. */
     .fs-v12-funnel-note{display:none!important}
 
+    /* 18/09/2026 12:15 — usuários cadastrados estáveis */
+    .access-list-wrap>summary{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}
+    .fs-v18-access-title{font-weight:800}
+    .fs-v18-access-meta{margin-left:auto;color:#7b8495;font-size:11px;font-weight:800;text-align:right;white-space:nowrap}
+    #access-user-list .access-branch-group-addon>summary{display:none!important}
+    #access-user-list .access-branch-group-addon{border:0!important;background:transparent!important;margin:0!important;overflow:visible!important}
+    #access-user-list .access-branch-users-addon{padding:0!important}
+
     @media(max-width:900px){
       .fs-bi-sidebar{display:none!important}
       body.fs-bi-v12 main{padding-bottom:28px!important}
@@ -246,18 +254,66 @@ function stableHeader(){
   $('refresh')?.addEventListener('click',()=>{
     document.body.classList.remove('fs-v17-awaiting-apply');
     document.body.classList.add('fs-v17-analysis-applied');
+    const accessList=document.querySelector('.access-list-wrap');if(accessList){accessList.dataset.fsV18Opened='';}
+    setTimeout(stabilizeAccessRoster,80);
     const d=$('fs-v17-filter-dialog');if(d?.open)d.close();
     setTimeout(()=>document.getElementById('metrics')?.scrollIntoView({behavior:'smooth',block:'start'}),180);
   });
   window.addEventListener('resize',syncFilterToolbarLocation);
 }
+function stabilizeAccessRoster(){
+  const wrap=document.querySelector('.access-list-wrap');
+  const list=$('access-user-list');
+  if(!wrap||!list)return;
+
+  // O agrupador antigo recria o bloco a cada atualização. Mantemos qualquer
+  // grupo interno aberto e escondemos o cabeçalho redundante da filial.
+  list.querySelectorAll('.access-branch-group-addon').forEach(g=>{g.open=true});
+
+  const rows=[...list.querySelectorAll('.access-user')];
+  if(!rows.length)return;
+
+  const branches=[];
+  rows.forEach(row=>{
+    const small=row.querySelector('small');
+    const raw=String(small?.textContent||'').trim();
+    const branch=raw.split('·')[0].trim();
+    if(branch&&!/^(VENDEDOR|GERENTE|COLABORADOR)$/i.test(branch)&&!branches.includes(branch))branches.push(branch);
+  });
+  const selected=$('hero-branch')?.selectedOptions?.[0]?.textContent?.trim();
+  let branchLabel='';
+  if(selected&&!/todas as filiais/i.test(selected)) branchLabel=selected.replace(/^Minha equipe\s*·\s*/i,'');
+  else if(branches.length===1) branchLabel=branches[0];
+  else if(branches.length>1) branchLabel=branches.length+' filiais';
+  else branchLabel='Equipe';
+
+  const summary=wrap.querySelector(':scope > summary');
+  if(summary){
+    summary.innerHTML='<span class="fs-v18-access-title">Usuários cadastrados</span><span class="fs-v18-access-meta">'+esc(branchLabel)+' · '+rows.length+' colaborador'+(rows.length===1?'':'es')+'</span>';
+  }
+
+  // Ao aplicar a análise, abre uma vez. Depois respeita se o usuário fechar.
+  if(document.body.classList.contains('fs-v17-analysis-applied')&&!wrap.dataset.fsV18Opened){
+    wrap.open=true;
+    wrap.dataset.fsV18Opened='1';
+  }
+}
+function watchAccessRoster(){
+  const list=$('access-user-list');if(!list||list.dataset.fsV18Watch==='1')return;
+  list.dataset.fsV18Watch='1';
+  let timer=0;
+  const schedule=()=>{clearTimeout(timer);timer=setTimeout(stabilizeAccessRoster,60)};
+  new MutationObserver(schedule).observe(list,{childList:true,subtree:true});
+  schedule();
+}
+
 function cleanupBottom(){
   document.body.classList.add('fs-v16-ready');
   $('relatorios')?.setAttribute('hidden','');
   const p=$('permissions');if(p&&!p.closest('#fs-v16-permissions-dialog'))p.style.display='none';
   const d=$('data-admin-addon');if(d&&!d.closest('#fs-v16-data-dialog'))d.style.display='none';
 }
-function enhance(){style();desktop();mobileMenu();stableHeader();cleanupBottom()}
+function enhance(){style();desktop();mobileMenu();stableHeader();cleanupBottom();watchAccessRoster();stabilizeAccessRoster()}
 function boot(){
   document.body.classList.add('fs-v17-awaiting-apply');
   document.body.classList.remove('fs-v17-analysis-applied');

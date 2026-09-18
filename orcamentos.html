@@ -5356,5 +5356,27 @@ window.FSCRMBridge = {
 
 </style>
 <script src="./home-transition.js?v=90"></script>
+
+<script id="fs-preco-tabela-persistente-1215">
+(function(){
+  function aplicarAzulTabela(){
+    var card=document.querySelector('#discountForm > .pricing-card-table');
+    if(!card)return;
+    card.style.setProperty('background','linear-gradient(180deg,#e4f1ff 0%,#edf6ff 100%)','important');
+    card.style.setProperty('border','1px solid #bdd8f6','important');
+    card.style.setProperty('box-shadow','0 8px 22px rgba(59,130,246,.09)','important');
+    var pay=card.querySelector('div[style*="margin-top: 1.5rem"]');
+    if(pay){
+      pay.style.setProperty('background','rgba(236,246,255,.82)','important');
+      pay.style.setProperty('border','1px solid #c9dff6','important');
+      pay.style.setProperty('box-shadow','none','important');
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',aplicarAzulTabela,{once:true});else aplicarAzulTabela();
+  window.addEventListener('pageshow',function(){requestAnimationFrame(aplicarAzulTabela)});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)requestAnimationFrame(aplicarAzulTabela)});
+})();
+</script>
+
 </body>
 </html>

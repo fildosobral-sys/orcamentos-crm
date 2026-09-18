@@ -179,3 +179,23 @@ body.fs-bi-v12 #loss-cases{display:grid!important;grid-template-columns:repeat(2
   body.fs-bi-v12 .seller-cards{grid-template-columns:1fr!important}
   .fs-v12-rank-sub{flex-direction:column;gap:1px}
 }
+
+
+/* 18/09/2026 12:15 — acabamento dos indicadores e evolução */
+.fs-v12-metric{position:relative;overflow:hidden;background:linear-gradient(180deg,#fff 0%,#fbfcff 100%)}
+.fs-v12-metric::before{position:absolute;right:12px;top:11px;width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent,#6657d9) 10%,white);color:var(--accent,#6657d9);font-size:12px;font-weight:900;line-height:1}
+.fs-v12-metric[data-metric="budget"]::before{content:'▦'}
+.fs-v12-metric[data-metric="wins"]::before{content:'✓'}
+.fs-v12-metric[data-metric="conversion"]::before{content:'%'}
+.fs-v12-metric[data-metric="open"]::before{content:'◷'}
+.fs-v12-metric[data-metric="scheduled"]::before{content:'⌁'}
+.fs-v12-metric[data-metric="potential"]::before{content:'R$';font-size:9px}
+.fs-v12-metric[data-metric="lost"]::before{content:'↓'}
+.fs-v12-metric[data-metric="value"]::before{content:'◆';font-size:9px}
+.fs-v12-metric small,.fs-v12-metric strong{padding-right:34px}
+.fs-v12-evo-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+.fs-v12-evo-summary>span{min-height:66px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(180deg,#fafbff,#f6f8fc)}
+@media(max-width:900px){
+  .fs-v12-evo-summary{grid-template-columns:1fr 1fr!important}
+  .fs-v12-evo-summary>span{min-height:76px;padding:12px!important}
+}
