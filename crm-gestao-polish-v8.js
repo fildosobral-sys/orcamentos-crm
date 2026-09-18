@@ -218,3 +218,22 @@
 
   setInterval(()=>{if(!document.hidden)refresh();},60000);
 })();
+
+/* =========================================================
+   FS CRM V9 — acabamento do cabeçalho da gestão
+   ========================================================= */
+(function(){
+  'use strict';
+  function apply(){
+    if(document.title!=='Gestão da equipe')document.title='Gestão da equipe';
+    const hero=document.querySelector('.hero');
+    if(hero)hero.classList.add('fs-v9-hero');
+    const team=document.getElementById('hero-team-wrap');
+    if(team)team.classList.add('fs-v9-team-selector');
+    const filters=document.querySelector('.executive-filter-wrap');
+    if(filters)filters.classList.add('fs-v9-analysis-card');
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true});
+  else apply();
+  new MutationObserver(apply).observe(document.documentElement,{childList:true,subtree:true});
+})();

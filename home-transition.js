@@ -326,3 +326,134 @@
     childList:true, subtree:true
   });
 })();
+
+/* =========================================================
+   FS CRM V9 — login limpo, assinatura discreta e teclado numérico
+   ========================================================= */
+(function(){
+  'use strict';
+
+  function authCardVisible(){
+    const card=document.getElementById('authCard');
+    if(!card)return false;
+    const st=getComputedStyle(card);
+    return st.display!=='none' && st.visibility!=='hidden' && card.offsetParent!==null;
+  }
+
+  function syncLoginPrivacy(){
+    const panel=document.getElementById('fscrm-panel');
+    if(!panel)return;
+    if(authCardVisible()){
+      panel.hidden=true;
+      panel.style.setProperty('display','none','important');
+      panel.setAttribute('aria-hidden','true');
+    }else{
+      panel.style.removeProperty('display');
+      panel.removeAttribute('aria-hidden');
+    }
+  }
+
+  function polishDocument(){
+    if(document.title!=='Orçamentos')document.title='Orçamentos';
+
+    const footer=document.querySelector('.developer-signature');
+    if(footer){
+      const main=footer.querySelector('.signature-main');
+      const sub=footer.querySelector('.signature-subtitle');
+      if(main)main.innerHTML='Developed by <span class="developer-name">@FildoSobral</span>';
+      if(sub)sub.textContent='Sales CRM · FS Solutions';
+    }
+
+    const styleId='fs-v9-login-footer-style';
+    if(!document.getElementById(styleId)){
+      const s=document.createElement('style');
+      s.id=styleId;
+      s.textContent=`
+        .developer-signature{
+          opacity:.46!important;
+          padding:.55rem 0 .7rem!important;
+          min-height:0!important;
+        }
+        .developer-signature .signature-main{
+          margin:0!important;
+          font-size:.74rem!important;
+          font-weight:500!important;
+          letter-spacing:.02em!important;
+        }
+        .developer-signature .developer-name{
+          font-weight:650!important;
+          color:rgba(255,255,255,.82)!important;
+        }
+        .developer-signature .signature-subtitle{
+          margin:.14rem 0 0!important;
+          font-size:.62rem!important;
+          font-weight:400!important;
+          opacity:.78!important;
+        }
+        #authCard ~ #fscrm-panel{display:none!important;}
+        .price-input[data-fs-price-card="1"]{
+          cursor:text!important;
+          border-radius:14px!important;
+        }
+        .price-input[data-fs-price-card="1"]:focus-within{
+          box-shadow:0 0 0 3px rgba(102,126,234,.12)!important;
+        }
+        #precoNormal,#precoPromocional,
+        #valorParcelaNormal,#valorParcelaPromocional{
+          touch-action:manipulation!important;
+        }
+        @media(max-width:640px){
+          .developer-signature{padding:.42rem 0 .55rem!important;}
+          .developer-signature .signature-main{font-size:.68rem!important;}
+          .developer-signature .signature-subtitle{font-size:.58rem!important;}
+        }
+      `;
+      document.head.appendChild(s);
+    }
+  }
+
+  function numericSetup(){
+    const ids=['precoNormal','precoPromocional','valorParcelaNormal','valorParcelaPromocional'];
+    ids.forEach(id=>{
+      const input=document.getElementById(id);
+      if(!input || input.dataset.fsNumericReady==='1')return;
+      input.dataset.fsNumericReady='1';
+      input.setAttribute('inputmode','decimal');
+      input.setAttribute('enterkeyhint','done');
+      input.setAttribute('autocomplete','off');
+      input.setAttribute('pattern','[0-9.,]*');
+
+      const card=input.closest('.price-input');
+      if(card){
+        card.dataset.fsPriceCard='1';
+        card.setAttribute('role','group');
+        card.addEventListener('click',e=>{
+          if(e.target.closest('button,a,select,input[type="radio"],input[type="checkbox"]'))return;
+          input.focus({preventScroll:true});
+          try{input.setSelectionRange(input.value.length,input.value.length);}catch(_e){}
+        });
+      }
+      const group=input.closest('.input-group');
+      const label=group?.querySelector(`label[for="${id}"]`);
+      label?.addEventListener('click',()=>setTimeout(()=>input.focus({preventScroll:true}),0));
+    });
+  }
+
+  function boot(){
+    polishDocument();
+    numericSetup();
+    syncLoginPrivacy();
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+
+  document.addEventListener('fscrm:auth-required',()=>setTimeout(syncLoginPrivacy,0));
+  document.addEventListener('fscrm:authenticated',()=>setTimeout(syncLoginPrivacy,0));
+
+  new MutationObserver(()=>{
+    polishDocument();
+    numericSetup();
+    syncLoginPrivacy();
+  }).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','hidden','class']});
+})();
