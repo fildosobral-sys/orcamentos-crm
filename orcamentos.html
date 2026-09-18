@@ -1864,6 +1864,19 @@
   }
 }
 
+
+/* AJUSTE FINAL 18/09/2026C — preço de tabela mais azul-bebê */
+.pricing-card-table > div[style*="margin-top: 1.5rem"]{
+  background: linear-gradient(180deg, rgba(228, 240, 255, 0.78), rgba(240, 247, 255, 0.88)) !important;
+  border: 1px solid rgba(179, 205, 242, 0.80) !important;
+}
+@media (max-width: 640px){
+  .pricing-card-table > div[style*="margin-top: 1.5rem"]{
+    background: linear-gradient(180deg, rgba(224, 238, 255, 0.82), rgba(240, 247, 255, 0.92)) !important;
+    border: 1px solid rgba(179, 205, 242, 0.90) !important;
+  }
+}
+
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
@@ -3159,7 +3172,6 @@ let currentData = [];
 
             if (parcelas < 1 || parcelas > 12) {
                 out.value = '';
-                showToast("⚠️ ", "error");
                 return;
             }
 
@@ -3180,7 +3192,6 @@ let currentData = [];
 
             if (parcelas < 1 || parcelas > 12) {
                 out.value = '';
-                showToast("⚠️ ", "error");
                 return;
             }
 
@@ -3256,10 +3267,8 @@ let currentData = [];
             
             if (modalidade === 'parcelado') {
                 parcelasGroup.classList.add('active');
-                 // Auto-calcular parcela ao ativar
-                 setTimeout(atualizarParcelamentoPromocional, 0);
-                 // Auto-calcular parcela ao ativar
-                 setTimeout(atualizarParcelamentoNormal, 0);
+                // Apenas exibe os campos. O cálculo acontece quando preço/parcelas forem informados.
+                setTimeout(atualizarParcelamentoNormal, 0);
             } else {
                 parcelasGroup.classList.remove('active');
                 document.getElementById('parcelasNormal').value = '';
@@ -3273,6 +3282,8 @@ let currentData = [];
             
             if (modalidade === 'parcelado') {
                 parcelasGroup.classList.add('active');
+                // Apenas exibe os campos. O cálculo acontece quando preço/parcelas forem informados.
+                setTimeout(atualizarParcelamentoPromocional, 0);
             } else {
                 parcelasGroup.classList.remove('active');
                 document.getElementById('parcelasPromocional').value = '';
