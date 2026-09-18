@@ -57,27 +57,241 @@
     btn.setAttribute('aria-label','Abrir gestão da equipe');
   }
 
-  const STATUS={negociacao:['🤝','Em negociação','negociacao'],aguardando:['💬','Aguardando resposta','aguardando'],agendado:['📅','Retorno agendado','agendado'],aguardando_produto:['📦','Aguardando produto','produto'],ganha:['✅','Bem-sucedida','ganha'],perdida:['❌','Não concluído','perdida'],outro:['🔖','Outro','outro']};
+  const STATUS={negociacao:['🤝','Em negociação','negociacao'],aguardando:['💬','Aguardando resposta','aguardando'],agendado:['📅','Retorno agendado','agendado'],aguardando_produto:['📦','Aguardando produto','produto'],ganha:['✅','Venda concluída','ganha'],perdida:['❌','Não concluído','perdida'],outro:['🔖','Outro','outro']};
   function recordPool(){const arr=[];try{if(typeof currentData!=='undefined'&&Array.isArray(currentData))arr.push(...currentData)}catch(_e){}try{if(typeof crmHistoryShadow!=='undefined'&&Array.isArray(crmHistoryShadow))arr.push(...crmHistoryShadow)}catch(_e){}const map=new Map();arr.forEach(r=>{const id=String(r?.__backendId||r?.id||'');if(id)map.set(id,{...(map.get(id)||{}),...r})});return map}
   function cardRecordId(card){const btn=card.querySelector('[onclick*="acompanharRegistroHistorico"]');if(!btn)return '';const raw=btn.getAttribute('onclick')||'',m=raw.match(/acompanharRegistroHistorico\((['"])(.*?)\1\)/);return m?m[2]:''}
   function statusInfo(r){if(!r)return STATUS.negociacao;let key=String(r.crm_status||r.status||'').trim();if(r.venda_bem_sucedida===true||key==='ganha')key='ganha';if(r.crm_followupType==='produto'&&!['ganha','perdida'].includes(key))key='aguardando_produto';const info=STATUS[key]||STATUS.outro,custom=String(r.crm_customStatus||r.customStatus||'').trim();return [info[0],key==='outro'&&custom?custom:info[1],info[2]]}
   function brDate(v){if(!v)return '';const p=String(v).slice(0,10).split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:''}
-  function syncHistoryStatus(){const pool=recordPool();document.querySelectorAll('.history-item').forEach(card=>{const r=pool.get(cardRecordId(card));if(!r)return;const badge=card.querySelector('.history-state-meta .success-status');if(!badge)return;const [icon,label,cls]=statusInfo(r),d=r.crm_next||r.next||'',t=r.crm_nextTime||r.nextTime||'',suffix=((cls==='produto'||cls==='agendado')&&d)?' · '+brDate(d)+(t?' · '+t:''):'';badge.textContent=`${icon} ${label}${suffix}`;badge.className='success-status crm-state-'+cls})}
+
+  /* Histórico: status curto dentro do card, detalhes da agenda abaixo. */
+  function syncHistoryStatus(){
+    const pool=recordPool();
+    document.querySelectorAll('.history-item').forEach(card=>{
+      const r=pool.get(cardRecordId(card));if(!r)return;
+      const badge=card.querySelector('.history-state-meta .success-status');if(!badge)return;
+      const [icon,label,cls]=statusInfo(r),d=r.crm_next||r.next||'',t=r.crm_nextTime||r.nextTime||'';
+      const agenda=((cls==='produto'||cls==='agendado')&&d)
+        ? `<small class="crm-status-detail">${cls==='produto'?'Previsão':'Retorno'} ${brDate(d)}${t?' · '+t:''}</small>`
+        : '';
+      badge.innerHTML=`<span class="crm-status-title">${icon} ${String(label).replace(/[<>&"]/g,'')}</span>${agenda}`;
+      badge.className='success-status crm-state-'+cls;
+    });
+  }
+
+  function saleMode(){
+    const modal=document.getElementById('fscrm-modal');
+    const status=document.getElementById('fscrm-edit-status');
+    if(!modal||!status)return;
+    const sold=status.value==='ganha';
+
+    const hideIds=['fscrm-return-schedule','fscrm-loss-reason-wrap','fscrm-loss-box','fscrm-standard-fields','fscrm-postsale-details'];
+    hideIds.forEach(id=>{const el=document.getElementById(id);if(el)el.hidden=sold;});
+
+    let box=document.getElementById('fs-sale-final-box');
+    if(sold){
+      if(!box){
+        box=document.createElement('section');
+        box.id='fs-sale-final-box';
+        box.className='fs-sale-final-box';
+        box.innerHTML=`
+          <div class="fs-sale-final-head">
+            <span class="fs-sale-final-icon">✅</span>
+            <div><strong>Venda realizada</strong><small>Finalize o acompanhamento desta negociação.</small></div>
+          </div>
+          <label>Como a venda foi finalizada?
+            <select id="fs-sale-final-channel">
+              <option value="">Selecione</option>
+              <option value="PRESENCIAL">Presencialmente</option>
+              <option value="WHATSAPP">WhatsApp</option>
+              <option value="TELEFONE">Telefone</option>
+              <option value="OUTRO">Outro</option>
+            </select>
+          </label>`;
+        const note=document.getElementById('fscrm-note-wrap');
+        if(note)note.insertAdjacentElement('beforebegin',box);
+        else modal.querySelector('.fscrm-grid')?.appendChild(box);
+      }
+      box.hidden=false;
+      const note=document.getElementById('fscrm-note-wrap');
+      if(note)note.hidden=false;
+      const msg=document.getElementById('fscrm-message-action');
+      const stop=document.getElementById('fscrm-stop-action');
+      const save=document.getElementById('fscrm-save-action');
+      if(msg)msg.hidden=true;
+      if(stop)stop.hidden=true;
+      if(save)save.textContent='Finalizar venda';
+    }else{
+      if(box)box.hidden=true;
+    }
+  }
+
+  function bindSaleMode(){
+    if(document.documentElement.dataset.fsSaleModeReady==='1')return;
+    document.documentElement.dataset.fsSaleModeReady='1';
+
+    document.addEventListener('change',e=>{
+      if(e.target?.id==='fscrm-edit-status')setTimeout(saleMode,0);
+    },true);
+
+    document.addEventListener('click',e=>{
+      const btn=e.target?.closest?.('#fscrm-save-action');
+      if(!btn)return;
+      const status=document.getElementById('fscrm-edit-status');
+      if(status?.value!=='ganha')return;
+      const channel=document.getElementById('fs-sale-final-channel')?.value||'';
+      const note=document.getElementById('fscrm-edit-note');
+      if(channel&&note&&!String(note.value||'').includes('FINALIZAÇÃO:')){
+        const original=String(note.value||'').trim();
+        note.value=`FINALIZAÇÃO: ${channel}${original?'\n'+original:''}`;
+      }
+    },true);
+  }
+
+  function centerUserMenu(){
+    const dd=document.getElementById('menuDropdown');
+    if(!dd||window.innerWidth>768)return;
+    dd.style.position='fixed';
+    dd.style.top='50%';
+    dd.style.left='50%';
+    dd.style.right='auto';
+    dd.style.bottom='auto';
+    dd.style.margin='0';
+    dd.style.width=Math.min(360,window.innerWidth-28)+'px';
+    dd.style.maxWidth='calc(100vw - 28px)';
+    dd.style.transform='translate(-50%,-50%)';
+  }
+
   function injectStyle(){
-    if(document.getElementById('fs-v13-hotfix-style'))return;const s=document.createElement('style');s.id='fs-v13-hotfix-style';s.textContent=`
+    if(document.getElementById('fs-v91-hotfix-style'))return;
+    const s=document.createElement('style');s.id='fs-v91-hotfix-style';s.textContent=`
       .fs-back-home{position:fixed!important;right:14px!important;bottom:14px!important;width:48px!important;height:48px!important;min-width:48px!important;display:flex!important;align-items:center!important;justify-content:center!important;border-radius:50%!important;background:rgba(255,255,255,.7)!important;border:1px solid rgba(255,255,255,.9)!important;box-shadow:0 6px 18px rgba(15,23,42,.11)!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;opacity:.58!important;z-index:9999!important}
       .success-status.crm-state-negociacao{background:#eef2ff!important;color:#4f46a5!important}.success-status.crm-state-aguardando{background:#edf5ff!important;color:#2563a8!important}.success-status.crm-state-agendado{background:#f4edff!important;color:#7048a5!important}.success-status.crm-state-produto{background:#fff3cf!important;color:#8a6414!important}.success-status.crm-state-ganha{background:#e4f7ec!important;color:#1d7a4b!important}.success-status.crm-state-perdida{background:#fdecee!important;color:#aa3649!important}.success-status.crm-state-outro{background:#eef0f4!important;color:#525b6c!important}
       #btnShareAccess{font-size:1.25rem!important}
-      @media(max-width:640px){.fs-back-home{right:10px!important;bottom:10px!important;width:45px!important;height:45px!important;min-width:45px!important}}
+
+      /* O status é definido apenas no Acompanhar; remove o antigo botão Realizada/Pendente. */
+      .history-actions-compact .history-status-btn{display:none!important}
+
+      /* Segunda linha: status ocupa o espaço liberado e a data fica organizada à direita. */
+      .history-state-meta{
+        grid-column:1/-1!important;
+        display:grid!important;
+        grid-template-columns:minmax(0,2fr) minmax(90px,1fr)!important;
+        gap:.46rem!important;
+        min-width:0!important;
+      }
+      .history-state-meta .success-status{
+        min-width:0!important;
+        width:100%!important;
+        white-space:normal!important;
+        overflow:hidden!important;
+        overflow-wrap:anywhere!important;
+        display:flex!important;
+        flex-direction:column!important;
+        gap:3px!important;
+        align-items:center!important;
+        justify-content:center!important;
+        text-align:center!important;
+        padding:.42rem .36rem!important;
+        font-size:.68rem!important;
+        line-height:1.08!important;
+      }
+      .crm-status-title{
+        display:block!important;
+        max-width:100%!important;
+        font-weight:800!important;
+        white-space:normal!important;
+      }
+      .crm-status-detail{
+        display:block!important;
+        max-width:100%!important;
+        font-size:.61rem!important;
+        font-weight:650!important;
+        line-height:1.12!important;
+        opacity:.84!important;
+        text-transform:none!important;
+        letter-spacing:0!important;
+      }
+
+      /* Venda concluída: fluxo limpo, sem perda e sem campos que não ajudam a finalizar. */
+      .fs-sale-final-box{
+        grid-column:1/-1;
+        margin:12px 0;
+        padding:14px;
+        border:1px solid #ccebd9;
+        border-radius:16px;
+        background:#f2fbf6;
+      }
+      .fs-sale-final-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+      .fs-sale-final-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:#daf5e5;font-size:20px}
+      .fs-sale-final-head div{display:flex;flex-direction:column;gap:2px}
+      .fs-sale-final-head strong{color:#176a42;font-size:1rem}
+      .fs-sale-final-head small{color:#6a7b72;font-size:.74rem}
+      .fs-sale-final-box label{display:flex!important;flex-direction:column!important;gap:6px!important;font-weight:700!important;color:#46504a!important}
+      .fs-sale-final-box select{width:100%!important}
+
+      @media(max-width:768px){
+        .fs-back-home{right:10px!important;bottom:10px!important;width:45px!important;height:45px!important;min-width:45px!important}
+
+        /* Menu abre diretamente centralizado; elimina o "salto" da lateral. */
+        #menuDropdown.menu-dropdown{
+          position:fixed!important;
+          top:50%!important;
+          left:50%!important;
+          right:auto!important;
+          bottom:auto!important;
+          margin:0!important;
+          width:min(360px,calc(100vw - 28px))!important;
+          min-width:0!important;
+          max-width:calc(100vw - 28px)!important;
+          transform:translate(-50%,-50%)!important;
+          transform-origin:center!important;
+          animation:fsMenuCenterIn .16s ease-out!important;
+          z-index:100000!important;
+        }
+        @keyframes fsMenuCenterIn{
+          from{opacity:0;transform:translate(-50%,-50%) scale(.96)}
+          to{opacity:1;transform:translate(-50%,-50%) scale(1)}
+        }
+
+        .history-actions-compact{
+          grid-template-columns:repeat(3,minmax(0,1fr))!important;
+          gap:.42rem!important;
+        }
+        .history-actions-compact .history-action-btn{
+          min-width:0!important;
+          font-size:.72rem!important;
+          padding:.44rem .20rem!important;
+        }
+        .history-state-meta{
+          grid-template-columns:minmax(0,1.8fr) minmax(96px,.92fr)!important;
+        }
+        .history-state-meta .success-status{
+          font-size:.64rem!important;
+        }
+      }
+
+      @media(max-width:360px){
+        .history-actions-compact{gap:.34rem!important}
+        .history-actions-compact .history-action-btn{font-size:.67rem!important}
+        .history-state-meta{grid-template-columns:minmax(0,1.65fr) minmax(88px,.9fr)!important}
+      }
     `;document.head.appendChild(s)
   }
-  function applyAll(){cleanTitle();cleanFooter();numericMoneyFields();hideCommercialDuringLogin();bindHome();syncHistoryStatus();polishManagementButton();injectStyle();injectIOSStyle()}
+
+  function applyAll(){
+    cleanTitle();cleanFooter();numericMoneyFields();hideCommercialDuringLogin();bindHome();
+    syncHistoryStatus();polishManagementButton();injectStyle();injectIOSStyle();bindSaleMode();
+    saleMode();
+    if(document.getElementById('menuDropdown')?.classList.contains('active'))centerUserMenu();
+  }
+
   function start(){holdLegacyAuth();applyAll();bootOfficialCRM();bootTimer=setInterval(bootOfficialCRM,100);setTimeout(applyAll,250);setTimeout(applyAll,900);setTimeout(applyAll,1800)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
   document.addEventListener('fscrm:authenticated',()=>{releaseAuth();applyAll()});
   document.addEventListener('fscrm:auth-required',()=>setTimeout(()=>{releaseAuth();applyAll()},100));
   window.addEventListener('storage',applyAll);
-  new MutationObserver(()=>requestAnimationFrame(applyAll)).observe(document.documentElement,{childList:true,subtree:true});
+  window.addEventListener('resize',()=>{if(document.getElementById('menuDropdown')?.classList.contains('active'))centerUserMenu()});
+  new MutationObserver(()=>requestAnimationFrame(applyAll)).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden']});
 
   function injectIOSStyle(){
     if(document.getElementById('fs-ios-main-v14'))return;
