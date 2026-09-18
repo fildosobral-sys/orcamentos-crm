@@ -65,8 +65,12 @@ function style(){
     body.fs-v17-awaiting-apply #relatorios,
     body.fs-v17-awaiting-apply .explanation,
     body.fs-v17-awaiting-apply #updated{display:none!important}
-    body.fs-v17-awaiting-apply #access-admin{margin-bottom:12px!important}
+    /* Antes de Aplicar análise, nenhum conteúdo da gestão aparece. */
+    body.fs-v17-awaiting-apply #content > *{display:none!important}
+    body.fs-v17-awaiting-apply #access-admin{display:none!important}
     body.fs-v17-awaiting-apply #state:empty::before{content:'Selecione os filtros da análise e toque em Aplicar análise.';display:block;color:#667085}
+    /* Removido definitivamente: texto explicativo solicitado para sair. */
+    .fs-v12-funnel-note{display:none!important}
 
     @media(max-width:900px){
       .fs-bi-sidebar{display:none!important}

@@ -1974,6 +1974,38 @@
   }
 }
 </style>
+
+<style id="fs-preco-tabela-azul-1153">
+/* Ajuste pontual: todo o card de Preço de Tabela em azul-bebê. */
+#discountForm .pricing-card-table{
+  background:#dfeeff !important;
+  border:1px solid #b9d7f5 !important;
+  box-shadow:0 8px 22px rgba(74,123,184,.10) !important;
+}
+#discountForm .pricing-card-table > div[style*="margin-top: 1.5rem"]{
+  background:#eaf4ff !important;
+  border:1px solid #c7ddf4 !important;
+  box-shadow:none !important;
+}
+@media(max-width:640px){
+  #discountForm .pricing-card-table{background:#dcecff !important;}
+  #discountForm .pricing-card-table > div[style*="margin-top: 1.5rem"]{background:#e8f3ff !important;}
+}
+</style>
+
+<style id="fs-preco-tabela-espelho-promocional-1206">
+/* Mesmo efeito do card promocional, trocando somente vermelho por azul. */
+#discountForm > .input-group.pricing-card.pricing-card-table{
+  background:linear-gradient(180deg,rgba(59,130,246,.095),rgba(59,130,246,.035)) !important;
+  border:1px solid rgba(59,130,246,.20) !important;
+  box-shadow:0 8px 22px rgba(59,130,246,.07) !important;
+}
+#discountForm > .input-group.pricing-card.pricing-card-table > div[style*="margin-top: 1.5rem"]{
+  background:rgba(255,255,255,.40) !important;
+  border:1px solid rgba(59,130,246,.14) !important;
+  box-shadow:none !important;
+}
+</style>
 </head>
  <body>
   <header class="header">
