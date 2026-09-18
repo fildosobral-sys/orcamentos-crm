@@ -28,10 +28,11 @@
   html.fs-boot-lock body>*:not(#fs-v19-loading-card):not(script){visibility:hidden!important}
   html.fs-boot-lock body{background:#f5f6fa!important}
   body.fs-v19-loading::before{content:"";position:fixed;inset:0;z-index:2147483000;background:rgba(28,35,48,.20);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:none}
-  #fs-v19-loading-card.fs-v19-loading-card{--fs-progress:0;position:fixed!important;display:block!important;z-index:2147483001!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(600px,calc(100% - 28px))!important;padding:24px 22px 22px!important;border:3px solid transparent!important;border-radius:24px!important;background:linear-gradient(rgba(255,255,255,.985),rgba(255,255,255,.985)) padding-box,conic-gradient(from -90deg,#4f8df7 0%,#6551d6 calc(var(--fs-progress)*1%),#e4e8f0 calc(var(--fs-progress)*1%),#e4e8f0 100%) border-box!important;box-shadow:0 24px 70px rgba(29,40,67,.22)!important;text-align:center!important;overflow:hidden!important;pointer-events:none!important}
+  #fs-v19-loading-card.fs-v19-loading-card{--fs-progress:0;position:fixed!important;display:none!important;z-index:2147483001!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(600px,calc(100% - 28px))!important;padding:24px 22px 22px!important;border:3px solid transparent!important;border-radius:24px!important;background:linear-gradient(rgba(255,255,255,.985),rgba(255,255,255,.985)) padding-box,conic-gradient(from -90deg,#4f8df7 0%,#6551d6 calc(var(--fs-progress)*1%),#e4e8f0 calc(var(--fs-progress)*1%),#e4e8f0 100%) border-box!important;box-shadow:0 24px 70px rgba(29,40,67,.22)!important;text-align:center!important;overflow:hidden!important;pointer-events:none!important}
   #fs-v19-loading-card .fs-v19-loading-quote{margin:0;color:#25324a;font-size:15px;line-height:1.55;font-weight:700}
   #fs-v19-loading-card .fs-v19-loading-author{display:block;margin-top:8px;color:#8490a3;font-size:10px;font-weight:750}
   #fs-v19-loading-card .fs-v19-loading-percent{display:block;margin-top:10px;color:#8995a8;font-size:10px;font-weight:850;letter-spacing:.04em}
+  #fs-v19-loading-card.is-visible{display:block!important}
   #fs-v19-loading-card .fs-v19-loading-progress{display:none!important}
   body.fs-v19-loading #state{visibility:hidden!important}
   @media(max-width:900px){#fs-v19-loading-card.fs-v19-loading-card{width:min(600px,calc(100% - 28px))!important;padding:22px 20px 20px!important;border-radius:22px!important}}
