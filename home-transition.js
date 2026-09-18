@@ -71,11 +71,43 @@
       @media(max-width:640px){.fs-back-home{right:10px!important;bottom:10px!important;width:45px!important;height:45px!important;min-width:45px!important}}
     `;document.head.appendChild(s)
   }
-  function applyAll(){cleanTitle();cleanFooter();numericMoneyFields();hideCommercialDuringLogin();bindHome();syncHistoryStatus();polishManagementButton();injectStyle()}
+  function applyAll(){cleanTitle();cleanFooter();numericMoneyFields();hideCommercialDuringLogin();bindHome();syncHistoryStatus();polishManagementButton();injectStyle();injectIOSStyle()}
   function start(){holdLegacyAuth();applyAll();bootOfficialCRM();bootTimer=setInterval(bootOfficialCRM,100);setTimeout(applyAll,250);setTimeout(applyAll,900);setTimeout(applyAll,1800)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
   document.addEventListener('fscrm:authenticated',()=>{releaseAuth();applyAll()});
   document.addEventListener('fscrm:auth-required',()=>setTimeout(()=>{releaseAuth();applyAll()},100));
   window.addEventListener('storage',applyAll);
   new MutationObserver(()=>requestAnimationFrame(applyAll)).observe(document.documentElement,{childList:true,subtree:true});
+
+  function injectIOSStyle(){
+    if(document.getElementById('fs-ios-main-v14'))return;
+    const s=document.createElement('style');s.id='fs-ios-main-v14';s.textContent=`
+      :root{--ios-bg:#f2f2f7;--ios-line:rgba(60,60,67,.14);--ios-text:#1c1c1e;--ios-sub:#6e6e73;--ios-blue:#0a84ff;--ios-indigo:#5e5ce6;--ios-green:#30d158;--ios-red:#ff453a;--ios-shadow:0 10px 30px rgba(28,28,30,.08)}
+      html,body,button,input,select,textarea{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif!important;-webkit-font-smoothing:antialiased}
+      body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)!important;color:var(--ios-text)!important}
+      .header{background:linear-gradient(135deg,rgba(72,102,226,.96),rgba(116,78,188,.96))!important;box-shadow:0 12px 34px rgba(44,38,109,.18)!important;border-bottom:1px solid rgba(255,255,255,.16)!important}
+      .container{max-width:1120px!important}
+      .calculator-card,.history-section,#authCard,#fscrm-panel,.history-item,.fscrm-card{border-radius:22px!important;border-color:var(--ios-line)!important;box-shadow:0 8px 24px rgba(28,28,30,.07)!important}
+      input:not([type=checkbox]):not([type=radio]),select,textarea{border-radius:14px!important;border:1px solid var(--ios-line)!important;background:rgba(250,250,252,.97)!important;min-height:46px!important;transition:.16s ease!important}
+      input:focus,select:focus,textarea:focus{outline:none!important;border-color:rgba(10,132,255,.46)!important;box-shadow:0 0 0 4px rgba(10,132,255,.10)!important;background:#fff!important}
+      button,.btn,.menu-toggle{border-radius:14px!important;transition:transform .14s ease,box-shadow .14s ease,filter .14s ease!important}
+      button:active,.btn:active,.menu-toggle:active{transform:scale(.985)!important}
+      .menu-toggle{background:rgba(255,255,255,.18)!important;border:1px solid rgba(255,255,255,.28)!important;backdrop-filter:blur(16px)!important}
+      .menu-dropdown{background:rgba(79,66,156,.90)!important;border:1px solid rgba(255,255,255,.18)!important;border-radius:20px!important;backdrop-filter:blur(22px) saturate(160%)!important;box-shadow:0 24px 55px rgba(30,23,72,.28)!important}
+      #fscrm-modal{border-radius:26px!important;border:1px solid var(--ios-line)!important;box-shadow:0 28px 80px rgba(0,0,0,.24)!important}
+      #fscrm-modal::backdrop{background:rgba(20,20,24,.34)!important;backdrop-filter:blur(12px)!important}
+      .fscrm-stats>div,.detail-item{border-radius:14px!important;background:#f7f7fa!important;border-color:rgba(60,60,67,.10)!important}
+      .history-actions .btn,.fscrm-card-actions button{min-height:44px!important}
+      .fs-back-home{background:rgba(255,255,255,.76)!important;border:1px solid rgba(255,255,255,.88)!important;backdrop-filter:blur(18px) saturate(160%)!important;box-shadow:0 10px 28px rgba(28,28,30,.14)!important}
+      footer,.footer,.footer-content{opacity:.62!important;font-size:.72rem!important}
+      @media(max-width:700px){
+        .header{padding:1rem 0!important;border-radius:0 0 24px 24px!important}
+        .container{padding:0 12px!important}
+        .calculator-card,.history-section,#authCard,#fscrm-panel{border-radius:20px!important}
+        .history-details{gap:8px!important}
+        .history-actions{gap:8px!important}
+        #fscrm-modal{width:calc(100vw - 18px)!important;max-height:90dvh!important;border-radius:24px!important}
+      }
+    `;document.head.appendChild(s);
+  }
 })();
