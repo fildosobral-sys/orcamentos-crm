@@ -305,8 +305,210 @@
     R.__fsOptimisticV16=true;
   }
 
+  function setupMobileCompactForm(){
+    const mobile=window.matchMedia('(max-width: 768px)').matches;
+    const form=document.getElementById('discountForm');
+    if(!form)return;
+
+    const normalLabel=form.querySelector('label[for="precoNormal"]');
+    const normalCard=normalLabel?.closest('.input-group');
+    if(normalCard){
+      normalCard.classList.toggle('fs-mobile-price-card-normal',mobile);
+      const normalPayment=[...normalCard.querySelectorAll('div')].find(el=>{
+        const h=el.querySelector(':scope > h4');
+        return h&&/Modalidades\s*-\s*Preço de Tabela/i.test(h.textContent||'');
+      });
+      if(normalPayment){
+        normalPayment.classList.toggle('fs-mobile-payment-block',mobile);
+        const h=normalPayment.querySelector(':scope > h4');
+        if(h){
+          if(!h.dataset.fsOriginalText)h.dataset.fsOriginalText=h.textContent;
+          h.textContent=mobile?'💳 Modalidade de Pagamento':h.dataset.fsOriginalText;
+        }
+      }
+    }
+
+    const promoManual=form.querySelector('.calculation-section.section-manual:has(#precoPromocional)');
+    const promoPayment=[...form.querySelectorAll('.calculation-section.section-payment')].find(el=>el.querySelector('input[name="modalidadePromocional"]'));
+    if(promoManual)promoManual.classList.toggle('fs-mobile-promo-main',mobile);
+    if(promoPayment){
+      promoPayment.classList.toggle('fs-mobile-promo-payment',mobile);
+      const h=promoPayment.querySelector('.section-title');
+      if(h){
+        if(!h.dataset.fsOriginalText)h.dataset.fsOriginalText=h.textContent;
+        h.textContent=mobile?'💳 Modalidade de Pagamento':h.dataset.fsOriginalText;
+      }
+    }
+  }
+
+  function injectMobileCompactFormStyle(){
+    if(document.getElementById('fs-mobile-form-compact-v17'))return;
+    const s=document.createElement('style');
+    s.id='fs-mobile-form-compact-v17';
+    s.textContent=`
+      @media (max-width:768px){
+        /* Escopo estrito: somente o formulário principal em telas mobile. */
+        #discountForm{--fs-mobile-gap:14px;}
+        #discountForm>.input-group,
+        #discountForm>.calculation-section{margin-bottom:var(--fs-mobile-gap)!important;}
+
+        #discountForm .input-label{
+          font-size:14px!important;
+          line-height:1.25!important;
+          margin-bottom:7px!important;
+        }
+        #discountForm .input-field{
+          min-height:54px!important;
+          height:auto!important;
+          padding:12px 14px!important;
+          font-size:14px!important;
+          line-height:1.25!important;
+          border-radius:13px!important;
+        }
+        #discountForm .price-input .input-field{padding-left:46px!important;}
+        #discountForm .currency-symbol{left:14px!important;font-size:14px!important;}
+        #discountForm textarea.input-field{
+          min-height:82px!important;
+          padding-top:12px!important;
+          padding-bottom:12px!important;
+        }
+
+        /* Preço de tabela + modalidade: um único card visual, sem alterar DOM/IDs/eventos. */
+        #discountForm .fs-mobile-price-card-normal{
+          margin:0 0 var(--fs-mobile-gap)!important;
+          padding:15px!important;
+          border:1px solid rgba(102,126,234,.18)!important;
+          border-radius:17px!important;
+          background:rgba(255,255,255,.76)!important;
+          box-shadow:0 7px 20px rgba(33,45,84,.06)!important;
+        }
+        #discountForm .fs-mobile-price-card-normal>label[for="precoNormal"]{
+          font-size:18px!important;
+          line-height:1.2!important;
+          margin-bottom:9px!important;
+          text-shadow:none!important;
+        }
+        #discountForm .fs-mobile-price-card-normal>.price-input{margin-bottom:0!important;}
+        #discountForm .fs-mobile-payment-block{
+          margin-top:13px!important;
+          padding:13px 0 0!important;
+          background:transparent!important;
+          border:0!important;
+          border-top:1px solid rgba(60,60,67,.14)!important;
+          border-radius:0!important;
+        }
+        #discountForm .fs-mobile-payment-block>h4{
+          margin:0 0 9px!important;
+          font-size:15px!important;
+          line-height:1.2!important;
+          gap:6px!important;
+        }
+
+        /* Cálculo percentual: cabeçalho e botão na mesma linha. */
+        #discountForm .section-auto{
+          margin:0 0 var(--fs-mobile-gap)!important;
+          padding:13px 14px!important;
+          border-radius:15px!important;
+        }
+        #discountForm .section-auto>.section-title{
+          display:flex!important;
+          align-items:center!important;
+          justify-content:space-between!important;
+          gap:10px!important;
+          margin:0!important;
+          min-height:36px!important;
+          font-size:16px!important;
+          line-height:1.2!important;
+        }
+        #discountForm .section-auto .auto-toggle-btn{
+          flex:0 0 auto!important;
+          min-height:36px!important;
+          height:36px!important;
+          padding:0 12px!important;
+          margin:0!important;
+          border-radius:11px!important;
+          font-size:13px!important;
+        }
+        #discountForm .section-auto:not(.collapsed)>.input-group:first-of-type{margin-top:12px!important;}
+
+        /* Preço promocional + modalidade: duas seções existentes passam a parecer um único card. */
+        #discountForm .fs-mobile-promo-main{
+          margin:0!important;
+          padding:15px!important;
+          border-radius:17px 17px 0 0!important;
+          border:1px solid rgba(245,101,101,.18)!important;
+          border-bottom:0!important;
+          background:linear-gradient(180deg,rgba(239,244,255,.92),rgba(255,247,248,.92))!important;
+          box-shadow:0 7px 20px rgba(33,45,84,.05)!important;
+        }
+        #discountForm .fs-mobile-promo-main>.section-title{display:none!important;}
+        #discountForm .fs-mobile-promo-main .input-group{margin:0!important;}
+        #discountForm .fs-mobile-promo-main label[for="precoPromocional"]{
+          font-size:18px!important;
+          line-height:1.2!important;
+          margin-bottom:9px!important;
+          text-shadow:none!important;
+        }
+        #discountForm .fs-mobile-promo-payment{
+          margin:-1px 0 var(--fs-mobile-gap)!important;
+          padding:13px 15px 15px!important;
+          border-radius:0 0 17px 17px!important;
+          border:1px solid rgba(245,101,101,.18)!important;
+          border-top:1px solid rgba(60,60,67,.14)!important;
+          background:linear-gradient(180deg,rgba(255,247,248,.92),rgba(248,244,255,.92))!important;
+          box-shadow:0 7px 20px rgba(33,45,84,.05)!important;
+        }
+        #discountForm .fs-mobile-promo-payment>.section-title{
+          margin:0 0 9px!important;
+          font-size:15px!important;
+          line-height:1.2!important;
+        }
+        #discountForm .fs-mobile-promo-payment>.input-group{margin:0!important;}
+
+        #discountForm .payment-options{
+          display:flex!important;
+          flex-wrap:wrap!important;
+          gap:8px 16px!important;
+          align-items:center!important;
+        }
+        #discountForm .payment-options label{
+          min-height:40px!important;
+          display:inline-flex!important;
+          align-items:center!important;
+          gap:7px!important;
+          font-size:14px!important;
+          line-height:1.15!important;
+          margin:0!important;
+        }
+        #discountForm .payment-options input[type="radio"]{
+          width:20px!important;
+          height:20px!important;
+          flex:0 0 20px!important;
+        }
+        #discountForm .parcelas-group{
+          margin-top:10px!important;
+          gap:10px!important;
+        }
+        #discountForm .parcelas-group .input-label{font-size:13px!important;margin-bottom:5px!important;}
+        #discountForm .parcelas-group .input-field{min-height:50px!important;font-size:14px!important;}
+
+        /* Cliente, WhatsApp e anotações: mesma ordem, menor altura vertical. */
+        #discountForm #cliente,
+        #discountForm #whatsapp{min-height:54px!important;}
+        #discountForm label[for="cliente"],
+        #discountForm label[for="whatsapp"],
+        #discountForm label[for="anotacoes"]{font-size:15px!important;}
+
+        /* Campos auxiliares dentro das seções seguem confortáveis ao toque. */
+        #discountForm .calculation-section .input-group{margin-bottom:12px!important;}
+        #discountForm .calculation-section .input-group:last-child{margin-bottom:0!important;}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
   function applyAll(){
-    cleanTitle();cleanFooter();numericMoneyFields();hideCommercialDuringLogin();bindHome();
+    cleanTitle();cleanFooter();numericMoneyFields();hideCommercialDuringLogin();bindHome();setupMobileCompactForm();injectMobileCompactFormStyle();
     removeLegacySaleButton();installOptimisticSync();syncHistoryStatus();polishManagementButton();injectStyle();injectIOSStyle();bindSaleMode();
     saleMode();
     if(document.getElementById('menuDropdown')?.classList.contains('active'))centerUserMenu();
@@ -317,7 +519,7 @@
   document.addEventListener('fscrm:authenticated',()=>{releaseAuth();applyAll()});
   document.addEventListener('fscrm:auth-required',()=>setTimeout(()=>{releaseAuth();applyAll()},100));
   window.addEventListener('storage',applyAll);
-  window.addEventListener('resize',()=>{if(document.getElementById('menuDropdown')?.classList.contains('active'))centerUserMenu()});
+  window.addEventListener('resize',()=>{setupMobileCompactForm();if(document.getElementById('menuDropdown')?.classList.contains('active'))centerUserMenu()});
   new MutationObserver(()=>requestAnimationFrame(applyAll)).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden']});
 
   function injectIOSStyle(){
