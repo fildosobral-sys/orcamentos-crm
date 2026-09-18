@@ -1,0 +1,247 @@
+
+/* FS CRM — BI v10
+   Complementa v8 sem alterar as regras do backend. */
+
+:root{
+  --v10-blue:#3978e7;
+  --v10-indigo:#6652c8;
+  --v10-green:#1b9b72;
+  --v10-amber:#d69b26;
+  --v10-red:#cf5f6f;
+  --v10-cyan:#2c98a7;
+  --v10-ink:#202a3f;
+  --v10-muted:#748094;
+  --v10-line:#e4e9f2;
+  --v10-bg:#f4f6fb;
+  --v10-card:#fff;
+  --v10-shadow:0 12px 30px rgba(28,42,73,.075);
+  --v10-shadow-hover:0 20px 44px rgba(28,42,73,.13);
+}
+
+/* Acessos separados e mais claros */
+.v10-access-admin{
+  display:grid!important;
+  gap:18px!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  padding:0!important;
+}
+.v10-access-card{
+  background:#fff!important;
+  border:1px solid var(--v10-line)!important;
+  border-radius:20px!important;
+  box-shadow:var(--v10-shadow)!important;
+  overflow:hidden!important;
+}
+.v10-access-card>summary{
+  list-style:none!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  cursor:pointer!important;
+  padding:20px 24px!important;
+}
+.v10-access-card>summary::-webkit-details-marker{display:none!important}
+.v10-open-icon{
+  width:38px;height:38px;border-radius:12px;
+  display:grid;place-items:center;
+  background:#f2f4fa;
+  flex:0 0 auto;
+  font-size:17px;
+}
+.v10-list-title{display:grid;gap:2px}
+.v10-list-title small{font-size:11px;letter-spacing:.12em;color:#7b66c6;font-weight:800}
+.v10-list-title strong{font-size:20px;color:var(--v10-ink)}
+.v10-list-title em{font-size:12px;color:var(--v10-muted);font-style:normal;font-weight:400}
+.v10-list-card #access-user-list{padding:0 18px 18px!important}
+.v10-create-card .access-create-body{padding:0 24px 22px!important}
+.v10-create-card .access-photo-field{display:none!important}
+
+/* filtro/scope visível */
+.v10-scope-badge{
+  display:flex;flex-wrap:wrap;gap:8px;
+  margin:8px 0 14px;
+}
+.v10-scope-badge span{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 10px;border-radius:999px;
+  background:#fff;border:1px solid var(--v10-line);
+  color:#4c5870;font-size:12px;font-weight:700;
+  box-shadow:0 5px 14px rgba(30,44,77,.05);
+}
+
+/* métricas executivas */
+.v10-metrics{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:12px!important;
+  margin:14px 0 18px!important;
+}
+.v10-metric{
+  min-height:116px!important;
+  padding:16px!important;
+  border-radius:16px!important;
+  background:linear-gradient(180deg,#fff,#fbfcff)!important;
+  border:1px solid var(--v10-line)!important;
+  box-shadow:0 8px 22px rgba(30,44,77,.055)!important;
+}
+.v10-metric.budget{border-left:4px solid var(--v10-indigo)!important}
+.v10-metric.wins{border-left:4px solid var(--v10-green)!important}
+.v10-metric.conversion{border-left:4px solid var(--v10-blue)!important}
+.v10-metric.open{border-left:4px solid #8a66d1!important}
+.v10-metric.scheduled{border-left:4px solid var(--v10-amber)!important}
+.v10-metric.potential{border-left:4px solid #d79333!important}
+.v10-metric.lost{border-left:4px solid var(--v10-red)!important}
+.v10-metric.value{border-left:4px solid var(--v10-cyan)!important}
+
+/* Loss BI mais definido */
+.v10-loss-intel{
+  background:
+    radial-gradient(circle at 100% 0,rgba(92,78,197,.055),transparent 32%),
+    linear-gradient(180deg,#fff,#f9fbff)!important;
+}
+.v10-loss-intel .loss-panel,
+.v10-loss-intel .loss-kpi{
+  border-color:#dfe5ef!important;
+  box-shadow:0 9px 24px rgba(28,42,73,.07)!important;
+}
+.v10-loss-case{
+  position:relative!important;
+  padding-top:36px!important;
+}
+.v10-case-index{
+  position:absolute;top:12px;right:12px;
+  width:28px;height:28px;border-radius:9px;
+  display:grid;place-items:center;
+  background:#f0ecff;color:#6750bc;
+  font-size:10px;font-weight:900;
+}
+
+/* Mini dashboards dos vendedores */
+.v10-seller-values{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+  margin:8px 0 10px;
+}
+.v10-seller-values>div{
+  padding:9px 8px;
+  border-radius:10px;
+  background:#f8f9fc;
+  border:1px solid #eceff5;
+  min-width:0;
+}
+.v10-seller-values small{
+  display:block;color:#7a8496;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;
+}
+.v10-seller-values strong{
+  display:block;margin-top:3px;color:#28344b;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* Ranking e tendência */
+.v10-team-intelligence{
+  margin:22px 0 18px;
+  padding:20px;
+  border:1px solid var(--v10-line);
+  border-radius:22px;
+  background:linear-gradient(180deg,#fff,#fafbfe);
+  box-shadow:var(--v10-shadow);
+}
+.v10-section-head small{
+  display:block;color:#745fc8;font-weight:900;letter-spacing:.12em;font-size:10px
+}
+.v10-section-head h2{margin:4px 0 5px;color:var(--v10-ink)}
+.v10-section-head p{margin:0;color:var(--v10-muted);font-size:13px}
+.v10-team-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:16px;
+}
+.v10-ranking-card,.v10-trend-card{
+  border:1px solid #e3e8f1;
+  border-radius:17px;
+  background:#fff;
+  padding:16px;
+  box-shadow:0 7px 18px rgba(30,44,77,.045);
+}
+.v10-card-title{
+  display:flex;align-items:center;gap:10px;margin-bottom:14px
+}
+.v10-card-title>span{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#f1edff
+}
+.v10-card-title strong{display:block;color:#253149}
+.v10-card-title small{display:block;color:#8a93a2;margin-top:2px}
+.v10-ranking-list{display:grid;gap:10px}
+.v10-rank-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center}
+.v10-rank-pos{
+  width:30px;height:30px;border-radius:9px;background:#f2efff;color:#6551bc;
+  display:grid;place-items:center;font-size:11px;font-weight:900
+}
+.v10-rank-main{min-width:0}
+.v10-rank-main>div{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.v10-rank-main strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v10-rank-main span{font-size:10px;color:#727c8e;white-space:nowrap}
+.v10-rank-main i{display:block;height:7px;border-radius:999px;background:#eef1f6;margin-top:5px;overflow:hidden}
+.v10-rank-main b{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#5f4dc8,#3a83e9)}
+.v10-trend-chart{
+  min-height:170px;
+  display:grid;place-items:center;
+  border-radius:13px;
+  background:linear-gradient(180deg,#fafbff,#f5f8fe);
+  overflow:hidden;
+}
+.v10-trend-chart svg{width:100%;height:170px}
+.v10-gridline{stroke:#dde3ed;stroke-width:1}
+.v10-line{fill:none;stroke:#5b55cd;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.v10-dot{fill:#3483e9;stroke:#fff;stroke-width:2}
+.v10-empty-chart{color:#8a93a3;font-size:12px;text-align:center;padding:30px}
+
+/* cues de abertura/fechamento mais perceptíveis */
+.v10-summary-cue{margin-left:auto;font-size:13px;flex:0 0 auto}
+.access-list-wrap>summary .v10-summary-cue,
+.access-create-wrap>summary .v10-summary-cue{display:none}
+
+/* hover desktop */
+@media (hover:hover) and (pointer:fine){
+  .v10-metric:hover,
+  .v10-ranking-card:hover,
+  .v10-trend-card:hover,
+  .v10-access-card:hover{
+    transform:translateY(-2px);
+    box-shadow:var(--v10-shadow-hover)!important;
+  }
+}
+
+/* desktop amplo */
+@media(min-width:1200px){
+  .v10-metrics{grid-template-columns:repeat(8,minmax(0,1fr))!important}
+  .v10-metric{min-height:112px!important;padding:14px 12px!important}
+  .v10-metric strong{font-size:21px!important}
+}
+
+/* tablet */
+@media(max-width:980px){
+  .v10-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .v10-team-grid{grid-template-columns:1fr}
+}
+
+/* mobile */
+@media(max-width:560px){
+  .v10-access-card>summary{padding:15px 14px!important}
+  .v10-create-card .access-create-body{padding:0 14px 16px!important}
+  .v10-list-card #access-user-list{padding:0 10px 12px!important}
+  .v10-open-icon{width:34px;height:34px}
+  .v10-list-title strong{font-size:17px}
+  .v10-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+  .v10-metric{min-height:102px!important;padding:12px 10px!important}
+  .v10-metric strong{font-size:20px!important}
+  .v10-metric span{font-size:10px!important}
+  .v10-seller-values{grid-template-columns:1fr 1fr 1fr}
+  .v10-seller-values strong{font-size:11px}
+  .v10-team-intelligence{padding:14px;margin:16px 0}
+  .v10-rank-main>div{align-items:flex-start;flex-direction:column;gap:2px}
+}
