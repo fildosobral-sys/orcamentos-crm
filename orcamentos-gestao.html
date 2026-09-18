@@ -37,6 +37,176 @@
   body.fs-v19-loading #state{visibility:hidden!important}
   @media(max-width:900px){#fs-v19-loading-card.fs-v19-loading-card{width:min(600px,calc(100% - 28px))!important;padding:22px 20px 20px!important;border-radius:22px!important}}
 </style>
+
+<style id="fs-card-polish-v1">
+  :root{
+    --fs-soft-blue:#f3f8ff;
+    --fs-soft-indigo:#f5f2ff;
+    --fs-soft-green:#f2fbf6;
+    --fs-soft-teal:#f1fbfb;
+    --fs-soft-amber:#fff8ee;
+    --fs-soft-rose:#fff3f6;
+    --fs-soft-sky:#eef7ff;
+    --fs-card-line:#e4e9f2;
+    --fs-hover-line:#badbff;
+    --fs-hover-bg:#f6fbff;
+    --fs-hover-shadow:0 18px 38px rgba(90,148,255,.16);
+  }
+
+  /* visual iOS/Android mais leve */
+  .fs-v12-metric,
+  .fs-v12-panel,
+  .loss-panel,
+  .loss-kpis>div,
+  .seller-card,
+  .branch-card,
+  .metric,
+  .filters,
+  .loss-intel,
+  .losses,
+  #permissions{
+    border-color:var(--fs-card-line)!important;
+    box-shadow:0 8px 26px rgba(37,50,74,.045)!important;
+  }
+
+  /* cards principais com cores suaves */
+  #metrics>.fs-v12-metric:nth-child(6n+1){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-indigo) 100%)!important}
+  #metrics>.fs-v12-metric:nth-child(6n+2){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-green) 100%)!important}
+  #metrics>.fs-v12-metric:nth-child(6n+3){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-sky) 100%)!important}
+  #metrics>.fs-v12-metric:nth-child(6n+4){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-teal) 100%)!important}
+  #metrics>.fs-v12-metric:nth-child(6n+5){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-amber) 100%)!important}
+  #metrics>.fs-v12-metric:nth-child(6n+6){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-rose) 100%)!important}
+
+  #metrics>.fs-v12-metric small,
+  .loss-kpis>div small{font-size:11px!important;letter-spacing:.04em;text-transform:uppercase;color:#7e889a!important;font-weight:800}
+  #metrics>.fs-v12-metric strong,
+  .loss-kpis>div strong{color:#2f3a53!important}
+  #metrics>.fs-v12-metric span,
+  .loss-kpis>div span{color:#7a8497!important}
+
+  /* painéis da inteligência comercial */
+  #fs-team-intelligence .fs-v12-panel.sales{background:linear-gradient(180deg,#ffffff 0%,#f4f8ff 100%)!important}
+  #fs-team-intelligence .fs-v12-panel.evolution{background:linear-gradient(180deg,#ffffff 0%,#f2fbf8 100%)!important}
+  #fs-team-intelligence .fs-v12-panel.loss{background:linear-gradient(180deg,#ffffff 0%,#fff4f7 100%)!important}
+  #fs-team-intelligence .fs-v12-panel.portfolio{background:linear-gradient(180deg,#ffffff 0%,#f8f6ff 100%)!important}
+
+  .fs-v12-panel-head i{
+    width:42px;height:42px;display:grid;place-items:center;
+    border-radius:14px;background:#eef3ff;color:#597de0;
+    box-shadow:inset 0 0 0 1px rgba(102,133,214,.12);
+    font-style:normal!important;
+  }
+  .fs-v12-panel.sales .fs-v12-panel-head i{background:#eef3ff;color:#4f82eb}
+  .fs-v12-panel.evolution .fs-v12-panel-head i{background:#ecfbf6;color:#2f9b76}
+  .fs-v12-panel.loss .fs-v12-panel-head i{background:#fff0f4;color:#d86288}
+  .fs-v12-panel.portfolio .fs-v12-panel-head i{background:#f2efff;color:#6d58cc}
+
+  .fs-v12-panel-head strong,
+  .panel-title h3{font-size:16px!important;line-height:1.2!important;color:#263249!important}
+  .fs-v12-panel-head small,
+  .panel-title small{font-size:11px!important;line-height:1.4!important;letter-spacing:.04em!important;color:#8893a5!important}
+
+  .fs-v12-mini span,
+  .fs-v12-evo-summary span{
+    background:rgba(255,255,255,.78)!important;
+    border:1px solid #e7ecf4!important;
+    border-radius:14px!important;
+  }
+
+  /* análise de perdas mais padronizada */
+  .loss-intel-head{
+    align-items:flex-end!important;
+    gap:16px!important;
+    padding-bottom:4px;
+  }
+  .loss-intel-head .eyebrow-dark{
+    font-size:11px!important;
+    letter-spacing:.14em!important;
+    margin-bottom:6px!important;
+    color:#7567c3!important;
+  }
+  .loss-intel-head h2{
+    margin:0 0 6px!important;
+    font-size:19px!important;
+    line-height:1.18!important;
+    color:#25324a!important;
+  }
+  .loss-intel-head p{
+    margin:0!important;
+    max-width:720px!important;
+    font-size:13px!important;
+    line-height:1.45!important;
+    color:#6e7a8d!important;
+  }
+  .loss-intel-head button{
+    background:#1e3567!important;
+    color:#fff!important;
+    border-color:#1e3567!important;
+    box-shadow:0 10px 24px rgba(30,53,103,.18)!important;
+  }
+
+  .loss-kpis>div:nth-child(4n+1){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-indigo) 100%)!important}
+  .loss-kpis>div:nth-child(4n+2){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-rose) 100%)!important}
+  .loss-kpis>div:nth-child(4n+3){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-green) 100%)!important}
+  .loss-kpis>div:nth-child(4n+4){background:linear-gradient(180deg,#ffffff 0%,var(--fs-soft-sky) 100%)!important}
+
+  .loss-panel:nth-of-type(1){background:linear-gradient(180deg,#ffffff 0%,#fcfbff 100%)!important}
+  .loss-panel.loss-donut-panel{background:linear-gradient(180deg,#ffffff 0%,#f7faff 100%)!important}
+  .loss-trend-panel{background:linear-gradient(180deg,#ffffff 0%,#f7fbff 100%)!important}
+  #loss-cases .loss-case,
+  #loss-cases>article,
+  #loss-cases>div{background:rgba(255,255,255,.78)!important;border-radius:16px!important;border:1px solid #e6ebf3!important}
+
+  .panel-icon{
+    width:36px!important;height:36px!important;border-radius:12px!important;
+    background:#eef1ff!important;color:#6254c8!important;font-size:11px!important;
+    box-shadow:inset 0 0 0 1px rgba(98,84,200,.08);
+  }
+
+  /* vendedor e cards individuais */
+  .seller-card{background:linear-gradient(180deg,#ffffff 0%,#fcfcff 100%)!important}
+  .seller-numbers>div,
+  .seller-numbers>span,
+  .seller-numbers article{
+    background:rgba(248,249,255,.96)!important;border:1px solid #ebeff6!important;border-radius:14px!important;padding:10px 10px 9px!important;
+  }
+  .seller-card .conversion{background:#fbfbff;border:1px solid #eceef7;border-radius:14px;padding:12px 14px}
+  .seller-card .bar{height:9px!important;background:#eceff8!important}
+
+  /* hover mais perceptível no desktop */
+  @media (hover:hover) and (pointer:fine){
+    .fs-v12-metric,
+    .fs-v12-panel,
+    .loss-panel,
+    .loss-kpis>div,
+    .seller-card,
+    .branch-card,
+    .metric{
+      transition:transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease!important;
+      will-change:transform;
+    }
+    .fs-v12-metric:hover,
+    .fs-v12-panel:hover,
+    .loss-panel:hover,
+    .loss-kpis>div:hover,
+    .seller-card:hover,
+    .branch-card:hover,
+    .metric:hover{
+      transform:translateY(-4px) scale(1.017)!important;
+      border-color:var(--fs-hover-line)!important;
+      box-shadow:var(--fs-hover-shadow)!important;
+      background:var(--fs-hover-bg)!important;
+    }
+  }
+
+  /* mobile */
+  @media (max-width:720px){
+    .loss-intel-head h2{font-size:18px!important}
+    .loss-intel-head p{font-size:12px!important}
+    .fs-v12-panel-head strong,.panel-title h3{font-size:15px!important}
+  }
+</style>
+
 </head>
 <body class="fs-v19-loading">
 
