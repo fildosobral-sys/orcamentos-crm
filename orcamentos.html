@@ -1787,6 +1787,83 @@
   .pricing-card-promo .section-title{font-size:.96rem!important;line-height:1.2!important;margin-bottom:.7rem!important;}
 }
 
+
+/* CORREÇÃO EXTRA 18/09/2026B — orçamento mobile */
+.pricing-card-table{
+  background:linear-gradient(180deg,#eef6ff 0%,#f8fbff 100%)!important;
+  border-color:#cfe2ff!important;
+  box-shadow:0 6px 16px rgba(148,163,184,.05)!important;
+}
+.pricing-card-table > div[style*="margin-top: 1.5rem"],
+.pricing-card-promo .section-payment{
+  background:rgba(255,255,255,.42)!important;
+  border-color:rgba(160,180,205,.22)!important;
+  box-shadow:none!important;
+}
+.pricing-card-promo{
+  background:linear-gradient(180deg,rgba(255,241,243,.9) 0%,rgba(255,249,250,.98) 100%)!important;
+  border-color:rgba(239,68,68,.14)!important;
+}
+@media (max-width: 640px){
+  #codigoProdutoRow{
+    grid-template-columns:94px minmax(0,1fr)!important;
+    grid-template-areas:'search paste' 'input input'!important;
+    gap:10px!important;
+  }
+  #btnPesquisarZenir{
+    width:94px!important;
+    flex:none!important;
+    height:50px!important;
+    font-size:1.75rem!important;
+    padding:0!important;
+    border-radius:18px!important;
+  }
+  #btnColarZenir{
+    height:50px!important;
+    font-size:.84rem!important;
+    padding:0 10px!important;
+    border-radius:18px!important;
+    letter-spacing:0!important;
+  }
+  .pricing-card .payment-options{
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:stretch!important;
+    justify-content:space-between!important;
+    gap:.55rem!important;
+    width:100%!important;
+    margin-bottom:.55rem!important;
+  }
+  .pricing-card .payment-options label{
+    flex:1 1 0!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:.62rem .45rem!important;
+    min-height:46px!important;
+    border-radius:14px!important;
+    border:1px solid rgba(180,190,210,.35)!important;
+    background:rgba(255,255,255,.58)!important;
+    box-shadow:none!important;
+  }
+  .pricing-card .payment-options label span{
+    font-size:.90rem!important;
+    white-space:nowrap!important;
+  }
+  .pricing-card .payment-options input[type="radio"]{
+    width:18px!important;
+    height:18px!important;
+    margin:0!important;
+  }
+  .pricing-card-table > div[style*="margin-top: 1.5rem"],
+  .pricing-card-promo .section-payment{
+    padding:.72rem!important;
+    border-radius:14px!important;
+    background:rgba(255,255,255,.34)!important;
+  }
+}
+
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>

@@ -39,3 +39,11 @@ Observação importante
 - Modalidades "À Vista" e "Parcelado" posicionadas lado a lado no mobile, tanto no preço de tabela quanto no promocional.
 - Ajuste do cabeçalho da Gestão: desativado o painel legado que aparecia antes do cabeçalho novo.
 - Filtros mobile da Gestão reforçados para abrir no cabeçalho atual e fechar corretamente ao aplicar ou tocar fora.
+
+
+=== CORREÇÕES COMPLEMENTARES 18/09/2026B ===
+- Botão "Colar Zenir" reduzido e botão da lupa alargado proporcionalmente no mobile.
+- Card de Preço de Tabela reforçado com tom azul-bebê.
+- Modalidades "À Vista" e "Parcelado" forçadas lado a lado no mobile, com menos destaque visual.
+- Visão principal da Gestão limpa: a área "Usuários cadastrados"/acessos deixa de aparecer no topo da página principal.
+- Filtros da Gestão mantidos visíveis e funcionais no mobile, sem depender do cabeçalho antigo.
