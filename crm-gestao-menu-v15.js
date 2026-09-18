@@ -72,24 +72,25 @@ function style(){
     /* Removido definitivamente: texto explicativo solicitado para sair. */
     .fs-v12-funnel-note{display:none!important}
 
-    /* 18/09/2026 12:15 — usuários cadastrados estáveis */
-    .access-list-wrap>summary{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}
-    .fs-v18-access-title{font-weight:800}
-    .fs-v18-access-meta{margin-left:auto;color:#7b8495;font-size:11px;font-weight:800;text-align:right;white-space:nowrap}
+    /* 18/09/2026 12:38 — usuários cadastrados compactos e estáveis */
+    .access-list-wrap>summary{position:relative!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;text-align:center!important;padding-right:44px!important;padding-left:44px!important;min-height:74px!important}
+    .fs-v18-access-title{font-weight:850!important;text-align:center!important}
+    .fs-v18-access-meta{margin:0!important;color:#7b8495!important;font-size:11px!important;font-weight:800!important;text-align:center!important;white-space:normal!important}
+    .fs-v18-access-arrow{position:absolute!important;right:18px!important;top:50%!important;transform:translateY(-50%) rotate(0deg)!important;color:#7b8495!important;font-size:18px!important;font-weight:900!important;transition:transform .18s ease!important}
+    .access-list-wrap[open]>summary .fs-v18-access-arrow{transform:translateY(-50%) rotate(180deg)!important}
     #access-user-list .access-branch-group-addon>summary{display:none!important}
     #access-user-list .access-branch-group-addon{border:0!important;background:transparent!important;margin:0!important;overflow:visible!important}
     #access-user-list .access-branch-users-addon{padding:0!important}
 
-
-    /* 18/09/2026 12:31 — cartão de sincronização/reflexão */
-    .fs-v19-loading-card{display:none;margin:18px auto 0;width:min(680px,calc(100% - 32px));padding:18px 20px;border:1px solid #e0e5ee;border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 12px 34px rgba(39,52,83,.07);text-align:center}
-    .fs-v19-loading-card.is-visible{display:block}\n    body.fs-v19-loading #state{display:none!important}
-    .fs-v19-loading-top{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;color:#45536b;font-size:12px;font-weight:850;text-transform:uppercase;letter-spacing:.07em}
-    .fs-v19-loading-dot{width:9px;height:9px;border-radius:50%;background:#5f63d9;box-shadow:0 0 0 5px rgba(95,99,217,.10);animation:fsV19Pulse 1.2s ease-in-out infinite}
+    /* 18/09/2026 12:38 — reflexão com progresso mínimo de 7 segundos */
+    .fs-v19-loading-card{position:relative;display:none;margin:18px auto 0;width:min(680px,calc(100% - 32px));padding:24px 22px 25px;border:1px solid #e0e5ee;border-radius:20px;background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(39,52,83,.07);text-align:center;overflow:hidden}
+    .fs-v19-loading-card.is-visible{display:block}
+    body.fs-v19-loading #state{display:none!important}
     .fs-v19-loading-quote{margin:0;color:#25324a;font-size:15px;line-height:1.55;font-weight:650}
-    .fs-v19-loading-author{display:block;margin-top:7px;color:#8490a3;font-size:11px;font-weight:750}
-    @keyframes fsV19Pulse{0%,100%{transform:scale(.82);opacity:.55}50%{transform:scale(1.12);opacity:1}}
-    @media(prefers-reduced-motion:reduce){.fs-v19-loading-dot{animation:none}}
+    .fs-v19-loading-author{display:block;margin-top:8px;color:#8490a3;font-size:11px;font-weight:750}
+    .fs-v19-loading-progress{position:absolute;left:0;right:0;bottom:0;height:5px;background:#eef1f6;overflow:hidden}
+    .fs-v19-loading-progress>i{display:block;width:0;height:100%;background:linear-gradient(90deg,#4f8df7,#6551d6);border-radius:0 999px 999px 0;transition:width .16s linear}
+    .fs-v19-loading-percent{display:block;margin-top:10px;color:#9aa4b3;font-size:10px;font-weight:800;letter-spacing:.04em}
 
     /* Alternância segura entre visual mobile e visual desktop */
     .fs-v19-desktop-return{display:flex!important;align-items:center;gap:7px;margin-top:8px!important;text-decoration:none;color:#53617a;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:800;background:#f7f9fc;border:1px solid #e2e8f2;cursor:pointer}
@@ -258,11 +259,12 @@ const FS_V19_REFLECTIONS=[
   ['Aprender, ajustar e continuar também é progresso.','Reflexão de desenvolvimento'],
   ['Clareza na decisão transforma esforço em direção.','Reflexão de gestão']
 ];
-let fsV19QuoteIndex=0,fsV19QuoteTimer=0;
+const FS_V20_MIN_LOADING_MS=7000;
+let fsV19QuoteIndex=0,fsV19QuoteTimer=0,fsV20ProgressTimer=0,fsV20LoadingStarted=0,fsV20UnderlyingLoading=false,fsV20PendingHide=0;
 function loadingCard(){
   let c=$('fs-v19-loading-card');if(c)return c;
   c=document.createElement('section');c.id='fs-v19-loading-card';c.className='fs-v19-loading-card';c.setAttribute('aria-live','polite');
-  c.innerHTML='<div class="fs-v19-loading-top"><i class="fs-v19-loading-dot"></i><span id="fs-v19-loading-status">Atualizando sua gestão…</span></div><p class="fs-v19-loading-quote" id="fs-v19-loading-quote"></p><small class="fs-v19-loading-author" id="fs-v19-loading-author"></small>';
+  c.innerHTML='<p class="fs-v19-loading-quote" id="fs-v19-loading-quote"></p><small class="fs-v19-loading-author" id="fs-v19-loading-author"></small><span class="fs-v19-loading-percent" id="fs-v19-loading-percent">0%</span><div class="fs-v19-loading-progress" aria-hidden="true"><i id="fs-v19-loading-bar"></i></div>';
   const main=document.querySelector('main');
   const state=$('state');
   if(state&&state.parentElement)state.insertAdjacentElement('afterend',c);else main?.prepend(c);
@@ -274,16 +276,54 @@ function paintReflection(){
   const qe=$('fs-v19-loading-quote'),ae=$('fs-v19-loading-author');
   if(qe)qe.textContent='“'+q[0]+'”';if(ae)ae.textContent=q[1];
 }
-function setLoadingReflection(show,statusText){
+function paintLoadingProgress(forceComplete=false){
+  if(!fsV20LoadingStarted)return;
+  const elapsed=Date.now()-fsV20LoadingStarted;
+  let pct=Math.min(92,Math.round((elapsed/FS_V20_MIN_LOADING_MS)*92));
+  if(forceComplete)pct=100;
+  const bar=$('fs-v19-loading-bar'),label=$('fs-v19-loading-percent');
+  if(bar)bar.style.width=pct+'%';
+  if(label)label.textContent=pct+'%';
+}
+function finishLoadingReflection(){
+  clearTimeout(fsV20PendingHide);fsV20PendingHide=0;
+  clearInterval(fsV20ProgressTimer);fsV20ProgressTimer=0;
+  paintLoadingProgress(true);
+  setTimeout(()=>{
+    const c=$('fs-v19-loading-card');if(c)c.classList.remove('is-visible');
+    document.body.classList.remove('fs-v19-loading');
+    clearInterval(fsV19QuoteTimer);fsV19QuoteTimer=0;
+    fsV20LoadingStarted=0;
+  },320);
+}
+function setLoadingReflection(show){
   const c=loadingCard();
-  c.classList.toggle('is-visible',!!show);
-  document.body.classList.toggle('fs-v19-loading',!!show);
-  const s=$('fs-v19-loading-status');if(s&&statusText)s.textContent=statusText;
-  clearInterval(fsV19QuoteTimer);fsV19QuoteTimer=0;
+  fsV20UnderlyingLoading=!!show;
   if(show){
-    paintReflection();
-    fsV19QuoteTimer=setInterval(()=>{fsV19QuoteIndex=(fsV19QuoteIndex+1)%FS_V19_REFLECTIONS.length;paintReflection()},4500);
+    clearTimeout(fsV20PendingHide);fsV20PendingHide=0;
+    if(!fsV20LoadingStarted){
+      fsV20LoadingStarted=Date.now();
+      fsV19QuoteIndex=(fsV19QuoteIndex+1)%FS_V19_REFLECTIONS.length;
+      paintReflection();
+      const bar=$('fs-v19-loading-bar');if(bar)bar.style.width='0%';
+      const label=$('fs-v19-loading-percent');if(label)label.textContent='0%';
+    }
+    c.classList.add('is-visible');
+    document.body.classList.add('fs-v19-loading');
+    clearInterval(fsV20ProgressTimer);
+    fsV20ProgressTimer=setInterval(()=>paintLoadingProgress(false),140);
+    clearInterval(fsV19QuoteTimer);
+    fsV19QuoteTimer=setInterval(()=>{fsV19QuoteIndex=(fsV19QuoteIndex+1)%FS_V19_REFLECTIONS.length;paintReflection()},7000);
+    return;
   }
+  if(!fsV20LoadingStarted)return;
+  const elapsed=Date.now()-fsV20LoadingStarted;
+  const remaining=Math.max(0,FS_V20_MIN_LOADING_MS-elapsed);
+  clearTimeout(fsV20PendingHide);
+  fsV20PendingHide=setTimeout(()=>{
+    if(fsV20UnderlyingLoading)return;
+    finishLoadingReflection();
+  },remaining);
 }
 function syncLoadingReflection(){
   const stateEl=$('state'),content=$('content');
@@ -293,11 +333,7 @@ function syncLoadingReflection(){
   const awaiting=document.body.classList.contains('fs-v17-awaiting-apply');
   const loadingText=/verificando|carregando|atualizando|sincronizando|aguarde/i.test(txt);
   const shouldShow=!isError&&(loadingText||((content&&content.hidden)&&!awaiting));
-  let label='Atualizando sua gestão…';
-  if(/autoriza/i.test(txt))label='Verificando sua autorização…';
-  else if(/sincron/i.test(txt))label='Sincronizando com a nuvem…';
-  else if(/carreg|atualiz/i.test(txt))label='Atualizando dados…';
-  setLoadingReflection(shouldShow,label);
+  setLoadingReflection(shouldShow);
 }
 function watchLoadingReflection(){
   const stateEl=$('state'),content=$('content');if(!stateEl||!content)return;
@@ -354,7 +390,6 @@ function stableHeader(){
   $('refresh')?.addEventListener('click',()=>{
     document.body.classList.remove('fs-v17-awaiting-apply');
     document.body.classList.add('fs-v17-analysis-applied');
-    const accessList=document.querySelector('.access-list-wrap');if(accessList){accessList.dataset.fsV18Opened='';}
     setTimeout(stabilizeAccessRoster,80);
     const d=$('fs-v17-filter-dialog');if(d?.open)d.close();
     setTimeout(()=>document.getElementById('metrics')?.scrollIntoView({behavior:'smooth',block:'start'}),180);
@@ -389,13 +424,7 @@ function stabilizeAccessRoster(){
 
   const summary=wrap.querySelector(':scope > summary');
   if(summary){
-    summary.innerHTML='<span class="fs-v18-access-title">Usuários cadastrados</span><span class="fs-v18-access-meta">'+esc(branchLabel)+' · '+rows.length+' colaborador'+(rows.length===1?'':'es')+'</span>';
-  }
-
-  // Ao aplicar a análise, abre uma vez. Depois respeita se o usuário fechar.
-  if(document.body.classList.contains('fs-v17-analysis-applied')&&!wrap.dataset.fsV18Opened){
-    wrap.open=true;
-    wrap.dataset.fsV18Opened='1';
+    summary.innerHTML='<span class="fs-v18-access-title">Usuários cadastrados</span><span class="fs-v18-access-meta">'+esc(branchLabel)+' · '+rows.length+' colaborador'+(rows.length===1?'':'es')+'</span><span class="fs-v18-access-arrow" aria-hidden="true">⌄</span>';
   }
 }
 function watchAccessRoster(){
