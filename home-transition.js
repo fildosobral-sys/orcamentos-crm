@@ -169,7 +169,7 @@
       #btnShareAccess{font-size:1.25rem!important}
 
       /* O status é definido apenas no Acompanhar; remove o antigo botão Realizada/Pendente. */
-      .history-actions-compact .history-status-btn{display:none!important}
+      .history-actions-compact .history-status-btn,button[onclick^="alterarStatusVenda"],button[title*="Marcar venda como"]{display:none!important}
 
       /* Segunda linha: status ocupa o espaço liberado e a data fica organizada à direita. */
       .history-state-meta{
@@ -278,9 +278,36 @@
     `;document.head.appendChild(s)
   }
 
+
+  function removeLegacySaleButton(){
+    document.querySelectorAll('.history-status-btn,button[onclick^="alterarStatusVenda"],button[title*="Marcar venda como"]').forEach(el=>el.remove());
+  }
+
+  function installOptimisticSync(){
+    const R=window.FSCRMRemote;
+    if(!R||R.__fsOptimisticV16||typeof R.call!=='function'||typeof R.enqueue!=='function')return;
+    const original=R.call.bind(R);
+    const key='fscrm_records_cache_v2';
+    R.call=async function(action,data){
+      if(action==='update'&&data&&data.id&&data.patch){
+        let rows=[];try{rows=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(rows))rows=[]}catch(_e){rows=[]}
+        const i=rows.findIndex(x=>String(x.id)===String(data.id));
+        const base=i>=0?rows[i]:{id:data.id,revision:Number(data.expectedRevision||0)};
+        const optimistic={...base,...data.patch,id:data.id,revision:Number(data.expectedRevision??base.revision??0)+1,updatedAt:new Date().toISOString()};
+        if(i>=0)rows[i]=optimistic;else rows.push(optimistic);
+        try{localStorage.setItem(key,JSON.stringify(rows.slice(-1200)))}catch(_e){}
+        await R.enqueue(action,data);
+        setTimeout(()=>{R.flushQueue?.().catch(()=>{})},0);
+        return optimistic;
+      }
+      return original(action,data);
+    };
+    R.__fsOptimisticV16=true;
+  }
+
   function applyAll(){
     cleanTitle();cleanFooter();numericMoneyFields();hideCommercialDuringLogin();bindHome();
-    syncHistoryStatus();polishManagementButton();injectStyle();injectIOSStyle();bindSaleMode();
+    removeLegacySaleButton();installOptimisticSync();syncHistoryStatus();polishManagementButton();injectStyle();injectIOSStyle();bindSaleMode();
     saleMode();
     if(document.getElementById('menuDropdown')?.classList.contains('active'))centerUserMenu();
   }
