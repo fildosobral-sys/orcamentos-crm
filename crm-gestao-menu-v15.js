@@ -328,13 +328,19 @@ function setLoadingReflection(show){
   },remaining);
 }
 function syncLoadingReflection(){
-  const stateEl=$('state'),content=$('content');
+  const stateEl=$('state'),content=$('content'),refreshBtn=$('refresh');
   if(!stateEl)return;
   const txt=String(stateEl.textContent||'').trim();
   const isError=stateEl.dataset.error==='true';
   const awaiting=document.body.classList.contains('fs-v17-awaiting-apply');
+  const contentHidden=!!(content&&content.hidden);
+  const activelyRefreshing=!!(refreshBtn&&refreshBtn.disabled);
   const loadingText=/verificando|carregando|atualizando|sincronizando|aguarde/i.test(txt);
-  const shouldShow=!isError&&(loadingText||((content&&content.hidden)&&!awaiting));
+
+  // A fonte de verdade passa a ser o carregamento real. Um texto antigo de
+  // "Verificando..." não pode manter o popup preso depois que a atualização acabou.
+  const initialLoading=contentHidden&&!awaiting&&(activelyRefreshing||loadingText);
+  const shouldShow=!isError&&(activelyRefreshing||initialLoading);
   setLoadingReflection(shouldShow);
 }
 function watchLoadingReflection(){
@@ -344,9 +350,19 @@ function watchLoadingReflection(){
   const obs=new MutationObserver(()=>setTimeout(syncLoadingReflection,0));
   obs.observe(stateEl,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-error']});
   obs.observe(content,{attributes:true,attributeFilter:['hidden']});
+  const refreshBtn=$('refresh');
+  if(refreshBtn)obs.observe(refreshBtn,{attributes:true,attributeFilter:['disabled']});
   window.addEventListener('pageshow',()=>setTimeout(syncLoadingReflection,40));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(syncLoadingReflection,60)});
   syncLoadingReflection();
+  // Segurança contra estado visual preso após reload/restauração de página.
+  setInterval(()=>{
+    if(!fsV20LoadingStarted)return;
+    const content=$('content'),refreshBtn=$('refresh');
+    const awaiting=document.body.classList.contains('fs-v17-awaiting-apply');
+    const realWork=!!(refreshBtn&&refreshBtn.disabled);
+    if(!realWork && ((content&&!content.hidden)||awaiting)) setLoadingReflection(false);
+  },500);
 }
 
 function filterDialog(){
