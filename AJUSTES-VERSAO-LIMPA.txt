@@ -30,3 +30,12 @@ Observação importante
 - O backend/Google Apps Script não está dentro deste pacote. A permissão de Administrador Geral
   depende da resposta actor.isOwner enviada pela API e precisa ser auditada separadamente caso o
   problema de acesso continue.
+
+
+=== AJUSTES COMPLEMENTARES — 18/09/2026 ===
+- Botão "Colar Zenir" reduzido no mobile, com largura mais contida.
+- Botão da lupa ampliado e com borda mais visível.
+- Card de Preço de Tabela reforçado no tom azul.
+- Modalidades "À Vista" e "Parcelado" posicionadas lado a lado no mobile, tanto no preço de tabela quanto no promocional.
+- Ajuste do cabeçalho da Gestão: desativado o painel legado que aparecia antes do cabeçalho novo.
+- Filtros mobile da Gestão reforçados para abrir no cabeçalho atual e fechar corretamente ao aplicar ou tocar fora.

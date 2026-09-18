@@ -1694,6 +1694,99 @@
   }
 }
 
+
+/* AJUSTE EXTRA 18/09/2026 — refinamento mobile do orçamento */
+#codigoProdutoRow{align-items:stretch!important;}
+#btnPesquisarZenir{
+  font-size:1.35rem!important;
+  border:2px solid rgba(102,126,234,.30)!important;
+  box-shadow:0 8px 18px rgba(102,126,234,.12)!important;
+  border-radius:16px!important;
+}
+#btnColarZenir{
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  padding:.72rem .95rem!important;
+  font-size:.96rem!important;
+}
+.pricing-card-table>div[style*="margin-top: 1.5rem"]{
+  background:rgba(59,130,246,.08)!important;
+  border:1px solid rgba(59,130,246,.18)!important;
+}
+.pricing-card-promo .section-payment{
+  background:rgba(239,68,68,.045)!important;
+  border:1px solid rgba(239,68,68,.14)!important;
+  border-radius:16px!important;
+  padding:.85rem 0 0!important;
+}
+@media (max-width: 640px){
+  #codigoProdutoRow{
+    display:grid!important;
+    grid-template-columns:72px minmax(0,1fr)!important;
+    grid-template-areas:'search paste' 'input input'!important;
+    gap:10px!important;
+    align-items:stretch!important;
+  }
+  #btnPesquisarZenir{
+    grid-area:search!important;
+    order:initial!important;
+    width:72px!important;
+    flex:none!important;
+    height:50px!important;
+    padding:0!important;
+    font-size:1.6rem!important;
+  }
+  #btnColarZenir{
+    grid-area:paste!important;
+    order:initial!important;
+    width:auto!important;
+    flex:none!important;
+    height:50px!important;
+    padding:0 12px!important;
+    line-height:1.1!important;
+    font-size:.9rem!important;
+    justify-content:center!important;
+  }
+  #codigoProduto{
+    grid-area:input!important;
+    order:initial!important;
+    flex:none!important;
+    width:100%!important;
+  }
+  .pricing-card{padding:.9rem!important;border-radius:16px!important;}
+  .pricing-card-table>div[style*="margin-top: 1.5rem"],
+  .pricing-card-promo .section-payment{
+    margin-top:.85rem!important;
+    padding:.9rem!important;
+    border-radius:16px!important;
+  }
+  .pricing-card .payment-options{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:.65rem!important;
+    width:100%!important;
+    margin-bottom:.75rem!important;
+  }
+  .pricing-card .payment-options label{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:.42rem!important;
+    min-height:48px!important;
+    margin:0!important;
+    padding:.68rem .5rem!important;
+    border-radius:14px!important;
+    border:1.5px solid rgba(148,163,184,.24)!important;
+    background:rgba(255,255,255,.72)!important;
+    text-align:center!important;
+  }
+  .pricing-card .payment-options label span{font-size:.96rem!important;white-space:nowrap!important;}
+  .pricing-card .payment-options input[type="radio"]{width:20px!important;height:20px!important;}
+  .pricing-card-table h4,
+  .pricing-card-promo .section-title{font-size:.96rem!important;line-height:1.2!important;margin-bottom:.7rem!important;}
+}
+
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
@@ -1919,7 +2012,7 @@
         <div id="codigoProdutoRow" style="display:flex; gap:12px; align-items:center; width:100%;">
           <input type="text" id="codigoProduto" class="input-field" placeholder="Ex: 11962 - DESCRIÇÃO DO PRODUTO..." required style="flex:1;">
           <button type="button" id="btnPesquisarZenir" class="btn btn-secondary" style="width:56px; padding: 0.75rem 0;" title="Consultar produto no app de Vendas Zenir">🔎</button>
-          <button type="button" id="btnColarZenir" class="btn btn-primary" style="white-space:nowrap;" title="Colar código/descrição da Zenir">📋 Colar da ZENIR</button>
+          <button type="button" id="btnColarZenir" class="btn btn-primary" style="white-space:nowrap;" title="Colar código/descrição da Zenir">📋 Colar Zenir</button>
         </div>
         <p id="zenirDica" style="display:none;"><span style="display:none;">Dica: digite um código/descrição, clique na lupa, copie o texto da página e depois clique em Colar da ZENIR.</span></p>
       </div>
@@ -1927,7 +2020,7 @@
        <div class="price-input"><span class="currency-symbol" id="currencySymbol1">R$</span> <input type="text" id="precoNormal" class="input-field" placeholder="Digite o preço normal do produto" required>
        </div><!-- Modalidade de Pagamento - Preço Normal -->
        <div style="margin-top: 1.5rem; padding: 1.5rem; background: rgba(147, 51, 234, 0.1); border-radius: 15px; border: 2px solid rgba(147, 51, 234, 0.2);">
-        <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: #4a5568; display: flex; align-items: center; gap: 0.5rem;">💳 Modalidades - Preço de Tabela</h4>
+        <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: #4a5568; display: flex; align-items: center; gap: 0.5rem;">💳 Modalidade de Pagamento</h4>
         <div class="payment-options"><label> <input type="radio" name="modalidadeNormal" value="vista" checked onchange="toggleParcelasNormal()"> <span>À Vista</span> </label> <label> <input type="radio" name="modalidadeNormal" value="parcelado" onchange="toggleParcelasNormal()"> <span>Parcelado</span> </label>
         </div>
         <div id="parcelasNormalGroup" class="parcelas-group">
@@ -1985,7 +2078,7 @@
        </div>
       </div><!-- Seção: Modalidade de Pagamento - Preço Promocional -->
       <div class="calculation-section section-payment">
-       <h3 class="section-title">💳 Modalidade de Pagamento - Preço Promocional</h3>
+       <h3 class="section-title">💳 Modalidade de Pagamento</h3>
        <div class="input-group">
         <div class="payment-options"><label> <input type="radio" name="modalidadePromocional" value="vista" checked onchange="toggleParcelasPromocional()"> <span>À Vista</span> </label> <label> <input type="radio" name="modalidadePromocional" value="parcelado" onchange="toggleParcelasPromocional()"> <span>Parcelado</span> </label>
         </div>

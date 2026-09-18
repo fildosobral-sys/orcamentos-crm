@@ -156,11 +156,14 @@ function mobileMenu(){
 function stableHeader(){
   const summary=$('fs-v13-mobile-summary');if(!summary)return;
 
-  // Mantém o cabeçalho em um único estado visual. O legado pode tentar recolher
-  // durante o scroll, mas esta rotina neutraliza a classe sem alterar a página.
   const clearLegacyState=()=>{
     if(document.body.classList.contains('fs-mobile-header-collapsed'))
       document.body.classList.remove('fs-mobile-header-collapsed');
+  };
+  const setOpen=(open)=>{
+    clearLegacyState();
+    document.body.classList.toggle('fs-v16-filters-open',!!open);
+    summary.setAttribute('aria-expanded',String(!!open));
   };
   clearLegacyState();
 
@@ -168,16 +171,27 @@ function stableHeader(){
     document.body.dataset.fsV16HeaderWatch='1';
     const bodyObserver=new MutationObserver(clearLegacyState);
     bodyObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
+    document.addEventListener('click',e=>{
+      if(window.innerWidth>900) return;
+      if(!document.body.classList.contains('fs-v16-filters-open')) return;
+      const toolbar=document.getElementById('fs-v13-toolbar');
+      if(toolbar && toolbar.contains(e.target)) return;
+      if(summary.contains(e.target)) return;
+      const menuBtn=document.getElementById('fs-v16-menu-btn');
+      if(menuBtn && menuBtn.contains(e.target)) return;
+      setOpen(false);
+    });
+    window.addEventListener('resize',()=>{if(window.innerWidth>900)setOpen(false)});
+    document.getElementById('refresh')?.addEventListener('click',()=>setOpen(false));
   }
 
   if(summary.dataset.fsV16==='1')return;
   summary.dataset.fsV16='1';summary.setAttribute('role','button');summary.setAttribute('tabindex','0');summary.setAttribute('aria-expanded','false');
   const toggle=()=>{
-    clearLegacyState();
-    const open=document.body.classList.toggle('fs-v16-filters-open');
-    summary.setAttribute('aria-expanded',String(open));
+    if(window.innerWidth>900) return;
+    setOpen(!document.body.classList.contains('fs-v16-filters-open'));
   };
-  summary.addEventListener('click',toggle);
+  summary.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggle()});
   summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
 }
 function cleanupBottom(){

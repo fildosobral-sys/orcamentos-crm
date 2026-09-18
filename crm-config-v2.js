@@ -14,9 +14,9 @@ window.FSCRMConfig = Object.freeze({
     const t=document.createElement('meta');t.name='theme-color';t.content='#5b4cc4';head.appendChild(t);
   }
   if(/\/orcamentos-gestao\.html$/i.test(location.pathname)){
-    document.documentElement.classList.add('fs-bi-gated');
-    const c=document.createElement('link');c.rel='stylesheet';c.href='./crm-gestao-command-v1.css?v=1';head.appendChild(c);
-    window.addEventListener('load',()=>{if(document.querySelector('script[data-fs-bi-command]'))return;const s=document.createElement('script');s.src='./crm-gestao-command-v1.js?v=1';s.dataset.fsBiCommand='1';document.body.appendChild(s);},{once:true});
+    /* 18/09/2026: painel legado desativado para evitar o cabeçalho antigo aparecendo
+       antes do layout novo. A gestão agora abre apenas com o cabeçalho/filtros atuais. */
+    document.documentElement.classList.remove('fs-bi-gated');
   }
   const loadPwa=()=>{if(document.querySelector('script[data-fs-pwa]'))return;const s=document.createElement('script');s.src='./pwa-install.js?v=1';s.dataset.fsPwa='1';document.body.appendChild(s);};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadPwa,{once:true});else loadPwa();
