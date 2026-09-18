@@ -262,7 +262,7 @@ const FS_V19_REFLECTIONS=[
   ['Clareza na decisão transforma esforço em direção.','Reflexão de gestão']
 ];
 const FS_V20_MIN_LOADING_MS=7000;
-let fsV19QuoteIndex=0,fsV19QuoteTimer=0,fsV20ProgressTimer=0,fsV20LoadingStarted=0,fsV20UnderlyingLoading=false,fsV20PendingHide=0;
+let fsV19QuoteIndex=0,fsV19QuoteTimer=0,fsV20ProgressTimer=0,fsV20LoadingStarted=(window.__fsGestaoLoadingStarted||0),fsV20UnderlyingLoading=false,fsV20PendingHide=0;
 function loadingCard(){
   let c=$('fs-v19-loading-card');if(c)return c;
   c=document.createElement('section');c.id='fs-v19-loading-card';c.className='fs-v19-loading-card';c.setAttribute('aria-live','polite');
@@ -274,15 +274,15 @@ function loadingCard(){
   return c;
 }
 function paintReflection(){
-  const q=FS_V19_REFLECTIONS[fsV19QuoteIndex%FS_V19_REFLECTIONS.length];
   const qe=$('fs-v19-loading-quote'),ae=$('fs-v19-loading-author');
+  if(qe&&String(qe.textContent||'').trim())return;
+  const q=FS_V19_REFLECTIONS[fsV19QuoteIndex%FS_V19_REFLECTIONS.length];
   if(qe)qe.textContent='“'+q[0]+'”';if(ae)ae.textContent=q[1];
 }
 function paintLoadingProgress(forceComplete=false){
   if(!fsV20LoadingStarted)return;
-  const elapsed=Date.now()-fsV20LoadingStarted;
-  let pct=Math.min(92,Math.round((elapsed/FS_V20_MIN_LOADING_MS)*92));
-  if(forceComplete)pct=100;
+  let pct=Number(window.__fsLoadingProgress||0);
+  if(forceComplete){pct=100;window.__fsLoadingProgress=100;}
   const bar=$('fs-v19-loading-bar'),label=$('fs-v19-loading-percent');
   if(bar)bar.style.width=pct+'%';
   const card=$('fs-v19-loading-card');if(card)card.style.setProperty('--fs-progress',String(pct));
@@ -291,12 +291,15 @@ function paintLoadingProgress(forceComplete=false){
 function finishLoadingReflection(){
   clearTimeout(fsV20PendingHide);fsV20PendingHide=0;
   clearInterval(fsV20ProgressTimer);fsV20ProgressTimer=0;
+  clearInterval(window.__fsImmediateProgressTimer);window.__fsImmediateProgressTimer=0;
   paintLoadingProgress(true);
   setTimeout(()=>{
     const c=$('fs-v19-loading-card');if(c)c.classList.remove('is-visible');
     document.body.classList.remove('fs-v19-loading');
     clearInterval(fsV19QuoteTimer);fsV19QuoteTimer=0;
     fsV20LoadingStarted=0;
+    window.__fsGestaoLoadingStarted=0;
+    window.__fsGestaoLoadingVisibleAt=0;
   },320);
 }
 function setLoadingReflection(show){
@@ -305,19 +308,14 @@ function setLoadingReflection(show){
   if(show){
     clearTimeout(fsV20PendingHide);fsV20PendingHide=0;
     if(!fsV20LoadingStarted){
-      fsV20LoadingStarted=Date.now();
-      fsV19QuoteIndex=(fsV19QuoteIndex+1)%FS_V19_REFLECTIONS.length;
+      fsV20LoadingStarted=window.__fsGestaoLoadingStarted||Date.now();
+      window.__fsGestaoLoadingStarted=fsV20LoadingStarted;
       paintReflection();
-      const bar=$('fs-v19-loading-bar');if(bar)bar.style.width='0%';
-      c.style.setProperty('--fs-progress','0');
-      const label=$('fs-v19-loading-percent');if(label)label.textContent='0%';
     }
     c.classList.add('is-visible');
     document.body.classList.add('fs-v19-loading');
-    clearInterval(fsV20ProgressTimer);
-    fsV20ProgressTimer=setInterval(()=>paintLoadingProgress(false),140);
-    clearInterval(fsV19QuoteTimer);
-    fsV19QuoteTimer=setInterval(()=>{fsV19QuoteIndex=(fsV19QuoteIndex+1)%FS_V19_REFLECTIONS.length;paintReflection()},7000);
+    document.documentElement.classList.remove('fs-boot-lock');
+    paintLoadingProgress(false);
     return;
   }
   if(!fsV20LoadingStarted)return;
