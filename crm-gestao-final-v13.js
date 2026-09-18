@@ -117,7 +117,8 @@ function buildTopbar(){
   updateMobileSummary();
   const summaryBtn=$('fs-v13-mobile-summary');
   if(summaryBtn){
-    /* O painel mobile é controlado apenas pelo menu v15 para evitar conflito. */
+    /* 18/09/2026: o controle do painel mobile ficou centralizado no menu v15,
+       evitando conflito entre o cabeçalho antigo e o novo cabeçalho. */
     summaryBtn.setAttribute('aria-expanded','false');
   }
 }
