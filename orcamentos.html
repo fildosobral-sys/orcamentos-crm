@@ -1614,6 +1614,86 @@
   }
 }
 
+
+/* ============================================================
+   AJUSTE CONSOLIDADO 18/09/2026 — CARDS DE PREÇO / MOBILE
+   ============================================================ */
+.pricing-card {
+  border-radius: 18px;
+  padding: 1.15rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid transparent;
+}
+.pricing-card-table {
+  background: linear-gradient(180deg, rgba(59,130,246,.10), rgba(59,130,246,.045));
+  border-color: rgba(59,130,246,.22);
+  box-shadow: 0 8px 22px rgba(59,130,246,.08);
+}
+.pricing-card-promo {
+  background: linear-gradient(180deg, rgba(239,68,68,.095), rgba(239,68,68,.035));
+  border-color: rgba(239,68,68,.20);
+  box-shadow: 0 8px 22px rgba(239,68,68,.07);
+}
+.pricing-card-table > div[style*="margin-top: 1.5rem"] {
+  background: rgba(255,255,255,.62) !important;
+  border-color: rgba(59,130,246,.18) !important;
+}
+.pricing-card-promo .section-manual,
+.pricing-card-promo .section-payment {
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+.pricing-card-promo .section-payment { padding-top: .5rem; }
+.section-auto .section-title { text-align: center; }
+@media (max-width: 640px) {
+  .section-title,
+  .section-auto .section-title {
+    font-size: .98rem !important;
+    line-height: 1.25;
+    justify-content: center;
+    text-align: center;
+  }
+  .pricing-card {
+    padding: .9rem;
+    border-radius: 15px;
+    margin-bottom: 1rem;
+  }
+  .pricing-card .input-label {
+    font-size: .98rem !important;
+    line-height: 1.2;
+  }
+  .payment-options {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important;
+    gap: .55rem !important;
+    width: 100%;
+  }
+  .payment-options label {
+    min-width: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: .72rem .45rem !important;
+    justify-content: center !important;
+    text-align: center;
+    white-space: nowrap;
+    font-size: .88rem !important;
+  }
+  .pricing-card-table > div[style*="margin-top: 1.5rem"] {
+    margin-top: .9rem !important;
+    padding: .85rem !important;
+  }
+  .pricing-card-table h4,
+  .pricing-card-promo .section-payment .section-title {
+    font-size: .88rem !important;
+    line-height: 1.2;
+    margin-bottom: .7rem !important;
+  }
+}
+
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
@@ -1843,7 +1923,7 @@
         </div>
         <p id="zenirDica" style="display:none;"><span style="display:none;">Dica: digite um código/descrição, clique na lupa, copie o texto da página e depois clique em Colar da ZENIR.</span></p>
       </div>
-      <div class="input-group"><label class="input-label" for="precoNormal" style="font-size: 1.3rem; color: #667eea; text-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">💰 Preço de Tabela:</label>
+      <div class="input-group pricing-card pricing-card-table"><label class="input-label" for="precoNormal" style="font-size: 1.3rem; color: #667eea; text-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">💰 Preço de Tabela:</label>
        <div class="price-input"><span class="currency-symbol" id="currencySymbol1">R$</span> <input type="text" id="precoNormal" class="input-field" placeholder="Digite o preço normal do produto" required>
        </div><!-- Modalidade de Pagamento - Preço Normal -->
        <div style="margin-top: 1.5rem; padding: 1.5rem; background: rgba(147, 51, 234, 0.1); border-radius: 15px; border: 2px solid rgba(147, 51, 234, 0.2);">
@@ -1863,7 +1943,7 @@
        </div>
       </div><!-- Seção: Cálculo Automático por Percentual -->
       <div class="calculation-section section-auto">
-       <h3 class="section-title">🎯 Cálculo Automático por Percentual</h3>
+       <h3 class="section-title">🎯 Cálculo por Percentual</h3>
        <div class="input-group"><label class="input-label" for="percentualDesconto">📊 Percentual de Desconto (%):</label>
         <div class="percent-input"><input type="number" id="percentualDesconto" class="input-field" placeholder="" step="0.1" min="0" max="100"> <span class="percent-symbol">%</span>
         </div>
@@ -1895,7 +1975,8 @@
         </div>
         <input type="hidden" id="outroAprovacaoDescricao" value="">
        </div>
-      </div><!-- Seção: Cálculo Manual -->
+      </div><!-- Seção: Produto Promocional -->
+      <div class="pricing-card pricing-card-promo">
       <div class="calculation-section section-manual">
        <h3 class="section-title">✏️ OU Informe o Preço Promocional Manualmente</h3>
        <div class="input-group"><label class="input-label" for="precoPromocional" style="font-size: 1.3rem; color: #f56565; text-shadow: 0 2px 4px rgba(245, 101, 101, 0.3);">🔥 Preço Promocional Final:</label>
@@ -1920,6 +2001,7 @@
         </div>
        </div>
       </div>
+      </div><!-- /pricing-card-promo -->
       <div class="input-group"><label class="input-label" for="cliente">👤 Nome do Cliente:</label> <input type="text" id="cliente" class="input-field" placeholder="Digite o nome completo do cliente" required>
       </div>
       <div class="input-group"><label class="input-label" for="whatsapp">📱 WhatsApp do Cliente:</label> <input type="tel" id="whatsapp" class="input-field" placeholder="(11) 99999-9999" maxlength="15">
@@ -2516,7 +2598,7 @@ let currentData = [];
                     <div class="history-header">
                         <span class="client-name">👤 <strong>${item.vendedor || 'Usuário Desconhecido'}</strong> • 📦 ${item.codigo_produto || 'N/A'} - 👤 ${item.cliente}${item.whatsapp ? ` - 📱 ${item.whatsapp}` : ''}</span>
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <button type="button" onclick="excluirRegistro('${item.__backendId}', '${item.cliente.replace(/'/g, "\\'")}', '${item.codigo_produto || 'Produto'}')" 
+                            <button type="button" onclick="excluirRegistro(event, '${item.__backendId}', '${item.cliente.replace(/'/g, "\\'")}', '${item.codigo_produto || 'Produto'}')" 
                                     style="background: rgba(244, 67, 54, 0.1); border: 1px solid rgba(244, 67, 54, 0.3); color: #c62828; 
                                            width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; font-weight: bold; 
                                            cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;
@@ -3029,7 +3111,7 @@ let currentData = [];
         }
 
         // Função para excluir registro
-        async function excluirRegistro(backendId, nomeCliente, codigoProduto) {
+        async function excluirRegistro(event, backendId, nomeCliente, codigoProduto) {
             if (window.FSCRM && window.FSCRM.has(backendId)) {
                 return window.FSCRM.remove(backendId);
             }
@@ -3041,7 +3123,11 @@ let currentData = [];
             }
 
             // Confirmação inline - criar botão de confirmação temporário
-            const botaoExcluir = event.target;
+            const botaoExcluir = event?.currentTarget || event?.target;
+            if (!botaoExcluir) {
+                showToast("❌ Não foi possível identificar o botão de exclusão.", "error");
+                return;
+            }
             const textoOriginal = botaoExcluir.innerHTML;
             const estiloOriginal = botaoExcluir.style.cssText;
             
@@ -3115,7 +3201,7 @@ let currentData = [];
                     botaoExcluir.innerHTML = textoOriginal;
                     botaoExcluir.style.cssText = estiloOriginal;
                     botaoExcluir.title = 'Excluir registro';
-                    botaoExcluir.onclick = () => excluirRegistro(backendId, nomeCliente, codigoProduto);
+                    botaoExcluir.onclick = (ev) => excluirRegistro(ev, backendId, nomeCliente, codigoProduto);
                 }
             }, 3000);
             
@@ -3822,7 +3908,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
                     <div class="history-header">
                         <span class="client-name">📦 ${item.codigo_produto || 'N/A'} - 👤 ${item.cliente}${item.whatsapp ? ` - 📱 ${item.whatsapp}` : ''}</span>
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <button type="button" onclick="excluirRegistro('${item.__backendId}', '${item.cliente.replace(/'/g, "\\'")}', '${item.codigo_produto || 'Produto'}')" 
+                            <button type="button" onclick="excluirRegistro(event, '${item.__backendId}', '${item.cliente.replace(/'/g, "\\'")}', '${item.codigo_produto || 'Produto'}')" 
                                     style="background: rgba(244, 67, 54, 0.1); border: 1px solid rgba(244, 67, 54, 0.3); color: #c62828; 
                                            width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; font-weight: bold; 
                                            cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;

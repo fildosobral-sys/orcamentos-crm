@@ -1,0 +1,32 @@
+VERSÃO LIMPA — 18/09/2026
+
+Objetivo
+- Manter apenas os arquivos ativos/necessários do projeto.
+- Preservar compatibilidade com GitHub Pages, PWA e links antigos.
+- Evitar refatoração agressiva que possa quebrar funções existentes.
+
+Arquivos removidos por não estarem referenciados pela aplicação atual:
+- crm-gestao-bi-v10.css
+- crm-gestao-bi-v10.js
+- crm-gestao-bi-v11.css
+- crm-gestao-bi-v11.js
+
+Ajustes aplicados em orcamentos.html:
+- "Cálculo Automático por Percentual" -> "Cálculo por Percentual".
+- Preço de tabela ganhou card visual azul-claro.
+- Preço promocional + modalidade passaram a compor um único card visual avermelhado.
+- No mobile, opções "À Vista" e "Parcelado" ficam lado a lado.
+- Fontes/títulos mobile foram compactados para evitar quebra visual.
+- Correção da exclusão de registros: não depende mais de window.event implícito.
+
+Mantidos propositalmente:
+- orcamentos-2.html: compatibilidade com links antigos.
+- 404.html: comportamento correto no GitHub Pages.
+- manifest.webmanifest, service-worker.js e pwa-install.js: instalação como aplicativo/PWA.
+- Módulos v8/v12/v13/v15 atualmente referenciados por orcamentos-gestao.html.
+- README.md e LEIA-ME.txt: documentação, não interferem na execução.
+
+Observação importante
+- O backend/Google Apps Script não está dentro deste pacote. A permissão de Administrador Geral
+  depende da resposta actor.isOwner enviada pela API e precisa ser auditada separadamente caso o
+  problema de acesso continue.
