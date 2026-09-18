@@ -116,11 +116,11 @@ function buildTopbar(){
   syncRangeInputs(false);
   updateMobileSummary();
   const summaryBtn=$('fs-v13-mobile-summary');
-  if(summaryBtn){
-    /* 18/09/2026: o controle do painel mobile ficou centralizado no menu v15,
-       evitando conflito entre o cabeçalho antigo e o novo cabeçalho. */
-    summaryBtn.setAttribute('aria-expanded','false');
-  }
+  if(summaryBtn){summaryBtn.addEventListener('click',()=>{
+    if(window.innerWidth>900)return;
+    const collapsed=document.body.classList.toggle('fs-mobile-header-collapsed');
+    summaryBtn.setAttribute('aria-expanded',String(!collapsed));
+  });}
 }
 
 function updateMobileSummary(){

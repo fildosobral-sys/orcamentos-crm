@@ -38,9 +38,6 @@ function style(){
       .fs-bi-sidebar{display:none!important}
       body.fs-bi-v12 main{padding-bottom:28px!important}
 
-      /* 18/09/2026B — limpa a visão principal: acessos ficam fora da página principal */
-      body.fs-v16-ready #access-admin{display:none!important}
-
       /* Cabeçalho mobile fixo em UMA altura. Nada muda de tamanho durante o scroll. */
       .fs-bi-topbar{
         position:sticky!important;top:0!important;z-index:1400!important;
@@ -87,41 +84,6 @@ function style(){
       body.fs-mobile-header-collapsed #fs-v13-mobile-summary,
       body.fs-mobile-header-collapsed #fs-v16-menu-btn{transform:none!important;opacity:1!important}
       body.fs-mobile-header-collapsed .fs-v13-toolbar{display:none!important}
-      body.fs-mobile-header-collapsed.fs-v16-filters-open .fs-v13-toolbar{display:grid!important}
-
-
-    /* 18/09/2026B — manter os filtros visíveis e funcionais no mobile */
-    @media(max-width:900px){
-      .fs-bi-topbar{
-        display:block!important;
-        height:auto!important;min-height:0!important;max-height:none!important;
-        padding:12px 14px 14px!important;
-      }
-      .fs-v13-topbar-title{
-        display:block!important;
-        margin:0 56px 10px 0!important;
-      }
-      #fs-v16-menu-btn{
-        position:absolute!important;right:14px!important;top:12px!important;
-      }
-      #fs-v13-mobile-summary{display:none!important}
-      .fs-v13-toolbar{
-        display:grid!important;
-        position:static!important;
-        top:auto!important;left:auto!important;right:auto!important;
-        width:100%!important;max-width:none!important;max-height:none!important;
-        overflow:visible!important;
-        padding:0!important;margin-top:8px!important;
-        background:transparent!important;box-shadow:none!important;
-        backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-        grid-template-columns:1fr 1fr!important;gap:8px!important;
-      }
-      .fs-v13-control{min-width:0!important}
-      .fs-v13-control.branch,.fs-v13-control.seller{grid-column:1/-1!important}
-      .fs-v13-apply{width:100%!important;grid-column:1/-1!important}
-      .fs-v13-range{grid-column:1/-1!important;text-align:center!important;white-space:normal!important}
-      body.fs-v16-filters-open .fs-v13-toolbar,
-      body.fs-mobile-header-collapsed .fs-v13-toolbar,
       body.fs-mobile-header-collapsed.fs-v16-filters-open .fs-v13-toolbar{display:grid!important}
     }
   `;document.head.appendChild(s);
@@ -194,14 +156,11 @@ function mobileMenu(){
 function stableHeader(){
   const summary=$('fs-v13-mobile-summary');if(!summary)return;
 
+  // Mantém o cabeçalho em um único estado visual. O legado pode tentar recolher
+  // durante o scroll, mas esta rotina neutraliza a classe sem alterar a página.
   const clearLegacyState=()=>{
     if(document.body.classList.contains('fs-mobile-header-collapsed'))
       document.body.classList.remove('fs-mobile-header-collapsed');
-  };
-  const setOpen=(open)=>{
-    clearLegacyState();
-    document.body.classList.toggle('fs-v16-filters-open',!!open);
-    summary.setAttribute('aria-expanded',String(!!open));
   };
   clearLegacyState();
 
@@ -209,27 +168,16 @@ function stableHeader(){
     document.body.dataset.fsV16HeaderWatch='1';
     const bodyObserver=new MutationObserver(clearLegacyState);
     bodyObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
-    document.addEventListener('click',e=>{
-      if(window.innerWidth>900) return;
-      if(!document.body.classList.contains('fs-v16-filters-open')) return;
-      const toolbar=document.getElementById('fs-v13-toolbar');
-      if(toolbar && toolbar.contains(e.target)) return;
-      if(summary.contains(e.target)) return;
-      const menuBtn=document.getElementById('fs-v16-menu-btn');
-      if(menuBtn && menuBtn.contains(e.target)) return;
-      setOpen(false);
-    });
-    window.addEventListener('resize',()=>{if(window.innerWidth>900)setOpen(false)});
-    document.getElementById('refresh')?.addEventListener('click',()=>setOpen(false));
   }
 
   if(summary.dataset.fsV16==='1')return;
   summary.dataset.fsV16='1';summary.setAttribute('role','button');summary.setAttribute('tabindex','0');summary.setAttribute('aria-expanded','false');
   const toggle=()=>{
-    if(window.innerWidth>900) return;
-    setOpen(!document.body.classList.contains('fs-v16-filters-open'));
+    clearLegacyState();
+    const open=document.body.classList.toggle('fs-v16-filters-open');
+    summary.setAttribute('aria-expanded',String(open));
   };
-  summary.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggle()});
+  summary.addEventListener('click',toggle);
   summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
 }
 function cleanupBottom(){
@@ -237,7 +185,6 @@ function cleanupBottom(){
   $('relatorios')?.setAttribute('hidden','');
   const p=$('permissions');if(p&&!p.closest('#fs-v16-permissions-dialog'))p.style.display='none';
   const d=$('data-admin-addon');if(d&&!d.closest('#fs-v16-data-dialog'))d.style.display='none';
-  const a=$('access-admin');if(a&&!a.closest('#fs-v13-access-dialog'))a.style.display='none';
 }
 function enhance(){style();desktop();mobileMenu();stableHeader();cleanupBottom()}
 function boot(){enhance();let n=0;const t=setInterval(()=>{enhance();if(++n>40)clearInterval(t)},250);new MutationObserver(()=>requestAnimationFrame(enhance)).observe(document.documentElement,{childList:true,subtree:true})}

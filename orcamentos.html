@@ -1877,6 +1877,29 @@
   }
 }
 
+
+/* CORREÇÃO PONTUAL 18/09/2026D — TODO o card Preço de Tabela em azul-bebê */
+.pricing-card.pricing-card-table{
+  background:#edf6ff!important;
+  border:1px solid #c7ddf6!important;
+  box-shadow:0 6px 18px rgba(71,118,173,.08)!important;
+}
+.pricing-card.pricing-card-table > div[style*="margin-top: 1.5rem"]{
+  background:rgba(255,255,255,.34)!important;
+  border:1px solid rgba(166,196,232,.55)!important;
+  box-shadow:none!important;
+}
+@media (max-width:640px){
+  .pricing-card.pricing-card-table{
+    background:#eaf4ff!important;
+    border-color:#bed8f4!important;
+  }
+  .pricing-card.pricing-card-table > div[style*="margin-top: 1.5rem"]{
+    background:rgba(255,255,255,.28)!important;
+    border-color:rgba(166,196,232,.52)!important;
+  }
+}
+
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
