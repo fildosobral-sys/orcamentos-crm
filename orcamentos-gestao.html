@@ -9,12 +9,12 @@
 <link rel="manifest" href="./manifest.webmanifest?v=1">
 <link rel="stylesheet" href="./crm-gestao-v2.css?v=70">
 <link rel="stylesheet" href="./crm-gestao-polish-v8.css?v=1">
-<link rel="stylesheet" href="./crm-gestao-bi-v11.css?v=1">
+<link rel="stylesheet" href="./crm-gestao-bi-v12.css?v=1">
 </head>
 <body>
 <header><a href="./orcamentos.html?crm=1" class="back">← Meus orçamentos</a><span class="brand">FS SOLUÇÕES</span></header>
 <main>
-<section class="hero">
+<section class="hero" id="visao-executiva">
   <div class="hero-copy">
     <p class="eyebrow">ACOMPANHAMENTO COMERCIAL</p>
     <h1>Gestão da equipe</h1>
@@ -41,7 +41,7 @@
    <summary><div><p class="eyebrow">ACESSOS DA EQUIPE</p><h2>Criar acesso de colaborador</h2><p>Toque para abrir e cadastrar uma nova credencial.</p></div></summary>
    <div class="access-create-body">
   <div class="access-grid">
-    <label>Nome do colaborador<input id="access-name" type="text" placeholder="Ex.: Alessandro Silva" autocomplete="off"></label>
+    <label>Nome do colaborador<input id="access-name" type="text" placeholder="Ex.: Francifildo Pereira Sobral" autocomplete="off"></label>
     <label>Filial<input id="access-branch" type="text" placeholder="Ex.: Iguatu III" autocomplete="off"></label>
     <label>WhatsApp<input id="access-phone" type="tel" inputmode="numeric" placeholder="Ex.: 88999999999" autocomplete="off"></label>
     <label class="access-photo-field">Foto do colaborador
@@ -74,7 +74,7 @@
   <div id="branch-list" class="branch-list"></div>
 </section>
 
-<details class="executive-filter-wrap">
+<details class="executive-filter-wrap" open>
  <summary><span>Filtros da visão executiva</span><small>Período, vendedor e ordenação</small></summary>
  <section class="filters" aria-label="Filtros de acompanhamento">
  <div class="periods" role="group" aria-label="Período"><button data-period="dia">Dia</button><button data-period="semana">Semana</button><button data-period="quinzena">Quinzena</button><button data-period="mes" aria-pressed="true">Mês</button></div>
@@ -83,6 +83,8 @@
  </section>
 </details>
 <section id="metrics" class="metrics" aria-label="Resumo do período"></section>
+
+<section id="fs-team-intelligence" class="fs-team-intelligence" aria-label="Desempenho comercial"></section>
 
 <section class="loss-intel" id="loss-intel">
   <div class="loss-intel-head">
@@ -99,10 +101,10 @@
   <section class="loss-panel"><div class="loss-case-head"><h3>Casos de perda</h3><span id="loss-case-count"></span></div><div id="loss-cases"></div></section>
 </section>
 
-<details class="explanation"><summary>Como ler os números</summary><p>Orçamentos, vendas e conversão consideram as pesquisas criadas no período escolhido e o status atual de cada uma. Conversão = vendas concluídas ÷ pesquisas criadas no período.</p><p>Contatos consideram ações registradas no período, mesmo quando o orçamento é antigo. Retornos atrasados mostram as pendências atuais. Um contato conta quando o vendedor confirma que o realizou; abrir o WhatsApp não conta como envio.</p><p>A semana vai de segunda a domingo. Quinzena: dias 1 a 15 ou 16 ao último dia do mês. As datas usam o horário de Brasília. Vendedores cadastrados aparecem mesmo com zero registros.</p></details>
-<div class="section-heading"><h2>Vendedores</h2><span id="roster-count"></span></div>
+<details class="explanation"><summary>Como ler os números</summary><p>Pesquisas consideram os registros criados no período. Vendas concluídas e perdas consideram a data efetiva de conclusão/perda dentro do período. Em aberto representa a posição atual da carteira.</p><p>Conversão geral = vendas concluídas ÷ pesquisas criadas no período. Conversão sobre finalizadas = vendas concluídas ÷ (vendas concluídas + perdas finalizadas).</p><p>Contatos consideram ações registradas no período. Agendamentos mostram a posição atual das oportunidades com retorno ou produto agendado.</p></details>
+<div class="section-heading" id="equipe"><h2>Vendedores</h2><span id="roster-count"></span></div>
 <section id="seller-cards" class="seller-cards"></section>
-<section class="losses"><h2>Motivos de não fechamento</h2><div id="reasons"></div></section>
+<section class="losses" id="relatorios"><h2>Motivos de não fechamento</h2><div id="reasons"></div></section>
 <details id="permissions" hidden><summary>Autorizações da visão da equipe</summary><p>Somente o desenvolvedor responsável pode liberar ou retirar este acesso. O cargo, sozinho, não dá autorização. A liberação vale para a filial do usuário.</p><div id="permission-list"></div></details>
 <p id="updated" class="updated"></p>
 </div>
@@ -118,5 +120,5 @@
 <script src="./crm-gestao-v2.js?v=70"></script>
 <script src="./crm-relatorio-a4.js?v=1"></script>
 <script src="./crm-gestao-polish-v8.js?v=1"></script>
-<script src="./crm-gestao-bi-v11.js?v=1"></script>
+<script src="./crm-gestao-bi-v12.js?v=1"></script>
 </body></html>
