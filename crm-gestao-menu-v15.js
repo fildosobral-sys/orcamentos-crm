@@ -155,30 +155,29 @@ function mobileMenu(){
 }
 function stableHeader(){
   const summary=$('fs-v13-mobile-summary');if(!summary)return;
-
-  // Mantém o cabeçalho em um único estado visual. O legado pode tentar recolher
-  // durante o scroll, mas esta rotina neutraliza a classe sem alterar a página.
-  const clearLegacyState=()=>{
-    if(document.body.classList.contains('fs-mobile-header-collapsed'))
-      document.body.classList.remove('fs-mobile-header-collapsed');
+  const clearLegacyState=()=>document.body.classList.remove('fs-mobile-header-collapsed');
+  const setOpen=open=>{
+    clearLegacyState();
+    document.body.classList.toggle('fs-v16-filters-open',!!open);
+    summary.setAttribute('aria-expanded',String(!!open));
   };
   clearLegacyState();
-
   if(!document.body.dataset.fsV16HeaderWatch){
     document.body.dataset.fsV16HeaderWatch='1';
-    const bodyObserver=new MutationObserver(clearLegacyState);
-    bodyObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
+    new MutationObserver(clearLegacyState).observe(document.body,{attributes:true,attributeFilter:['class']});
+    document.addEventListener('click',e=>{
+      if(window.innerWidth>900||!document.body.classList.contains('fs-v16-filters-open'))return;
+      const toolbar=$('fs-v13-toolbar');
+      if(summary.contains(e.target)||toolbar?.contains(e.target))return;
+      setOpen(false);
+    });
+    $('refresh')?.addEventListener('click',()=>setOpen(false));
   }
-
   if(summary.dataset.fsV16==='1')return;
   summary.dataset.fsV16='1';summary.setAttribute('role','button');summary.setAttribute('tabindex','0');summary.setAttribute('aria-expanded','false');
-  const toggle=()=>{
-    clearLegacyState();
-    const open=document.body.classList.toggle('fs-v16-filters-open');
-    summary.setAttribute('aria-expanded',String(open));
-  };
+  const toggle=e=>{if(window.innerWidth>900)return;if(e){e.preventDefault();e.stopPropagation()}setOpen(!document.body.classList.contains('fs-v16-filters-open'));};
   summary.addEventListener('click',toggle);
-  summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
+  summary.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){toggle(e)}});
 }
 function cleanupBottom(){
   document.body.classList.add('fs-v16-ready');

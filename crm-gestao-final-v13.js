@@ -116,11 +116,10 @@ function buildTopbar(){
   syncRangeInputs(false);
   updateMobileSummary();
   const summaryBtn=$('fs-v13-mobile-summary');
-  if(summaryBtn){summaryBtn.addEventListener('click',()=>{
-    if(window.innerWidth>900)return;
-    const collapsed=document.body.classList.toggle('fs-mobile-header-collapsed');
-    summaryBtn.setAttribute('aria-expanded',String(!collapsed));
-  });}
+  if(summaryBtn){
+    /* O painel mobile é controlado apenas pelo menu v15 para evitar conflito. */
+    summaryBtn.setAttribute('aria-expanded','false');
+  }
 }
 
 function updateMobileSummary(){

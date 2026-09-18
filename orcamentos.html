@@ -1877,29 +1877,6 @@
   }
 }
 
-
-/* CORREÇÃO PONTUAL 18/09/2026D — TODO o card Preço de Tabela em azul-bebê */
-.pricing-card.pricing-card-table{
-  background:#edf6ff!important;
-  border:1px solid #c7ddf6!important;
-  box-shadow:0 6px 18px rgba(71,118,173,.08)!important;
-}
-.pricing-card.pricing-card-table > div[style*="margin-top: 1.5rem"]{
-  background:rgba(255,255,255,.34)!important;
-  border:1px solid rgba(166,196,232,.55)!important;
-  box-shadow:none!important;
-}
-@media (max-width:640px){
-  .pricing-card.pricing-card-table{
-    background:#eaf4ff!important;
-    border-color:#bed8f4!important;
-  }
-  .pricing-card.pricing-card-table > div[style*="margin-top: 1.5rem"]{
-    background:rgba(255,255,255,.28)!important;
-    border-color:rgba(166,196,232,.52)!important;
-  }
-}
-
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
@@ -1977,6 +1954,26 @@
 @media(max-width:600px){#fscrm-return-schedule{padding:14px!important;border-radius:18px!important}.fscrm-compact-time input{width:128px!important;max-width:128px!important;min-height:44px!important}dialog.fscrm-modal{max-width:calc(100vw - 24px)!important}}
 </style>
 
+
+<style id="fs-preco-tabela-azul-final">
+/* 18/09/2026 — card completo do Preço de Tabela em azul-bebê. */
+.input-group.pricing-card.pricing-card-table{
+  background:linear-gradient(180deg,#e9f4ff 0%,#f2f8ff 100%)!important;
+  border:1.5px solid #c4ddf7!important;
+  box-shadow:0 8px 20px rgba(63,116,181,.08)!important;
+}
+.input-group.pricing-card.pricing-card-table > div[style*="margin-top"]{
+  background:rgba(255,255,255,.34)!important;
+  border:1px solid rgba(150,184,224,.42)!important;
+  box-shadow:none!important;
+}
+@media(max-width:640px){
+  .input-group.pricing-card.pricing-card-table{
+    background:linear-gradient(180deg,#e4f1ff 0%,#eef7ff 100%)!important;
+    border-color:#b9d7f5!important;
+  }
+}
+</style>
 </head>
  <body>
   <header class="header">
