@@ -3,6 +3,8 @@ ATUALIZAÇÃO SEGURA — 19/09/2026
 Escopo desta versão
 - Mantidas as telas, regras comerciais, cálculos, registros e integrações existentes.
 - Removido o caminho legado de autorização local existente no HTML.
+- Mantida a compatibilidade de entrada automática pelo Index: o sinal antigo
+  agora apenas inicia a validação segura da sessão no servidor.
 - Novos acessos passam a receber credenciais com 16 caracteres aleatórios.
 - Anexos preparados pelo site agora respeitam o limite real da API publicada.
 - A entrada da Gestão da Equipe deixa de manter um bloqueio artificial prolongado.

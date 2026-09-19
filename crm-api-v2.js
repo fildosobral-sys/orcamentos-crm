@@ -78,9 +78,13 @@ function readCentralTicket(){
 function centralSSOCredentials(){
   try{
     const ticket=readCentralTicket();
+    // Compatibilidade com a Central/Index já publicada. fsAuthGlobal é somente
+    // um sinal de origem; nunca autoriza o CRM sem a validação remota abaixo.
+    const legacyIndexSignal=localStorage.getItem('fsAuthGlobal')==='ok-@fildO1060';
     const marked=
       sessionStorage.getItem('fs_module_from_index')==='1' ||
       sessionStorage.getItem('crm_sso_from_central')==='1' ||
+      legacyIndexSignal ||
       !!ticket;
 
     if(!marked)return null;
