@@ -1,0 +1,20 @@
+ATUALIZAÇÃO SEGURA — 19/09/2026
+
+Escopo desta versão
+- Mantidas as telas, regras comerciais, cálculos, registros e integrações existentes.
+- Removido o caminho legado de autorização local existente no HTML.
+- Novos acessos passam a receber credenciais com 16 caracteres aleatórios.
+- Anexos preparados pelo site agora respeitam o limite real da API publicada.
+- A entrada da Gestão da Equipe deixa de manter um bloqueio artificial prolongado.
+- Versões dos arquivos alterados foram atualizadas para evitar cache antigo no navegador.
+
+Compatibilidade
+- Credenciais já cadastradas continuam funcionando normalmente.
+- Nenhuma propriedade, planilha, endpoint ou estrutura de registro foi alterada.
+- Nenhum arquivo histórico foi removido deste pacote.
+
+Arquivos alterados
+- orcamentos.html
+- orcamentos-gestao.html
+- crm-ui-v2.js
+- crm-gestao-v2.js

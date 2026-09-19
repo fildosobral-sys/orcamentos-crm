@@ -2391,7 +2391,8 @@ let currentData = [];
         });
 
         // Senha gerencial
-        const SENHA_GERENTE = ''; // legado desativado; autenticação oficial no CRM
+        // Autorização legada removida. O acesso oficial é controlado por crm-api-v2.js.
+        const SENHA_GERENTE = null;
 
         // Função para atualizar a interface com base na configuração
         async function onConfigChange(config) {
@@ -2538,29 +2539,9 @@ let currentData = [];
         function verificarEstadoAcesso() {
             console.log("🔍 Verificando estado de acesso...");
 
-            const plataformaAutorizada = localStorage.getItem('plataformaAutorizada');
-            const vendedorLogado = localStorage.getItem('vendedorLogado');
-
-            // 🔐 Integra também o token global FS Soluções, usado pelo Index e por outros módulos
-            let autorizadoGlobal = false;
-            try {
-                const tokenGlobal = localStorage.getItem('fsAuthGlobal');
-                autorizadoGlobal = (tokenGlobal === 'ok-@fildO1060');
-            } catch (e) {
-                console.warn('[FS] Não foi possível ler o token global de autenticação:', e);
-            }
-
-            if ((plataformaAutorizada || autorizadoGlobal) && vendedorLogado) {
-                console.log("✅ Plataforma autorizada e usuário logado");
-                vendedorAtual = vendedorLogado;
-                entrarNaCalculadora(vendedorLogado);
-            } else if (plataformaAutorizada || autorizadoGlobal) {
-                console.log("🔐 Plataforma autorizada/global mas usuário não logado");
-                mostrarTelaLogin();
-            } else {
-                console.log("🚫 Plataforma não autorizada - primeiro acesso");
-                mostrarTelaAutorizacao();
-            }
+            // Esta função existe apenas para compatibilidade com chamadas antigas.
+            // crm-api-v2.js a substitui e valida toda sessão no servidor.
+            mostrarTelaAutorizacao();
         }
 
 
@@ -2584,37 +2565,11 @@ let currentData = [];
 
         // Função para processar autorização
         function processarAutorizacao(nomeUsuario, senhaDigitada) {
-            console.log("🔐 Processando autorização...");
-            
-            if (((senhaDigitada||"").trim()) !== SENHA_GERENTE) {
-                showToast("❌ Senha incorreta! Verifique e tente novamente.", "error");
-                
-                const senhaField = document.getElementById('senhaGerente');
-                if (senhaField) {
-                    senhaField.value = '';
-                }
-                return;
+            // Não autoriza mais pelo navegador. Mantido somente para que uma chamada
+            // antiga não quebre a página antes de crm-api-v2.js assumir o acesso.
+            if (typeof window.mostrarTelaAutorizacao === 'function') {
+                window.mostrarTelaAutorizacao();
             }
-            
-            console.log("✅ Senha correta! Autorizando plataforma...");
-            
-            // Autorizar a plataforma permanentemente
-            localStorage.setItem('plataformaAutorizada', 'true');
-            localStorage.setItem('dataAutorizacao', new Date().toISOString());
-
-            // 🔐 Integração com autenticação global FS Soluções
-            try {
-                localStorage.setItem('fsAuthGlobal', 'ok-@fildO1060');
-            } catch (e) {
-                console.warn('[FS] Não foi possível salvar o token global de autenticação:', e);
-            }
-
-            
-            // Fazer login do usuário atual
-            vendedorAtual = nomeUsuario;
-            localStorage.setItem('vendedorLogado', nomeUsuario);
-            
-            entrarNaCalculadora(nomeUsuario);
         }
 
         // Função para entrar na calculadora
@@ -5186,7 +5141,7 @@ window.FSCRMBridge = {
 <script src="./crm-config-v2.js?v=71"></script>
 <script src="./crm-api-v2.js?v=110"></script>
 <script src="./crm-core-v2.js?v=130"></script>
-<script src="./crm-ui-v2.js?v=130"></script>
+<script src="./crm-ui-v2.js?v=20260919-1"></script>
 
 <style>
   /* Histórico: ações compactas para reduzir a altura de cada registro */

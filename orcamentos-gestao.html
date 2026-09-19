@@ -308,8 +308,10 @@
 
   var finished=false;
   var started=Date.now();
-  var minVisible=2200;
-  var maxVisible=7000;
+  // A tela só permanece visível o tempo necessário para evitar um clarão na entrada.
+  // O limite de segurança continua liberando a interface caso a consulta remota demore.
+  var minVisible=350;
+  var maxVisible=5000;
 
   function finishEntryLoading(){
     if(finished) return;
@@ -428,7 +430,7 @@
 <script src="./crm-config-v2.js?v=18091150"></script>
 <script src="./crm-api-v2.js?v=18091150"></script>
 <script src="./crm-bi-v2.js?v=18091150"></script>
-<script src="./crm-gestao-v2.js?v=18091150"></script>
+<script src="./crm-gestao-v2.js?v=20260919-1"></script>
 <script src="./crm-relatorio-a4.js?v=18091150"></script>
 <script src="./crm-gestao-polish-v8.js?v=18091150"></script>
 <script src="./crm-gestao-bi-v12.js?v=18091235"></script>

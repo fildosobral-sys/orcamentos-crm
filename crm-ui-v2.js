@@ -21,7 +21,7 @@
   async function prepareEvidence(file){
     if(!file)throw Error('Selecione uma imagem ou PDF.');
     if(file.type==='application/pdf'){
-      if(file.size>300000)throw Error('PDF maior que 300 KB. Reduza o arquivo antes de anexar.');
+      if(file.size>225000)throw Error('PDF maior que 225 KB. Reduza o arquivo antes de anexar.');
       return {name:file.name,mime:file.type,base64:await fileToBase64(file)};
     }
     if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Use JPG, PNG, WEBP ou PDF.');
@@ -29,8 +29,8 @@
     const max=1280,scale=Math.min(1,max/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
     const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);
     let quality=.78,data=canvas.toDataURL('image/jpeg',quality);
-    while(data.length>430000&&quality>.42){quality-=.08;data=canvas.toDataURL('image/jpeg',quality);}
-    if(data.length>430000)throw Error('A imagem continua grande. Recorte ou reduza antes de anexar.');
+    while(data.length>310000&&quality>.42){quality-=.08;data=canvas.toDataURL('image/jpeg',quality);}
+    if(data.length>310000)throw Error('A imagem continua grande. Recorte ou reduza antes de anexar.');
     return {name:file.name.replace(/\.[^.]+$/,'.jpg'),mime:'image/jpeg',base64:data.split(',')[1]};
   }
   function uppercaseOperationalFields(root=document){

@@ -336,7 +336,13 @@ const clean=s=>String(s||'').trim();
 const digits=s=>String(s||'').replace(/\D/g,'');
 function slugName(name){return clean(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase();}
 function tokenPart(name){const raw=clean(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z]/g,'').toUpperCase();return (raw.slice(0,5)||'ACESSO');}
-function randomPart(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let out='';for(let i=0;i<4;i++)out+=chars[Math.floor(Math.random()*chars.length)];return out;}
+function randomPart(size=16){
+ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=new Uint8Array(size);let out='';
+ if(window.crypto?.getRandomValues)window.crypto.getRandomValues(bytes);
+ else for(let i=0;i<size;i++)bytes[i]=Math.floor(Math.random()*256);
+ for(let i=0;i<size;i++)out+=chars[bytes[i]%chars.length];
+ return out;
+}
 function makeToken(name,phone){const d=digits(phone);return tokenPart(name)+'-'+d.slice(-4)+'-'+randomPart();}
 function renderAccessUsers(){
  const box=$('access-user-list'); if(!box||!data)return;
