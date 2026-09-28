@@ -47,7 +47,7 @@
   const actor = () => remote?.session
     ? {...remote.session.actor,canManage:false}
     : ({name:localStorage.getItem('crm_nome')||'',branch:localStorage.getItem('crm_filial')||'',role:localStorage.getItem('crm_cargo')||'',canManage:false});
-  function persistServerRows(){try{localStorage.setItem(RECORD_CACHE_KEY,JSON.stringify(serverRows.slice(-1200)));}catch(_e){}}
+  function persistServerRows(){try{localStorage.setItem(RECORD_CACHE_KEY,JSON.stringify(serverRows.slice(-150)));}catch(_e){}}
   function readServerCache(){try{const rows=JSON.parse(localStorage.getItem(RECORD_CACHE_KEY)||'[]');return Array.isArray(rows)?rows:[];}catch(_e){return [];}}
   function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;persistServerRows();return r;}
   function removeCachedRecord(id){serverRows=serverRows.filter(x=>x.id!==id);persistServerRows();}

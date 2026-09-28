@@ -3990,7 +3990,22 @@ Zenir - O Melhor Está Aqui! 🏆`;
 
                 novoCalculo.__backendId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 dadosLocais.push(novoCalculo);
-                localStorage.setItem('calculosDesconto', JSON.stringify(dadosLocais));
+
+                // O cache do painel CRM é apenas uma cópia regenerável da nuvem.
+                // Se a cota do navegador estiver cheia, libera SOMENTE esse cache
+                // e repete uma vez a gravação do histórico real de cálculos.
+                const historicoSerializado = JSON.stringify(dadosLocais);
+                try {
+                    localStorage.setItem('calculosDesconto', historicoSerializado);
+                } catch (storageError) {
+                    const quota = storageError?.name === 'QuotaExceededError' ||
+                                  storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+                                  storageError?.code === 22 || storageError?.code === 1014;
+                    if (!quota) throw storageError;
+                    console.warn('⚠️ Cota local cheia. Liberando somente o cache regenerável do CRM e tentando novamente.');
+                    localStorage.removeItem('fscrm_records_cache_v2');
+                    localStorage.setItem('calculosDesconto', historicoSerializado);
+                }
                 currentData = [...dadosLocais];
             } catch (localError) {
                 console.error("💥 Erro no salvamento local:", localError);

@@ -1,0 +1,5 @@
+CORREÇÃO CIRÚRGICA — COTA DE ARMAZENAMENTO LOCAL
+- Histórico real de cálculos preservado.
+- Em erro de cota, remove somente fscrm_records_cache_v2, que é cache regenerável da nuvem, e tenta o salvamento novamente.
+- Cache CRM local reduzido de 1.200 para 150 registros recentes para evitar nova saturação.
+- Regras comerciais, cálculo, aprovação, histórico e dados da nuvem não foram alterados.

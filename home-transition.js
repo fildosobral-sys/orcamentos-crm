@@ -295,7 +295,7 @@
         const base=i>=0?rows[i]:{id:data.id,revision:Number(data.expectedRevision||0)};
         const optimistic={...base,...data.patch,id:data.id,revision:Number(data.expectedRevision??base.revision??0)+1,updatedAt:new Date().toISOString()};
         if(i>=0)rows[i]=optimistic;else rows.push(optimistic);
-        try{localStorage.setItem(key,JSON.stringify(rows.slice(-1200)))}catch(_e){}
+        try{localStorage.setItem(key,JSON.stringify(rows.slice(-150)))}catch(_e){}
         await R.enqueue(action,data);
         setTimeout(()=>{R.flushQueue?.().catch(()=>{})},0);
         return optimistic;
