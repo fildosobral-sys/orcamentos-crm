@@ -2421,6 +2421,16 @@ let currentData = [];
             ]);
         }
 
+        // Armazenamento local leve: evita exceder a quota do navegador.
+        // A nuvem/currentData continuam sendo a fonte completa durante a sessão.
+        const FS_LOCAL_HISTORY_LIMIT = 100;
+        function salvarHistoricoLocalLeve(rows) {
+            const lista = Array.isArray(rows) ? rows : [];
+            const leve = lista.slice(-FS_LOCAL_HISTORY_LIMIT);
+            localStorage.setItem('calculosDesconto', JSON.stringify(leve));
+            return leve;
+        }
+
         // Handler para mudanças nos dados
         const dataHandler = {
             onDataChanged(data) {
@@ -2437,12 +2447,10 @@ let currentData = [];
                 const mergedBase=incoming.length?incoming:local;
                 currentData = combinarHistoricoComCRM(mergedBase);
 
-                // A nuvem pode devolver milhares de registros. Eles continuam disponíveis
-                // em currentData, mas apenas a janela recente é mantida no localStorage.
-                if (window.FSHistoryStorage) window.FSHistoryStorage.persistSoon(incoming);
-                else {
-                    try { localStorage.setItem('calculosDesconto', JSON.stringify(incoming.slice(-150))); }
-                    catch (error) { console.error("❌ Erro ao sincronizar localStorage:", error); }
+                try {
+                    salvarHistoricoLocalLeve(incoming);
+                } catch (error) {
+                    console.error("❌ Erro ao sincronizar localStorage:", error);
                 }
 
                 if (vendedorAtual) {
@@ -3404,7 +3412,7 @@ let currentData = [];
                     currentData.splice(registroIndex, 1);
                     
                     try {
-                        window.FSHistoryStorage ? window.FSHistoryStorage.persistSoon(currentData) : localStorage.setItem('calculosDesconto', JSON.stringify(currentData.slice(-150)));
+                        salvarHistoricoLocalLeve(currentData);
                     } catch (error) {
                         console.error("❌ Erro ao salvar no localStorage:", error);
                     }
@@ -3487,7 +3495,7 @@ let currentData = [];
                 currentData[registroIndex] = registro;
                 
                 try {
-                    window.FSHistoryStorage ? window.FSHistoryStorage.persistSoon(currentData) : localStorage.setItem('calculosDesconto', JSON.stringify(currentData.slice(-150)));
+                    salvarHistoricoLocalLeve(currentData);
                 } catch (error) {
                     console.error("❌ Erro ao salvar no localStorage:", error);
                 }
@@ -3847,33 +3855,6 @@ Zenir - O Melhor Está Aqui! 🏆`;
             return remoto || crm || central || legado || memoria;
         }
 
-        // ===== Armazenamento seguro do histórico (V4) =====
-        // O localStorage guarda apenas uma janela recente. Registros antigos são
-        // arquivados no IndexedDB, que possui capacidade muito maior.
-        window.FSHistoryStorage = window.FSHistoryStorage || (function(){
-            const KEY='calculosDesconto';
-            const MAX_RECENT=150;
-            const DB='fs_orcamentos_history_v1';
-            const STORE='records';
-            function idOf(r){ return String((r&&r.__backendId) || (r&&r.id) || ((r&&r.data_calculo)||'')+'|'+((r&&r.vendedor)||'')+'|'+((r&&r.codigo_produto)||'')); }
-            function openDB(){ return new Promise((resolve,reject)=>{ try{ const q=indexedDB.open(DB,1); q.onupgradeneeded=()=>{ const db=q.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'__fsArchiveId'}); }; q.onsuccess=()=>resolve(q.result); q.onerror=()=>reject(q.error); }catch(e){ reject(e); } }); }
-            async function archive(rows){
-                rows=Array.isArray(rows)?rows:[]; if(!rows.length) return;
-                try{ const db=await openDB(); await new Promise((resolve,reject)=>{ const tx=db.transaction(STORE,'readwrite'); const st=tx.objectStore(STORE); rows.forEach(r=>{ if(!r)return; st.put({...r,__fsArchiveId:idOf(r)}); }); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error); }); db.close(); }
-                catch(e){ console.warn('⚠️ Não foi possível arquivar histórico antigo no IndexedDB:',e); }
-            }
-            async function persist(rows){
-                rows=Array.isArray(rows)?rows:[];
-                const overflow=rows.length>MAX_RECENT?rows.slice(0,-MAX_RECENT):[];
-                const recent=rows.slice(-MAX_RECENT);
-                if(overflow.length) await archive(overflow);
-                localStorage.setItem(KEY,JSON.stringify(recent));
-                return recent;
-            }
-            function persistSoon(rows){ persist(rows).catch(e=>console.warn('⚠️ Falha ao compactar histórico local:',e)); }
-            return {MAX_RECENT,archive,persist,persistSoon};
-        })();
-
         async function salvarCalculo() {
             const vendedorResolvido = resolverVendedorAtual();
             if (vendedorResolvido) vendedorAtual = vendedorResolvido;
@@ -4016,13 +3997,15 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 
                 novoCalculo.__backendId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 dadosLocais.push(novoCalculo);
-                // Arquiva o excedente no IndexedDB e mantém somente os 150 mais recentes
-                // no localStorage. Isso evita QuotaExceededError sem apagar o histórico.
-                const dadosRecentes = await window.FSHistoryStorage.persist(dadosLocais);
-                currentData = combinarHistoricoComCRM(dadosLocais);
-                // CRM é complementar: nunca pode invalidar um cálculo já salvo localmente.
-                try { if (window.FSCRM) window.FSCRM.saved(novoCalculo); }
-                catch (crmError) { console.warn('⚠️ Cálculo salvo; integração CRM pendente:', crmError); }
+                const historicoLocalLeve = salvarHistoricoLocalLeve(dadosLocais);
+
+                // Não deixar um histórico antigo e gigante permanecer em memória/localStorage.
+                // Mantém a janela local recente; a sincronização central continua independente.
+                currentData = combinarHistoricoComCRM(historicoLocalLeve);
+                if (window.FSCRM) {
+                    try { Promise.resolve(window.FSCRM.saved(novoCalculo)).catch(err => console.warn('⚠️ CRM pendente:', err)); }
+                    catch (err) { console.warn('⚠️ CRM pendente:', err); }
+                }
 
                 // Tentar salvar no Data SDK
                 if (window.dataSdk) {
@@ -5013,6 +4996,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
 <script>
 (function(){
   function getHistorico() {
+    if (Array.isArray(window.currentData) && window.currentData.length) return window.currentData;
     try { return JSON.parse(localStorage.getItem('calculosDesconto') || '[]'); }
     catch(e){ return []; }
   }
@@ -5209,7 +5193,7 @@ window.FSCRMBridge = {
     const row = rows.find(item => item.__backendId === id);
     if (!row || row.venda_bem_sucedida === sold) return;
     row.venda_bem_sucedida = sold;
-    window.FSHistoryStorage ? window.FSHistoryStorage.persistSoon(rows) : localStorage.setItem('calculosDesconto', JSON.stringify(rows.slice(-150)));
+    salvarHistoricoLocalLeve(rows);
     currentData = combinarHistoricoComCRM(rows);
     if (typeof aplicarFiltroData === 'function') aplicarFiltroData();
   }

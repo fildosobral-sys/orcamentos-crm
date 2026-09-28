@@ -47,7 +47,7 @@
   const actor = () => remote?.session
     ? {...remote.session.actor,canManage:false}
     : ({name:localStorage.getItem('crm_nome')||'',branch:localStorage.getItem('crm_filial')||'',role:localStorage.getItem('crm_cargo')||'',canManage:false});
-  function persistServerRows(){try{localStorage.setItem(RECORD_CACHE_KEY,JSON.stringify(serverRows.slice(-50)));}catch(_e){}}
+  function persistServerRows(){try{const light=serverRows.slice(-50).map(r=>{const x={...r};if(x.evidence)x.evidence=null;if(Array.isArray(x.history)&&x.history.length>20)x.history=x.history.slice(-20);return x});localStorage.setItem(RECORD_CACHE_KEY,JSON.stringify(light));}catch(_e){}}
   function readServerCache(){try{const rows=JSON.parse(localStorage.getItem(RECORD_CACHE_KEY)||'[]');return Array.isArray(rows)?rows:[];}catch(_e){return [];}}
   function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;persistServerRows();return r;}
   function removeCachedRecord(id){serverRows=serverRows.filter(x=>x.id!==id);persistServerRows();}
@@ -788,7 +788,7 @@
     }
     try{
       const rows=JSON.parse(localStorage.getItem('calculosDesconto')||'[]');
-      localStorage.setItem('calculosDesconto',JSON.stringify(rows.filter(x=>x.__backendId!==id)));
+      localStorage.setItem('calculosDesconto',JSON.stringify(rows.filter(x=>x.__backendId!==id).slice(-100)));
     }catch(_e){}
     window.dispatchEvent(new CustomEvent('fscrm:records',{detail:{records:serverRows}}));
     render();
