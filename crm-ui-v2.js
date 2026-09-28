@@ -47,22 +47,7 @@
   const actor = () => remote?.session
     ? {...remote.session.actor,canManage:false}
     : ({name:localStorage.getItem('crm_nome')||'',branch:localStorage.getItem('crm_filial')||'',role:localStorage.getItem('crm_cargo')||'',canManage:false});
-  function persistServerRows(){
-    // Cache local é apenas acelerador de leitura. Nunca deve competir com o histórico de cálculos.
-    // Remove anexos/base64 e limita a uma janela pequena; os dados completos permanecem na nuvem.
-    try{
-      const lean=serverRows.slice(-50).map(r=>{
-        const x={...r};
-        delete x.evidence; delete x.attachments; delete x.base64; delete x.fileBase64;
-        if(Array.isArray(x.history)) x.history=x.history.slice(-20).map(h=>{const y={...h};delete y.evidence;delete y.attachments;delete y.base64;delete y.fileBase64;return y;});
-        return x;
-      });
-      localStorage.setItem(RECORD_CACHE_KEY,JSON.stringify(lean));
-    }catch(_e){
-      // Cache é descartável. Se a quota estiver pressionada, libera o cache antigo.
-      try{localStorage.removeItem(RECORD_CACHE_KEY);}catch(__e){}
-    }
-  }
+  function persistServerRows(){try{localStorage.setItem(RECORD_CACHE_KEY,JSON.stringify(serverRows.slice(-50)));}catch(_e){}}
   function readServerCache(){try{const rows=JSON.parse(localStorage.getItem(RECORD_CACHE_KEY)||'[]');return Array.isArray(rows)?rows:[];}catch(_e){return [];}}
   function cacheRecord(r){const i=serverRows.findIndex(x=>x.id===r.id);if(i<0)serverRows.push(r);else serverRows[i]=r;persistServerRows();return r;}
   function removeCachedRecord(id){serverRows=serverRows.filter(x=>x.id!==id);persistServerRows();}
