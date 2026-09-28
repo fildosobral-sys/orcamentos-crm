@@ -3975,65 +3975,81 @@ Zenir - O Melhor Está Aqui! 🏆`;
             if (loadingElement) loadingElement.style.display = 'block';
             if (salvarBtn) salvarBtn.disabled = true;
 
+            // O salvamento principal é LOCAL e não depende do CRM/nuvem.
+            // Integrações remotas são disparadas somente depois da persistência local
+            // e nunca podem transformar um cálculo já salvo em "Erro ao salvar".
+            let dadosLocais = [];
             try {
-                // Salvamento local garantido
-                let dadosLocais = [];
-                
                 try {
-                    dadosLocais = JSON.parse(localStorage.getItem('calculosDesconto') || '[]');
+                    const lidos = JSON.parse(localStorage.getItem('calculosDesconto') || '[]');
+                    dadosLocais = Array.isArray(lidos) ? lidos : [];
                 } catch (parseError) {
+                    console.warn("⚠️ Histórico local inválido; iniciando uma lista segura:", parseError);
                     dadosLocais = [];
                 }
-                
+
                 novoCalculo.__backendId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 dadosLocais.push(novoCalculo);
                 localStorage.setItem('calculosDesconto', JSON.stringify(dadosLocais));
-                
                 currentData = [...dadosLocais];
-                if (window.FSCRM) window.FSCRM.saved(novoCalculo);
-
-                // Tentar salvar no Data SDK
-                if (window.dataSdk) {
-                    try {
-                        const calculoParaSDK = { ...novoCalculo };
-                        delete calculoParaSDK.__backendId;
-                        
-                        const result = await window.dataSdk.create(calculoParaSDK);
-                        if (result.isOk) {
-                            console.log("✅ Salvamento no Data SDK sucesso!");
-                        } else {
-                            console.warn("⚠️ Salvamento no Data SDK falhou:", result.error);
-                        }
-                    } catch (sdkError) {
-                        console.warn("⚠️ Erro no Data SDK:", sdkError);
-                    }
-                }
-
-                // Finalizar
+            } catch (localError) {
+                console.error("💥 Erro no salvamento local:", localError);
                 if (loadingElement) loadingElement.style.display = 'none';
                 if (salvarBtn) salvarBtn.disabled = false;
+                showToast("❌ Não foi possível salvar neste aparelho. Verifique o armazenamento e tente novamente.", "error");
+                return;
+            }
 
+            // A partir daqui o cálculo já está salvo. Libera a interface imediatamente.
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (salvarBtn) salvarBtn.disabled = false;
+
+            const pendentes = Number(window.FSCRMRemote?.pendingCountCached?.() || 0);
+            showToast(
+                pendentes > 0
+                  ? "💾 Salvo neste aparelho. A sincronização com a nuvem será feita automaticamente quando a conexão voltar."
+                  : "💾 Cálculo salvo! Use os botões no histórico para marcar como realizada.",
+                "success"
+            );
+
+            // CRM/acompanhamento em segundo plano. Falha remota não bloqueia o cálculo.
+            try {
+                if (window.FSCRM?.saved) {
+                    Promise.resolve(window.FSCRM.saved(novoCalculo)).catch(crmError => {
+                        console.warn("⚠️ Cálculo salvo; falha isolada no acompanhamento CRM:", crmError);
+                    });
+                }
+            } catch (crmStartError) {
+                console.warn("⚠️ Cálculo salvo; não foi possível iniciar o acompanhamento CRM:", crmStartError);
+            }
+
+            // Data SDK também roda em segundo plano para não prender o botão Salvar.
+            if (window.dataSdk?.create) {
+                const calculoParaSDK = { ...novoCalculo };
+                delete calculoParaSDK.__backendId;
+                Promise.resolve(window.dataSdk.create(calculoParaSDK))
+                    .then(result => {
+                        if (result?.isOk) console.log("✅ Salvamento no Data SDK sucesso!");
+                        else console.warn("⚠️ Salvamento no Data SDK falhou:", result?.error);
+                    })
+                    .catch(sdkError => console.warn("⚠️ Erro no Data SDK:", sdkError));
+            }
+
+            // Limpeza/renderização são pós-salvamento e não podem gerar falso erro.
+            try {
                 limparFormulario();
-                
-                if (window.dataSdk) {
-                    console.log("⏳ Aguardando onDataChanged do Data SDK...");
-                } else {
-                    setTimeout(() => aplicarFiltroData(), 100);
-                }
+            } catch (uiError) {
+                console.warn("⚠️ Cálculo salvo; falha ao limpar formulário:", uiError);
+            }
 
-                const pendentes = Number(window.FSCRMRemote?.pendingCountCached?.() || 0);
-                showToast(
-                    pendentes > 0
-                      ? "💾 Salvo neste aparelho. A sincronização com a nuvem será feita automaticamente quando a conexão voltar."
-                      : "💾 Cálculo salvo! Use os botões no histórico para marcar como realizada.",
-                    "success"
-                );
-
-            } catch (error) {
-                console.error("💥 Erro no salvamento:", error);
-                if (loadingElement) loadingElement.style.display = 'none';
-                if (salvarBtn) salvarBtn.disabled = false;
-                showToast("❌ Erro ao salvar. Tente novamente.", "error");
+            try {
+                if (window.dataSdk) console.log("⏳ Sincronização do Data SDK em segundo plano...");
+                else setTimeout(() => {
+                    try { aplicarFiltroData(); }
+                    catch (renderError) { console.warn("⚠️ Falha ao atualizar histórico:", renderError); }
+                }, 100);
+            } catch (renderStartError) {
+                console.warn("⚠️ Cálculo salvo; falha ao iniciar atualização visual:", renderStartError);
             }
         }
 
@@ -5184,9 +5200,9 @@ window.FSCRMBridge = {
 };
 </script>
 <script src="./crm-config-v2.js?v=71"></script>
-<script src="./crm-api-v2.js?v=110"></script>
+<script src="./crm-api-v2.js?v=111"></script>
 <script src="./crm-core-v2.js?v=130"></script>
-<script src="./crm-ui-v2.js?v=130"></script>
+<script src="./crm-ui-v2.js?v=131"></script>
 
 <style>
   /* Histórico: ações compactas para reduzir a altura de cada registro */

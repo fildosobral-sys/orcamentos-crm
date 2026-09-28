@@ -1,0 +1,22 @@
+CORREÇÃO CIRÚRGICA — SALVAMENTO / DESEMPENHO
+Data: 28/09/2026
+
+Arquivo alterado: orcamentos.html
+
+Correções:
+- O salvamento local agora é a etapa principal e independente da nuvem/CRM.
+- CRM/acompanhamento é iniciado em segundo plano após o cálculo já estar persistido.
+- Data SDK é iniciado em segundo plano e não mantém o botão Salvar bloqueado.
+- Falhas de CRM, Data SDK, limpeza do formulário ou atualização visual não exibem falso "Erro ao salvar" depois de um salvamento local válido.
+- Histórico local é validado como array antes da inclusão de um novo cálculo.
+- Mensagem de erro local foi tornada específica para falha real de persistência no aparelho.
+- Versões de cache dos scripts crm-api-v2.js e crm-ui-v2.js incrementadas na referência HTML.
+
+Preservado:
+- Regras de cálculo e desconto.
+- Aprovação superior.
+- Campos do orçamento.
+- Histórico.
+- Acompanhamento comercial.
+- Sincronização/offline existente.
+- Estrutura de autenticação e permissões.
