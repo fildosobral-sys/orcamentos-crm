@@ -42,7 +42,7 @@
   function cleanFooter(){
     document.querySelectorAll('footer,.footer,.footer-content').forEach(el=>{el.style.opacity='.7';el.style.fontSize='.78rem'});
     const root=document.body;if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
-    nodes.forEach(n=>{const t=String(n.nodeValue||'');if(t.includes('Desenvolvido por'))n.nodeValue=t.replace('Desenvolvido por','Developed by');if(t.includes('Sistema de Vendas Zenir - Calculadora de Descontos Profissional'))n.nodeValue=t.replace('Sistema de Vendas Zenir - Calculadora de Descontos Profissional','Sales tools · FS Solutions')});
+    nodes.forEach(n=>{const t=String(n.nodeValue||'');if(t.includes('Desenvolvido por'))n.nodeValue=t.replace('Desenvolvido por','Developed by');});
   }
   function numericMoneyFields(){
     ['precoNormal','precoPromocional','valorParcelaNormal','valorParcelaPromocional','percentualDesconto'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.setAttribute('inputmode','decimal');el.setAttribute('enterkeyhint','done');el.setAttribute('autocomplete','off')});

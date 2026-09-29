@@ -353,10 +353,12 @@ function accessMessage(info){return 'Olá, '+info.name+'. Seu acesso ao Sistema 
 async function createAccess(){
  const st=$('access-state');st.textContent='';
  const name=clean($('access-name').value).toUpperCase(),branch=clean($('access-branch').value).toUpperCase(),phone=digits($('access-phone').value),role=$('access-role').value,canManage=$('access-manage').checked,photo=pendingAccessPhoto;
+ const customToken=clean($('access-custom-token')?.value||'');
  if(!name){st.textContent='Informe o nome do colaborador.';return;}
  if(!branch){st.textContent='Informe a filial.';return;}
  if(!/^\d{10,11}$/.test(phone)){st.textContent='Informe o WhatsApp com DDD.';return;}
- const token=makeToken(name,phone),id=(slugName(name)+'_'+phone.slice(-4)).slice(0,80);
+ if(customToken && customToken.length<12){st.textContent='A credencial personalizada precisa ter no mínimo 12 caracteres.';return;}
+ const token=customToken||makeToken(name,phone),id=(slugName(name)+'_'+phone.slice(-4)).slice(0,80);
  const btn=$('access-create');btn.disabled=true;st.textContent='Criando acesso…';
  try{
    const res=await R.call('createUser',{id,name,branch,phone,role,canManage,token,photo});
