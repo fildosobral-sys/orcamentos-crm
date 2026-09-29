@@ -2423,12 +2423,47 @@ let currentData = [];
 
         // Armazenamento local leve: evita exceder a quota do navegador.
         // A nuvem/currentData continuam sendo a fonte completa durante a sessão.
-        const FS_LOCAL_HISTORY_LIMIT = 100;
+        const FS_LOCAL_HISTORY_LIMIT = 50;
+        const FS_HISTORY_DB = 'fs_orcamentos_history_v1';
+        const FS_HISTORY_STORE = 'calculos';
+        function abrirHistoricoIDB(){
+            return new Promise((resolve,reject)=>{
+                if(!window.indexedDB) return reject(new Error('IndexedDB indisponível'));
+                const req=indexedDB.open(FS_HISTORY_DB,1);
+                req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(FS_HISTORY_STORE))db.createObjectStore(FS_HISTORY_STORE,{keyPath:'__backendId'});};
+                req.onsuccess=()=>resolve(req.result);
+                req.onerror=()=>reject(req.error||new Error('Falha ao abrir IndexedDB'));
+            });
+        }
+        async function salvarCalculoIDB(registro){
+            const db=await abrirHistoricoIDB();
+            try{
+                await new Promise((resolve,reject)=>{
+                    const tx=db.transaction(FS_HISTORY_STORE,'readwrite');
+                    tx.objectStore(FS_HISTORY_STORE).put(registro);
+                    tx.oncomplete=()=>resolve();
+                    tx.onerror=()=>reject(tx.error||new Error('Falha ao gravar IndexedDB'));
+                    tx.onabort=()=>reject(tx.error||new Error('Gravação IndexedDB abortada'));
+                });
+            }finally{db.close();}
+        }
+        function limparCachesRegeneraveis(){
+            ['fscrm_records_cache_v2','fscrm_records_cache','fscrm_cache_v2','fscrm_cache'].forEach(k=>{try{localStorage.removeItem(k)}catch(_e){}});
+        }
         function salvarHistoricoLocalLeve(rows) {
             const lista = Array.isArray(rows) ? rows : [];
-            const leve = lista.slice(-FS_LOCAL_HISTORY_LIMIT);
-            localStorage.setItem('calculosDesconto', JSON.stringify(leve));
-            return leve;
+            const limites=[FS_LOCAL_HISTORY_LIMIT,20,5,1];
+            let ultimoErro=null;
+            for(let tentativa=0;tentativa<2;tentativa++){
+                for(const limite of limites){
+                    const leve=lista.slice(-limite);
+                    try{localStorage.setItem('calculosDesconto',JSON.stringify(leve));return leve;}
+                    catch(e){ultimoErro=e;}
+                }
+                limparCachesRegeneraveis();
+            }
+            console.warn('⚠️ localStorage sem espaço; histórico principal permanece seguro no IndexedDB.',ultimoErro);
+            return lista.slice(-FS_LOCAL_HISTORY_LIMIT);
         }
 
         // Handler para mudanças nos dados
@@ -3996,6 +4031,11 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 }
                 
                 novoCalculo.__backendId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+                // Persistência principal: IndexedDB não compartilha a pequena quota do localStorage.
+                // Só consideramos falha local se esta gravação durável também falhar.
+                await salvarCalculoIDB(novoCalculo);
+
                 dadosLocais.push(novoCalculo);
                 const historicoLocalLeve = salvarHistoricoLocalLeve(dadosLocais);
 
@@ -4048,7 +4088,8 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 console.error("💥 Erro no salvamento:", error);
                 if (loadingElement) loadingElement.style.display = 'none';
                 if (salvarBtn) salvarBtn.disabled = false;
-                showToast("❌ Erro ao salvar. Tente novamente.", "error");
+                const detalhe = String(error?.name || error?.message || 'erro desconhecido');
+                showToast("❌ Erro ao salvar localmente: " + detalhe + ".", "error");
             }
         }
 
@@ -5202,7 +5243,7 @@ window.FSCRMBridge = {
 <script src="./crm-config-v2.js?v=71"></script>
 <script src="./crm-api-v2.js?v=110"></script>
 <script src="./crm-core-v2.js?v=130"></script>
-<script src="./crm-ui-v2.js?v=140"></script>
+<script src="./crm-ui-v2.js?v=150"></script>
 
 <style>
   /* Histórico: ações compactas para reduzir a altura de cada registro */
